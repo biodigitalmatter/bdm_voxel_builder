@@ -1,0 +1,13 @@
+---
+name: bdm_voxel_builer
+
+channels:
+  - conda-forge
+  - nodefaults
+
+dependencies:
+  - compas_view2
+  - matplotlib
+  - numpy
+  - openvdb
+  - poetry

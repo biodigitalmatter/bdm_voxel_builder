@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "bdm-voxel-builder"
+version = "0.1.0"
+description = ""
+authors = ["Mangliár László <mangliar.laci@gmail.com>" ,"Anton Tetov <anton@tetov.se>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+compas-view2 = "^0.11.0"
+numpy = "*"
+matplotlib = "*"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.4"
+pytest = "^8.3.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
