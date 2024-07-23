@@ -6,8 +6,11 @@ channels:
   - nodefaults
 
 dependencies:
+  - click
   - compas_view2
   - matplotlib
   - numpy
   - openvdb
   - poetry
+  - pytest
+  - ruff
