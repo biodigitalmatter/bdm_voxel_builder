@@ -7,7 +7,9 @@ from bdm_voxel_builder.visualizers.base import Visualizer
 
 @dataclass
 class Config:
-    iterations: int
     algo: AgentAlgorithm
     visualizer: Visualizer
+    scale: int = 40
+    iterations: int=200
+    save_interval: int=100
 
