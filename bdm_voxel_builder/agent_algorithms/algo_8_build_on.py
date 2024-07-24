@@ -58,12 +58,12 @@ class Algo8(AgentAlgorithm):
 
     """
 
-    name: str = "build_on_existing"
+    name: str = "build_on_existing_no_decay"
     relevant_data_layers: Tuple[str] = "ground"
     seed_iterations: int = 10
 
     # EXISTING GEOMETRY
-    box_template = [20, 25, 22, 25, 0, 6]
+    box_template = [105, 115, 115, 125, 0, 9]
     ground_level_Z = 0
 
 
@@ -127,8 +127,9 @@ class Algo8(AgentAlgorithm):
             name="existing_geo",
             voxel_size=self.voxel_size,
             color=Color.from_rgb255(*rgb_existing),
-            flip_colors=True,
+            flip_colors=True, 
         )
+            # decay_linear_value=1/(self.agent_count * 3000 * 1000)
 
 
         ### CREATE GROUND ARRAY *could be imported from scan
@@ -164,7 +165,8 @@ class Algo8(AgentAlgorithm):
             gravity_shift_bool=False,
             decay=True
         )
-        print('ph bounds:', np.amax(built_ph_layer.array),np.amin(built_ph_layer.array))
+        # existing_geo.decay_linear()
+        # print('ph bounds:', np.amax(built_ph_layer.array),np.amin(built_ph_layer.array))
   
 
 
