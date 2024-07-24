@@ -5,7 +5,6 @@ import click
 
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder import DATA_DIR
-from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.helpers.numpy import save_ndarray
 from bdm_voxel_builder.simulation_state import SimulationState
 from bdm_voxel_builder.visualizers.matplotlib import MPLVisualizer
@@ -78,7 +77,7 @@ def _load_config(configfile: pathlib.Path) -> Config:
     "configfile", type=click.Path(exists=True), default=DATA_DIR / "config.py"
 )
 def main(configfile):
-    config = _load_config(configfile)
+    config: Config = _load_config(configfile)
 
     algo = config.algo
     visualizer = config.visualizer
@@ -90,8 +89,7 @@ def main(configfile):
 
     if (
         isinstance(visualizer, MPLVisualizer)
-        and visualizer.should_show_animation
-        or visualizer.should_save_animation
+        and visualizer.should_save_animation
     ):
         visualizer.setup_animation(
             simulate, config=config, sim_state=sim_state, iterations=iterations

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
+from bdm_voxel_builder.data_layer.base import DataLayer
 from bdm_voxel_builder.helpers.numpy import (
     create_random_array,
     create_zero_array,
@@ -12,7 +13,7 @@ from bdm_voxel_builder.helpers.math import remap
 
 
 @dataclass
-class DataLayer:
+class DiffusiveLayer(DataLayer):
     name: str = None
     axis_order: str = "zyx"
     voxel_size: int = 20
