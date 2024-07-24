@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import enum
 import numpy as np
 import numpy.typing as npt
 
@@ -12,12 +13,19 @@ from bdm_voxel_builder.helpers.numpy import (
 from bdm_voxel_builder.helpers.math import remap
 
 
+class GravityDir(enum.Enum):
+    LEFT = 0
+    RIGHT = 1
+    FRONT = 2
+    BACK = 3
+    DOWN = 4
+    UP = 5
+
+
 @dataclass
 class DiffusiveLayer(DataLayer):
     name: str = None
-    axis_order: str = "zyx"
     voxel_size: int = 20
-    rgb: float = (1, 1, 1)
     diffusion_ratio: float = 0.12
     diffusion_random_factor: float = 0.0
     decay_random_factor: float = 0.0
@@ -26,40 +34,32 @@ class DiffusiveLayer(DataLayer):
     emission_factor: float = 0.1
     gradient_resolution: float = 0.0
     flip_colors: bool = False
+    emmision_array: npt.NDArray = None
+    gravity_dir: GravityDir = GravityDir.DOWN
+    gravity_ratio: float = 0.0
+    voxel_crop_range = [0, 1]
 
     def __post_init__(self):
         self.array: npt.NDArray = create_zero_array(self.voxel_size)
-        self.voxel_crop_range = [0, 1]
-        self._iteration_counter: int = 0
-        self._emmision_array = None
-        self._gravity_ratio = 0
+        self.iteration_counter: int = 0
 
     @property
     def color_array(self):
-        r, g, b = self.rgb
+        r, g, b = self.color.rgb
         colors = np.copy(self.array)
-        min_ = np.min(colors)
-        max_ = np.max(colors)
+        min_ = np.min(self.array)
+        max_ = np.max(self.array)
         colors = remap(colors, output_domain=[0, 1], input_domain=[min_, max_])
-        if self._flip_colors:
+        if self.flip_colors:
             colors = 1 - colors
 
-        reds = np.reshape(colors * (r), [self._n, self._n, self._n, 1])
-        greens = np.reshape(colors * (g), [self._n, self._n, self._n, 1])
-        blues = np.reshape(colors * (b), [self._n, self._n, self._n, 1])
-        colors = np.concatenate((reds, greens, blues), axis=3)
-        return colors
+        newshape = [self.voxel_size] * 3 + [1]
 
-    @property
-    def gravity_dir(self):
-        return self._gravity_dir
+        reds = np.reshape(colors * (r), newshape=newshape)
+        greens = np.reshape(colors * (g), newshape=newshape)
+        blues = np.reshape(colors * (b), newshape=newshape)
 
-    @gravity_dir.setter
-    def gravity_dir(self, v):
-        """direction: 0:left, 1:right, 2:front, 3:back, 4:down, 5:up"""
-        if not isinstance(v, (int)) or v > 5 or v < 0:
-            raise ValueError("gravity ratio must be an integrer between 0 and 5")
-        self._gravity_dir = v
+        return np.concatenate((reds, greens, blues), axis=3)
 
     def conditional_fill(self, condition="<", value=0.5, override_self=False):
         """returns new voxel_array with 0,1 values based on condition"""
@@ -71,7 +71,7 @@ class DiffusiveLayer(DataLayer):
             mask_inv = self.array <= value
         elif condition == ">=":
             mask_inv = self.array >= value
-        a = create_zero_array(self._n)
+        a = create_zero_array(self.voxel_size)
         a[mask_inv] = 0
         if override_self:
             self.array = a
@@ -108,9 +108,9 @@ class DiffusiveLayer(DataLayer):
         if self.gradient_resolution == 0:
             pass
         else:
-            self._array = (
-                np.int64(self.array * self._gradient_resolution)
-                / self._gradient_resolution
+            self.array = (
+                np.int64(self.array * self.gradient_resolution)
+                / self.gradient_resolution
             )
 
     def diffuse(self, limit_by_Hirsh=True, reintroduce_on_the_other_end=False):
@@ -123,8 +123,8 @@ class DiffusiveLayer(DataLayer):
         where 0 <= a <= 1/6
         """
         if limit_by_Hirsh:
-            self._diffusion_ratio = max(0, self.diffusion_ratio)
-            self._diffusion_ratio = min(1 / 6, self.diffusion_ratio)
+            self.diffusion_ratio = max(0, self.diffusion_ratio)
+            self.diffusion_ratio = min(1 / 6, self.diffusion_ratio)
 
         shifts = [-1, 1]
         axes = [0, 0, 1, 1, 2, 2]
@@ -161,7 +161,9 @@ class DiffusiveLayer(DataLayer):
                 diff_ratio = self.diffusion_ratio
             else:
                 diff_ratio = self.diffusion_ratio * (
-                    1 - create_random_array(self._n) * self.diffusion_random_factor
+                    1
+                    - create_random_array(self.voxel_size)
+                    * self.diffusion_random_factor
                 )
             # summ up the diffusions per faces
             total_diffusions += diff_ratio * (self.array - y) / 2
@@ -169,7 +171,7 @@ class DiffusiveLayer(DataLayer):
         return self.array
 
     def gravity_shift(self, reintroduce_on_the_other_end=False):
-        """direction: 0:left, 1:right, 2:front, 3:back, 4:down, 5:up
+        """
         infinitive borders
         every value of the voxel cube diffuses with its face nb
         standard finite volume approach (Hirsch, 1988).
@@ -177,44 +179,51 @@ class DiffusiveLayer(DataLayer):
         delta_x = -a(x-y)
         where 0 <= a <= 1/6
         """
-
         shifts = [-1, 1]
         axes = [0, 0, 1, 1, 2, 2]
         # order: left, right, front
         # diffuse per six face_neighbors
-        total_diffusions = create_zero_array(self._n)
+        total_diffusions = create_zero_array(self.voxel_size)
         if self.gravity_ratio != 0:
-            for i in [self.gravity_dir]:
-                # y: shift neighbor
-                y = np.copy(self._array)
-                y = np.roll(y, shifts[i % 2], axis=axes[i])
-                if not reintroduce_on_the_other_end:
-                    # TODO replace to padded array method
-                    e = self._n - 1
-                    # removing the values from the other end after rolling
-                    if i == 0:
+            # y: shift neighbor
+            y = np.copy(self.array)
+            y = np.roll(y, shifts[self.gravity_dir % 2], axis=axes[self.gravity_dir])
+            if not reintroduce_on_the_other_end:
+                # TODO replace to padded array method
+                e = self.voxel_size - 1
+                # removing the values from the other end after rolling
+                match self.gravity_dir:
+                    case GravityDir.LEFT:
                         y[:][:][e] = 0
-                    elif i == 1:
+
+                    case GravityDir.RIGHT:
                         y[:][:][0] = 0
-                    elif 2 <= i <= 3:
+
+                    case GravityDir.FRONT:
                         m = y.transpose((1, 0, 2))
-                        if i == 2:
-                            m[:][:][e] = 0
-                        elif i == 3:
-                            m[:][:][0] = 0
+                        m[:][:][e] = 0
                         y = m.transpose((1, 0, 2))
-                    elif 4 <= i <= 5:
+
+                    case GravityDir.BACK:
+                        m = y.transpose((1, 0, 2))
+                        m[:][:][0] = 0
+                        y = m.transpose((1, 0, 2))
+
+                    case GravityDir.DOWN:
                         m = y.transpose((2, 0, 1))
-                        if i == 4:
-                            m[:][:][e] = 0
-                        elif i == 5:
-                            m[:][:][0] = 0
+                        m[:][:][e] = 0
                         y = m.transpose((1, 2, 0))
-                total_diffusions += self.gravity_ratio * (self._array - y) / 2
-            self._array -= total_diffusions
+
+                    case GravityDir.UP:
+                        m = y.transpose((2, 0, 1))
+                        m[:][:][0] = 0
+                        y = m.transpose((1, 2, 0))
+
+            total_diffusions += self.gravity_ratio * (self.array - y) / 2
+            self.array -= total_diffusions
         else:
             pass
-        return self._array
+        return self.array
 
     def emission_self(self, proportional=True):
         """updates array values based on self array values
@@ -256,19 +265,19 @@ class DiffusiveLayer(DataLayer):
             self.array -= self.array * self.decay_ratio
         else:
             randomized_decay = self.decay_ratio * (
-                1 - create_random_array(self._n) * self._decay_random_factor
+                1 - create_random_array(self.voxel_size) * self.decay_random_factor
             )
             randomized_decay = abs(randomized_decay) * -1
             self.array += self.array * randomized_decay
 
     def decay_linear(self):
         s, e = self.voxel_crop_range
-        self._array = crop_array(self._array - self.decay_linear_value, s, e)
+        self.array = crop_array(self.array - self.decay_linear_value, s, e)
 
     def iterate(
         self, diffusion_limit_by_Hirsh=False, reintroduce_on_the_other_end=False
     ):
-        self._iteration_counter += 1
+        self.iteration_counter += 1
         # emission update
         self.emmission_in()
         # decay
@@ -283,20 +292,18 @@ class DiffusiveLayer(DataLayer):
         a2 = other_layer.array
         return a1 + a2
 
-    def add_values_in_zone_xxyyzz(self, zone_xxyyzz, value = 1, add_values = False):
+    def add_values_in_zone_xxyyzz(self, zone_xxyyzz, value=1, add_values=False):
         """add or replace values within zone (including both end)
         add_values == True: add values in self.array
         add_values == False: replace values in self.array *default
-        input: 
+        input:
             zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
-            """
+        """
         # np.zeros_like(self.array)
         if add_values:
-            zone = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool = False)
+            zone = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool=False)
             zone *= value
             self.array += zone
         else:
             mask = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool=True)
             self.array[mask] = value
-
-
