@@ -248,9 +248,16 @@ def calculate_build_chances_full(agent, layers):
     build_chance += c
     erase_chance += e
 
-    v = agent.get_pheromone_strength(queen_bee_pheromon, queen_pheromon_min_to_build)
+    v = agent.get_chance_by_pheromone_strength(queen_bee_pheromon, queen_pheromon_min_to_build)
     build_chance += v
 
+    if stacked_chances:
+        # print(erase_chance)
+        agent.build_chance += build_chance
+        agent.erase_chance += erase_chance
+    else:
+        agent.build_chance = build_chance
+        agent.erase_chance = erase_chance
 
     return build_chance, erase_chance
 
@@ -265,17 +272,9 @@ def calculate_build_chances(agent, layers):
     build_chance = agent.build_chance
     erase_chance = agent.erase_chance
 
-    v = agent.get_pheromone_strength(queen_bee_pheromon, queen_pheromon_min_to_build, queen_pheromon_max_to_build, queen_pheromon_build_strength, queen_ph_build_flat_strength)
+    v = agent.get_chance_by_pheromone_strength(queen_bee_pheromon, queen_pheromon_min_to_build, queen_pheromon_max_to_build, queen_pheromon_build_strength, queen_ph_build_flat_strength)
     build_chance += v
     erase_chance += 0
-
-    return build_chance, erase_chance
-
-def build_over_limits_old(agent, layers, build_chance, erase_chance, decay_clay = False):
-    ground = layers['ground']
-    clay_moisture_layer = layers['clay_moisture_layer']
-    """agent builds on construction_layer, if chances are higher
-    return bool"""
     if stacked_chances:
         # print(erase_chance)
         agent.build_chance += build_chance
@@ -283,6 +282,13 @@ def build_over_limits_old(agent, layers, build_chance, erase_chance, decay_clay 
     else:
         agent.build_chance = build_chance
         agent.erase_chance = erase_chance
+    return build_chance, erase_chance
+
+def build_over_limits_old(agent, layers, decay_clay = False):
+    ground = layers['ground']
+    clay_moisture_layer = layers['clay_moisture_layer']
+    """agent builds on construction_layer, if chances are higher
+    return bool"""
 
     # CHECK IF BUILD CONDITIONS are favorable
     built = False
@@ -300,18 +306,11 @@ def build_over_limits_old(agent, layers, build_chance, erase_chance, decay_clay 
         erased2 = agent.erase(clay_moisture_layer)
     return built, erased
 
-def build_over_limits(agent, layers, build_chance, erase_chance):
+def build_over_limits(agent, layers):
     ground = layers['ground']
     """agent builds on construction_layer, if pheromon value in cell hits limit
     chances are either momentary values or stacked by history
     return bool"""
-    if stacked_chances:
-        # print(erase_chance)
-        agent.build_chance += build_chance
-        agent.erase_chance += erase_chance
-    else:
-        agent.build_chance = build_chance
-        agent.erase_chance = erase_chance
 
     # check is there is any solid neighbors
     build_condition = agent.check_build_conditions(ground)
@@ -327,19 +326,13 @@ def build_over_limits(agent, layers, build_chance, erase_chance):
             erased = agent.erase(ground)
     return built, erased
 
-def build_roll_a_dice(agent, layers, build_chance, erase_chance):
+def build_roll_a_dice(agent, layers):
     ground = layers['ground']
     """agent builds on construction_layer, if pheromon value in cell hits limit * random value
     chances are either momentary values or stacked by history
 
     return bool"""
-    if stacked_chances:
-        # print(erase_chance)
-        agent.build_chance += build_chance
-        agent.erase_chance += erase_chance
-    else:
-        agent.build_chance = build_chance
-        agent.erase_chance = erase_chance
+
 
     # CHECK IF BUILD CONDITIONS are favorable
     built = False
@@ -354,11 +347,11 @@ def build_roll_a_dice(agent, layers, build_chance, erase_chance):
 
     return built, erased
 
-def build(agent, layers, build_chance, erase_chance):
+def build_by_chance(agent, layers):
     """build - select build style here"""
-    # bool_ = build_roll_a_dice(agent, layers, build_chance, erase_chance)
-    bool_ = build_over_limits(agent, layers, build_chance, erase_chance)
-    # bool_ =  build_over_limits_old(agent, layers, build_chance, erase_chance, decay_clay = True)
+    # bool_ = build_roll_a_dice(agent, layers)
+    bool_ = build_over_limits(agent, layers)
+    # bool_ =  build_over_limits_old(agent, layers, decay_clay = True)
     built, erased = bool_
     return built, erased
 

@@ -166,7 +166,7 @@ class DiffusiveLayer(DataLayer):
                     * self.diffusion_random_factor
                 )
             # summ up the diffusions per faces
-            total_diffusions += diff_ratio * (self.array - y) / 2
+            total_diffusions += diff_ratio * (self.array - y)
         self.array -= total_diffusions
         return self.array
 
@@ -249,7 +249,7 @@ class DiffusiveLayer(DataLayer):
             )
         else:  # absolut
             self.array = np.where(
-                external_emission_array != 0, self.array + factor, self.array
+                external_emission_array != 0, factor, self.array
             )
 
     def block_layers(self, other_layers=[]):

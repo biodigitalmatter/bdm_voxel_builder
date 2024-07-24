@@ -17,31 +17,20 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
     visualizer = config.visualizer
 
     # 1. diffuse environment's layers
-
     algo.update_environment(sim_state)
 
     # 2. MOVE and BUILD
     for agent in sim_state.agents:
         # MOVE
         moved = algo.move_agent(agent, sim_state)
-        # print(agent.pose)
-        # print(moved)
         if not moved:
             algo.reset_agent(agent)
-        # BUILD DEMO
-        # if moved:
-        #     if np.random.random(1) >= 0:
-        #         x,y,z = agent.pose
-        #         ground.array[x,y,z] = 1
         # BUILD
         if moved:
-            build_chance, erase_chance = algo.calculate_build_chances(agent, sim_state)
-            built, erased = algo.build(agent, sim_state, build_chance, erase_chance)
-            # if built:
-            #     print('built:', agent.pose)
+            algo.calculate_build_chances(agent, sim_state)
+            built, erased = algo.build_by_chance(agent, sim_state)
             if built and algo.reset_after_build:
                 algo.reset_agent(agent)
-    # 2.b clay dries
 
     # 3. make frame for animation
     if visualizer:

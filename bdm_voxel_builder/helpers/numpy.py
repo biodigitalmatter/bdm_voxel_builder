@@ -178,7 +178,7 @@ def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool = True):
     n = voxel_size
     zone_xxyyzz = np.clip(np.asarray(zone_xxyyzz), 0, n - 1)
     x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz.tolist()
-    print('zone:', x_min, x_max, y_min, y_max, z_min, z_max )
+    # print('zone:', x_min, x_max, y_min, y_max, z_min, z_max )
     test_i = np.indices((n,n,n))
     x1 = test_i[0,:,:,:] >= x_min
     x2 = test_i[0,:,:,:] <= x_max

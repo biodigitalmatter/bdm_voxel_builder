@@ -29,6 +29,8 @@ class Agent:
         self._climb_style = ''
         self._build_chance = 0
         self._erase_chance = 0
+        self._build_limit = 1
+        self._erase_limit = 1
 
     @property
     def climb_style(self):
@@ -367,7 +369,7 @@ class Agent:
     def move_on_ground(self, voxel_size = None, check_self_collision = False):
         cube = self.get_nb_indices_26(self.pose)
         if voxel_size is not None:
-            cube = np.clip(cube,0,voxel_size)
+            cube = np.clip(cube,0,voxel_size-1)
             
         random_ph = np.random.random(26)
         exclude = self.get_move_mask_26(self.ground_layer, check_self_collision=check_self_collision)
@@ -425,7 +427,7 @@ class Agent:
         self.space_layer.set_layer_value_at_index(self.pose, 1)
         return True
 
-    def get_direction_cube_values_for_layer_domain(self, layer, domain, strength):
+    def get_direction_cube_values_for_layer_domain(self, layer, domain, strength = 1):
         # mirrored above domain end and squezed with the domain length
         # centered at 1
         ph_cube = self.get_nb_values_26(layer, self.pose)
@@ -505,7 +507,7 @@ class Agent:
         build_chance = (build_below * b + build_aside * s + build_above * t) * build_strength
         return build_chance
     
-    def get_pheromone_strength(self, pheromon_layer, limit1, limit2, strength, flat_value = True):
+    def get_chance_by_pheromone_strength(self, pheromon_layer, limit1, limit2, strength, flat_value = True):
         """gets pheromone v at pose. 
         if in limits, returns strength or strength * value"""
         v = self.get_layer_value_at_index(pheromon_layer, self.pose)
@@ -578,7 +580,7 @@ class Agent:
     
     def erase(self, layer, only_face_nb = True):
         if only_face_nb:
-            v = self.get_nb_values_6(self.ground_layer, self.pose, reintroduce=False)
+            v = self.get_nb_values_6(layer, self.pose, reintroduce=False)
             places = self.get_nb_indices_6(self.pose)
             places = np.asarray(places)
             choice = np.argmax(v)

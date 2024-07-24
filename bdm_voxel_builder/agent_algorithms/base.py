@@ -12,6 +12,9 @@ class AgentAlgorithm:
     def reset_agents(self):
         raise NotImplementedError
 
+    def setup_agents(self):
+        raise NotImplementedError
+
     def calculate_build_chances(self):
         raise NotImplementedError
 

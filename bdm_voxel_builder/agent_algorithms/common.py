@@ -18,7 +18,7 @@ def pheromon_loop(
     for _ in range(n_iterations):
         # emmission in
         if isinstance(emmission_array, np.ndarray):
-            pheromon_layer.emission_intake(emmission_array, 2, False)
+            pheromon_layer.emission_intake(emmission_array, 1, False)
 
         # diffuse
         if diffuse_bool:

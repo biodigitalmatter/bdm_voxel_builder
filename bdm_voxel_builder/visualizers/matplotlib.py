@@ -21,6 +21,8 @@ class MPLVisualizer(Visualizer):
         scale=1,
         color_4d=False,
         trim_below=0,
+        selected_layers: (str) = None,
+        clear = False
     ):
         super().__init__(save_file)
 
@@ -28,14 +30,16 @@ class MPLVisualizer(Visualizer):
         self.axes = plt.axes(
             xlim=(0, scale), ylim=(0, scale), zlim=(0, scale), projection="3d"
         )
+        self.scale = scale
         self.axes.set_xticks([])
         self.axes.set_yticks([])
         self.axes.set_zticks([])
-
         self.color_4d = color_4d
         self.trim_below = trim_below
 
         self.should_save_animation = save_animation
+        self.selected_layers = selected_layers
+        self.clear = clear
 
     def save_file(self, note=None):
         filepath = get_savepath(TEMP_DIR, self.FILE_SUFFIX, note=note)
@@ -63,21 +67,32 @@ class MPLVisualizer(Visualizer):
         print(f"MPL animation saved to {filepath}")
 
     def update(self, state: SimulationState):
+        if self.clear:
+            self.axes.clear()
+            self.axes.set_xticks([])
+            self.axes.set_yticks([])
+            self.axes.set_zticks([])
+            self.axes.set_xlim(0, self.scale)
+            self.axes.set_ylim(0, self.scale)
+            self.axes.set_zlim(0, self.scale)
         for layer in state.data_layers.values():
-            if self.color_4d:
-                facecolor = layer.color_array[:, :, :, self.trim_below :]
-                facecolor = np.clip(facecolor, 0, 1)
+            if self.selected_layers != None and layer.name not in self.selected_layers:
+                pass
             else:
-                facecolor = layer.color.rgb
-            # scatter plot
-            a1 = layer.array.copy()
-            pt_array = convert_array_to_points(
-                a1[:, :, self.trim_below :], list_output=False
-            )
-            p = pt_array.transpose()
-            self.axes.scatter(
-                p[0, :], p[1, :], p[2, :], marker="s", s=1, facecolor=facecolor
-            )
+                if self.color_4d:
+                    facecolor = layer.color_array[:, :, :, self.trim_below :]
+                    facecolor = np.clip(facecolor, 0, 1)
+                else:
+                    facecolor = layer.color.rgb
+                # scatter plot
+                a1 = layer.array.copy()
+                pt_array = convert_array_to_points(
+                    a1[:, :, self.trim_below :], list_output=False
+                )
+                p = pt_array.transpose()
+                self.axes.scatter(
+                    p[0, :], p[1, :], p[2, :], marker="s", s=1, facecolor=facecolor
+                )
 
     def show(self):
         self.fig.show()
