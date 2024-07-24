@@ -56,14 +56,17 @@ def sort_pts_by_values(arr: npt.NDArray, multiply=1):
 
     return sortedpts, values
 
-def create_zero_array(n):
-    # create voxel-like array
+def create_zero_array(edge_length):
+    """return 3D numpy zero array"""
+    n = int(edge_length)
     a = np.zeros(n ** 3)  # 3 dimensional numpy array representing voxel voxel
     a = np.reshape(a, [n, n, n])
     return a
 
-def create_random_array(n):
-    # create voxel-like array
+def create_random_array(edge_length):
+    """return 3D numpy zero array
+    """
+    n = int(edge_length)
     a = np.random.random(n ** 3)
     a = np.reshape(a, [n, n, n])
     return a
@@ -157,3 +160,34 @@ def get_sub_array(array, offset_radius, center = None, format_values = None):
         return np.average(v)
     else: 
         return v
+    
+def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool = True):
+    """gets 3D boolean array within zone (including both end)
+    return bool or int
+    input: 
+        voxel_size : int
+        zone_xxyyzz : [x_start, x_end, y_start, y_end, z_start, z_end]
+        _bool_type: bool
+    """
+    # make sure params are in bounds
+    n = voxel_size
+    zone_xxyyzz = np.clip(np.asarray(zone_xxyyzz), 0, n - 1)
+    x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz.tolist()
+    print('zone:', x_min, x_max, y_min, y_max, z_min, z_max )
+    test_i = np.indices((n,n,n))
+    x1 = test_i[0,:,:,:] >= x_min
+    x2 = test_i[0,:,:,:] <= x_max
+    y1 = test_i[1,:,:,:] >= y_min
+    y2 = test_i[1,:,:,:] <= y_max
+    z1 = test_i[2,:,:,:] >= z_min
+    z2 = test_i[2,:,:,:] <= z_max
+    a = np.zeros([n,n,n])
+    a[x2 & x1 & y1 & y2 & z1 & z2] = 1
+    if return_bool:
+        # a.astype(np.bool)
+        a = np.astype(a, np.bool)
+    else:
+        pass
+    return a
+
+

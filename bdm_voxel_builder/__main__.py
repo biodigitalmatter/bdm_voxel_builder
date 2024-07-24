@@ -3,6 +3,7 @@ import pathlib
 
 import click
 
+from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder import DATA_DIR
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.helpers.numpy import save_ndarray

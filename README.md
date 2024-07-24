@@ -4,6 +4,7 @@
 
 ```bash
 conda env update -f environment.yml
+conda activate bdm_voxel_builder
 pip install -e .
 ```
 

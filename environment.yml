@@ -1,5 +1,5 @@
 ---
-name: bdm_voxel_builer
+name: bdm_voxel_builder
 
 channels:
   - conda-forge

@@ -201,7 +201,7 @@ def move_agent(agent, layers):
         up, side, down = move_dir_preferences
         cube += agent.direction_preference_26_pheromones_v2(up, side, down) * move_dir_prefer_strength
     
-    moved = agent.move_on_ground_by_cube(ground=layers['ground'], pheromon_cube=cube, voxel_size=voxel_size, fly = False, only_bounds = keep_in_bounds, check_self_collision = True)
+    moved = agent.move_on_ground_by_ph_cube(ground=layers['ground'], pheromon_cube=cube, voxel_size=voxel_size, fly = False, only_bounds = keep_in_bounds, check_self_collision = True)
     
     # check if in bounds
     if 0 > np.min(agent.pose) or np.max(agent.pose) >= voxel_size :
@@ -321,7 +321,7 @@ def build_over_limits(agent, layers, build_chance, erase_chance):
     if build_condition:
         # build
         if agent.build_chance >= reach_to_build:
-            built = agent.build(ground)
+            built = agent.build()
         # erase
         elif agent.erase_chance >= reach_to_erase:
             erased = agent.erase(ground)
@@ -348,7 +348,7 @@ def build_roll_a_dice(agent, layers, build_chance, erase_chance):
     min_chance_to_build = np.random.random(1) * reach_to_build
     min_chance_to_erase = np.random.random(1) * reach_to_erase
     if agent.build_chance >= min_chance_to_build and build_condition == True:
-        built = agent.build(ground)
+        built = agent.build()
     elif agent.erase_chance >= min_chance_to_erase and build_condition == True:
         erased = agent.erase(ground)
 

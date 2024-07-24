@@ -1,6 +1,6 @@
 import numpy as np
 
-from bdm_voxel_builder.helpers.numpy import create_random_array, create_zero_array
+from bdm_voxel_builder.helpers.numpy import create_random_array, create_zero_array, get_mask_zone_xxyyzz
 from bdm_voxel_builder.helpers.math import remap
 
 class DataLayer:
@@ -484,4 +484,23 @@ class DataLayer:
                 a1 = self.array
                 a2 = other_layer.array
                 return a1 + a2
+
+
+    def add_values_in_zone_xxyyzz(self, zone_xxyyzz, value = 1, add_values = False):
+        """add or replace values within zone (including both end)
+        add_values == True: add values in self.array
+        add_values == False: replace values in self.array *default
+        input: 
+            zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
+            """
+        # np.zeros_like(self.array)
+        n = self.voxel_size
+        
+        if add_values:
+            zone = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool = False)
+            zone *= value
+            self.array += zone
+        else:
+            mask = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool=True)
+            self.array[mask] = value
 
