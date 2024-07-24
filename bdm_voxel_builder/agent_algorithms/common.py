@@ -1,17 +1,23 @@
+import numpy as np
+import numpy.typing as npt
+
+from bdm_voxel_builder.data_layer import DataLayer
+
+
 def pheromon_loop(
-    pheromon_layer,
-    emmission_array=None,
-    i=1,
-    blocking_layer=None,
-    gravity_shift_bool=False,
-    diffuse_bool=True,
-    decay=True,
-    decay_linear=False,
+    pheromon_layer: DataLayer,
+    emmission_array: npt.NDArray = None,
+    n_iterations: int = 1,
+    blocking_layer: DataLayer = None,
+    gravity_shift_bool: bool = False,
+    diffuse_bool: bool = True,
+    decay: bool = True,
+    decay_linear: bool = False,
 ):
     """gravity direction: 0:left, 1:right, 2:front, 3:back, 4:down, 5:up"""
-    for i in range(i):
+    for _ in range(n_iterations):
         # emmission in
-        if not isinstance(emmission_array, bool):
+        if isinstance(emmission_array, np.ndarray):
             pheromon_layer.emission_intake(emmission_array, 2, False)
 
         # diffuse
