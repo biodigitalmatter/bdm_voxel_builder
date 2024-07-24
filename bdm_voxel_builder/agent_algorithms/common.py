@@ -1,14 +1,14 @@
 import numpy as np
 import numpy.typing as npt
 
-from bdm_voxel_builder.data_layer import DataLayer
+from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 
 
 def pheromon_loop(
-    pheromon_layer: DataLayer,
+    pheromon_layer: DiffusiveLayer,
     emmission_array: npt.NDArray = None,
     n_iterations: int = 1,
-    blocking_layer: DataLayer = None,
+    blocking_layer: DiffusiveLayer = None,
     gravity_shift_bool: bool = False,
     diffuse_bool: bool = True,
     decay: bool = True,

@@ -58,9 +58,9 @@ def sort_pts_by_values(arr: npt.NDArray, multiply=1):
     return sortedpts, values
 
 
-def create_zero_array(n):
+def create_zero_array(n, n_dim=3):
     # create voxel-like array
-    return np.zeros(n**3).reshape([n] * 3)
+    return np.zeros(n**n_dim).reshape([n] * n_dim)
 
 
 def create_random_array(n):

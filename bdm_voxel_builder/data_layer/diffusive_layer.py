@@ -2,11 +2,11 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
-from bdm_voxel_builder.helpers.numpy import create_random_array, create_zero_array, get_mask_zone_xxyyzz
 from bdm_voxel_builder.helpers.numpy import (
     create_random_array,
     create_zero_array,
     crop_array,
+    get_mask_zone_xxyyzz,
 )
 from bdm_voxel_builder.helpers.math import remap
 
@@ -276,7 +276,7 @@ class DataLayer:
         self.diffuse(diffusion_limit_by_Hirsh, reintroduce_on_the_other_end)
         # emission_out
         self.emmission_out_update()
-    
+
     def get_merged_array_with(self, other_layer):
         a1 = self.array
         a2 = other_layer.array
@@ -290,8 +290,6 @@ class DataLayer:
             zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
             """
         # np.zeros_like(self.array)
-        n = self.voxel_size
-        
         if add_values:
             zone = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool = False)
             zone *= value
@@ -299,4 +297,5 @@ class DataLayer:
         else:
             mask = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool=True)
             self.array[mask] = value
+
 

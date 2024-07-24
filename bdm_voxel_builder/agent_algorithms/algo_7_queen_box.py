@@ -3,11 +3,12 @@ from typing import Dict, Tuple
 
 import numpy as np
 import numpy.typing as npt
+from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import pheromon_loop
-from bdm_voxel_builder.data_layer import DataLayer
+from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.helpers.numpy import make_solid_box_xxyyzz
 from bdm_voxel_builder.simulation_state import SimulationState
 
@@ -89,16 +90,20 @@ class Algo7QueenBox(AgentAlgorithm):
         )
         self.queens_place_array *= 1 / (2 * 2 * 3)
 
-        ground = DataLayer(
-            voxel_size=self.voxel_size, name="ground", rgb=[i / 255 for i in rgb_ground]
-        )
-        agent_space = DataLayer(
-            "agent_space", voxel_size=self.voxel_size, rgb=[i / 255 for i in rgb_agents]
-        )
-        queen_bee_pheromon = DataLayer(
-            "queen_bee_pheromon",
+        ground = DiffusiveLayer(
+            name="ground",
             voxel_size=self.voxel_size,
-            rgb=[i / 255 for i in rgb_queen],
+            color=Color.from_rgb255(*rgb_ground),
+        )
+        agent_space = DiffusiveLayer(
+            name="agent_space",
+            voxel_size=self.voxel_size,
+            color=Color.from_rgb255(*rgb_agents),
+        )
+        queen_bee_pheromon = DiffusiveLayer(
+            name="queen_bee_pheromon",
+            voxel_size=self.voxel_size,
+            color=Color.from_rgb255(*rgb_queen),
             flip_colors=True,
         )
 
@@ -139,7 +144,7 @@ class Algo7QueenBox(AgentAlgorithm):
             gravity_shift_bool=False,
         )
 
-    def setup_agents(self, data_layers: Dict[str, DataLayer]):
+    def setup_agents(self, data_layers: Dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
 

@@ -18,7 +18,6 @@ class MPLVisualizer(Visualizer):
         self,
         save_file=False,
         save_animation=False,
-        show_animation=False,
         scale=1,
         color_4d=False,
         trim_below=0,
@@ -37,7 +36,6 @@ class MPLVisualizer(Visualizer):
         self.trim_below = trim_below
 
         self.should_save_animation = save_animation
-        self.should_show_animation = show_animation
 
     def save_file(self, note=None):
         filepath = get_savepath(TEMP_DIR, self.FILE_SUFFIX, note=note)
@@ -70,7 +68,7 @@ class MPLVisualizer(Visualizer):
                 facecolor = layer.color_array[:, :, :, self.trim_below :]
                 facecolor = np.clip(facecolor, 0, 1)
             else:
-                facecolor = layer.rgb
+                facecolor = layer.color.rgb
             # scatter plot
             a1 = layer.array.copy()
             pt_array = convert_array_to_points(

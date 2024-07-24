@@ -1,13 +1,13 @@
 from typing import List
 from bdm_voxel_builder.agent import Agent
-from bdm_voxel_builder.data_layer import DataLayer
+from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 
 
 class SimulationState:
     def __init__(self, config):
         self.counter: int = 0
 
-        self.data_layers: List[DataLayer] = config.algo.initialization()
+        self.data_layers: List[DiffusiveLayer] = config.algo.initialization()
 
         # prediffuse
         for _ in range(config.algo.seed_iterations):

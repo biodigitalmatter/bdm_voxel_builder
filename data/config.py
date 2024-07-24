@@ -10,5 +10,10 @@ config = Config(
     iterations=5,
     scale=voxel_size,
     algo=Algo7QueenBox(agent_count=25, voxel_size=voxel_size),
-    visualizer=MPLVisualizer(save_file=True, scale=voxel_size, save_animation=True),
+    visualizer=MPLVisualizer(
+        save_file=True,
+        scale=voxel_size,
+        save_animation=True,
+        color_4d=False,
+    ),
 )

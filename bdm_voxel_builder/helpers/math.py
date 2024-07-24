@@ -29,5 +29,9 @@ def remap(x, output_domain, input_domain = [0,1]):
     trims output onto cap_output_domain"""
     i, j = input_domain
     a, b = output_domain
+
+    if i == j or a == b:
+        raise ZeroDivisionError("Input or output domain is invalid.")
+
     y = (b - a)/(j - i) * x
     return y
