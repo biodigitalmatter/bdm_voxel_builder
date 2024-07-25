@@ -22,7 +22,8 @@ class MPLVisualizer(Visualizer):
         color_4d=False,
         trim_below=0,
         selected_layers: (str) = None,
-        clear = False
+        clear = False,
+        show_fig = True
     ):
         super().__init__(save_file)
 
@@ -95,4 +96,4 @@ class MPLVisualizer(Visualizer):
                 )
 
     def show(self):
-        self.fig.show()
+        plt.show()
