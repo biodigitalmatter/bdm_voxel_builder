@@ -1,3 +1,4 @@
+from typing import List
 import numpy as np
 import numpy.typing as npt
 
@@ -14,18 +15,26 @@ NB_INDEX_DICT = {
 }
 
 
-def convert_array_to_points(a, list_output=False):
-    indicies = np.indices(a.shape)
-    pt_location = np.logical_not(a == 0)
+def _convert_array_to_pts_wo_data(arr: npt.NDArray):
+    pts = []
+    for i, j, k in zip(*np.nonzero(arr)):
+        pts.append([i, j, k])
+    return pts
+
+
+def convert_array_to_pts(arr: npt.NDArray, get_data=True):
+    if not get_data:
+        return _convert_array_to_pts_wo_data(arr)
+
+    indicies = np.indices(arr.shape)
+    pt_location = np.logical_not(arr == 0)
+
     coordinates = []
     for i in range(3):
         c = indicies[i][pt_location]
         coordinates.append(c)
-    if list_output:
-        pts = np.vstack(coordinates).transpose().tolist()
-    else:
-        pts = np.vstack(coordinates).transpose()
-    return pts
+
+    return np.vstack(coordinates).transpose()
 
 
 def save_ndarray(arr: npt.NDArray, note: str = None):
@@ -165,11 +174,12 @@ def get_sub_array(array, offset_radius, center=None, format_values=None):
         return np.average(v)
     else:
         return v
-    
-def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool = True):
+
+
+def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool=True):
     """gets 3D boolean array within zone (including both end)
     return bool or int
-    input: 
+    input:
         voxel_size : int
         zone_xxyyzz : [x_start, x_end, y_start, y_end, z_start, z_end]
         _bool_type: bool
@@ -179,14 +189,14 @@ def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool = True):
     zone_xxyyzz = np.clip(np.asarray(zone_xxyyzz), 0, n - 1)
     x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz.tolist()
     # print('zone:', x_min, x_max, y_min, y_max, z_min, z_max )
-    test_i = np.indices((n,n,n))
-    x1 = test_i[0,:,:,:] >= x_min
-    x2 = test_i[0,:,:,:] <= x_max
-    y1 = test_i[1,:,:,:] >= y_min
-    y2 = test_i[1,:,:,:] <= y_max
-    z1 = test_i[2,:,:,:] >= z_min
-    z2 = test_i[2,:,:,:] <= z_max
-    a = np.zeros([n,n,n])
+    test_i = np.indices((n, n, n))
+    x1 = test_i[0, :, :, :] >= x_min
+    x2 = test_i[0, :, :, :] <= x_max
+    y1 = test_i[1, :, :, :] >= y_min
+    y2 = test_i[1, :, :, :] <= y_max
+    z1 = test_i[2, :, :, :] >= z_min
+    z2 = test_i[2, :, :, :] <= z_max
+    a = np.zeros([n, n, n])
     a[x2 & x1 & y1 & y2 & z1 & z2] = 1
     if return_bool:
         # a.astype(np.bool)
@@ -194,8 +204,6 @@ def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool = True):
     else:
         pass
     return a
-
-
 
 
 def crop_array(arr, start=0, end=1):

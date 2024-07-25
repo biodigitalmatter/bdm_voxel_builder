@@ -34,7 +34,7 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
 
     # 3. make frame for animation
     if visualizer:
-        visualizer.update(sim_state)
+        visualizer.update()
 
     sim_state.counter += 1
 
@@ -76,15 +76,18 @@ def main(configfile):
 
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
-    if (
-        isinstance(visualizer, MPLVisualizer)
-        and visualizer.should_save_animation
-    ):
+    for layer in sim_state.data_layers.values():
+        if config.datalayers_to_visualize:
+            for layer_name in config.datalayers_to_visualize:
+                if layer.name == layer_name:
+                    visualizer.add_data_layer(layer)
+        else:
+            visualizer.add_data_layer(layer)
+
+    if isinstance(visualizer, MPLVisualizer) and visualizer.should_save_animation:
         visualizer.setup_animation(
             simulate, config=config, sim_state=sim_state, iterations=iterations
         )
-
-        visualizer.update(sim_state)
 
         if visualizer.should_save_animation:
             visualizer.save_animation(note=note)
@@ -97,11 +100,11 @@ def main(configfile):
         for _ in range(config.iterations):
             simulate(None, config=config, sim_state=sim_state)
 
-        if visualizer:
-            visualizer.update(sim_state)
+        visualizer.update()
 
+        if visualizer:
             if visualizer.should_save_file:
-                visualizer.save_file()
+                visualizer.save_file(note=note)
 
             visualizer.show()
 
