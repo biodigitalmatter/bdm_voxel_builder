@@ -80,6 +80,7 @@ class Algo8(AgentAlgorithm):
 
     stacked_chances: bool = True
     reset_after_build: bool = True
+    reset_after_erased: bool = False
 
     # Agent deployment
     deployment_zone__a = 5

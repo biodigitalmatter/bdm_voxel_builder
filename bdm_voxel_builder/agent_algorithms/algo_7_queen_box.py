@@ -30,6 +30,7 @@ class Algo7QueenBox(AgentAlgorithm):
     reach_to_erase: int = 1
     stacked_chances: bool = True
     reset_after_build: bool = True
+    reset_after_erased: bool = False
 
     # pheromon sensitivity
     queen_pheromon_min_to_build: float = 0.005

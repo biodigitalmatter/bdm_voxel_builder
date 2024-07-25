@@ -158,6 +158,7 @@ class Agent:
             v = 0
         return v
 
+
     def get_layer_value_at_pose(self, layer, print_ = False):
         pose = self.pose
         x,y,z = pose
@@ -451,49 +452,79 @@ class Agent:
             build_if_below = 5,
             erase_if_over = 27,
             erase_if_below = 0,
-            build_strength = 1):
+            build_strength = 1,
+            erase_strength = 1):
         """
         returns build_chance, erase_chance
         if layer nb value sum is between 
         """
         v = self.get_nb_values_26(pheromone_layer, self.pose)
         v = np.sum(v)
-
-        
+        build_chance, erase_chance = [0,0]
         if build_if_over < v < build_if_below:
             build_chance = build_strength
-        else:
-            build_chance = 0
         if erase_if_over < v < erase_if_below:
-            erase_chance = 0
-        else:
-            erase_chance = build_strength
+            erase_chance = erase_strength
         return build_chance, erase_chance
-    
-    def get_chances_by_density_below(
+
+
+    def get_chances_by_density_by_slice(
             self, 
-            pheromone_layer,       
+            pheromone_layer,  
+            slice_shape = [1,1,0,0,0,-1],   
             build_if_over = 0,
             build_if_below = 5,
             erase_if_over = 27,
             erase_if_below = 0,
-            build_strength = 1):
+            build_strength = 1,
+            erase_strength = 1):
         """
         returns build_chance, erase_chance
         if layer nb value sum is between 
+        [x_radius = 1, 
+        y_radius = 1, 
+        z_radius = 0, 
+        x_offset = 0,
+        y_offset = 0,
+        z_offset = 0] = slice_shape
         """
-        v = self.get_nb_values_26(pheromone_layer, self.pose)
-        v = np.sum(v)
+        # get the sum of the values in the slice
+        v = self.get_nb_slice_parametric(pheromone_layer, *slice_shape, self.pose, format_values=0)
 
-        
+        build_chance, erase_chance = [0,0]
         if build_if_over < v < build_if_below:
             build_chance = build_strength
-        else:
-            build_chance = 0
         if erase_if_over < v < erase_if_below:
-            erase_chance = 0
-        else:
-            erase_chance = build_strength
+            erase_chance = erase_strength
+        return build_chance, erase_chance
+
+    def get_chances_by_density_normal_by_slice(
+            self, 
+            pheromone_layer,  
+            slice_shape = [1,1,0,0,0,-1],   
+            build_if_over = 0,
+            build_if_below = 0.5,
+            erase_if_over = 0.9,
+            erase_if_below = 1,
+            build_strength = 1,
+            erase_strength = 1):
+        """
+        returns build_chance, erase_chance
+        if layer nb value sum is between 
+        [x_radius = 1, 
+        y_radius = 1, 
+        z_radius = 0, 
+        x_offset = 0,
+        y_offset = 0,
+        z_offset = 0] = slice_shape
+        """
+        # get the sum of the values in the slice
+        v = self.get_nb_slice_parametric(pheromone_layer, *slice_shape, self.pose, format_values=0)
+        build_chance, erase_chance = [0,0]
+        if build_if_over < v < build_if_below:
+            build_chance = build_strength
+        if erase_if_over < v < erase_if_below:
+            erase_chance = erase_strength
         return build_chance, erase_chance
 
     def get_chance_by_relative_position(
@@ -604,6 +635,31 @@ class Agent:
             x,y,z = place
             bool_ = False
         return bool_
+    
+    def set_layer_value(self, layer, value):
+        pose = self.pose
+        set_value_at_index(layer, pose, value)
+
+    def set_layer_value_at_nbs_26(self, layer, value):
+        nbs = self.get_nb_indices_26(self.pose)
+        for pose in nbs:
+            set_value_at_index(layer, pose, value)
+            
+    def set_layer_value_at_nbs_6(self, layer, value):
+        nbs = self.get_nb_indices_6(self.pose)
+        for pose in nbs:
+            set_value_at_index(layer, pose, value)
+
+    def erase_6(self, layer):
+        self.set_layer_value_at_nbs_6(layer, 0)
+    
+    def erase_26(self, layer):
+        self.set_layer_value_at_nbs_26(layer, 0)
+    
+    def erase_6(self, layer):
+        nbs = self.get_nb_indices_6(self.pose)
+        for pose in nbs:
+            set_value_at_index(layer, pose, 0)
 
     def check_build_conditions(self, layer, only_face_nbs = True):
         if only_face_nbs:
@@ -614,3 +670,5 @@ class Agent:
             if 0 < get_sub_array(layer, 1, self.pose, format_values = 0):
                 return True
         return False
+
+    # def get_chance_by_density(self, layer):

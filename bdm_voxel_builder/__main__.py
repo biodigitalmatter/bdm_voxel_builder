@@ -31,6 +31,8 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
             built, erased = algo.build_by_chance(agent, sim_state)
             if built and algo.reset_after_build:
                 algo.reset_agent(agent)
+            if erased and algo.reset_after_erased:
+                algo.reset_agent(agent)
 
     # 3. make frame for animation
     if visualizer:
