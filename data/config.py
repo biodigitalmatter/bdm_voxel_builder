@@ -5,14 +5,14 @@ from bdm_voxel_builder.agent_algorithms.algo_8_build_on import Algo8
 
 from bdm_voxel_builder.visualizers.matplotlib import MPLVisualizer
 
-# SMALL RUN
+# SHORT RUN
 voxel_size = 100
 plot_this = None
 plot_this = ("agent_space", "existing_geo")
 # plot_this = ('built_ph_layer', "existing_geo", "agent_space", )
 
 config = Config(
-    iterations=100,
+    iterations=10,
     scale=voxel_size,
     algo=Algo8(
         agent_count=100,
@@ -29,7 +29,7 @@ config = Config(
     save_interval=100
 )
 
-# # LARGE RUN
+# # LONG RUN
 # voxel_size = 200
 # plot_this = None
 # plot_this = ("existing_geo")

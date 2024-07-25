@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class AgentAlgorithm:
     agent_count: int
     voxel_size: int
+    layer_to_dump: str
 
     def move_agents(self):
         raise NotImplementedError

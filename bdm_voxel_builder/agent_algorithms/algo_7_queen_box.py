@@ -70,6 +70,9 @@ class Algo7QueenBox(AgentAlgorithm):
     # solid_box = [10,20,10,20,0,6]
     # solid_box = [0,1,0,1,0,1]
 
+    layer_to_dump : str = 'ground'
+
+
     def initialization(self):
         """
         creates the simulation environment setup

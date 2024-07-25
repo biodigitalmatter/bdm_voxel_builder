@@ -92,6 +92,8 @@ class Algo8(AgentAlgorithm):
     check_collision = True
     keep_in_bounds = True
 
+    layer_to_dump = 'existing_geo'
+
     def initialization(self):
         """
         creates the simulation environment setup

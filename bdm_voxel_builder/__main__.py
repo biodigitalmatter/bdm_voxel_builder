@@ -42,7 +42,8 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
     if sim_state.counter % config.save_interval == 0:
-        a1 = sim_state.data_layers["ground"].array.copy()
+        layer_to_dump = algo.layer_to_dump
+        a1 = sim_state.data_layers[layer_to_dump].array.copy()
         a1[:, :, : algo.ground_level_Z] = 0
 
         save_ndarray(a1, note=note)
@@ -103,7 +104,7 @@ def main(configfile):
             if visualizer.should_save_file:
                 visualizer.save_file()
 
-            visualizer.show()
+        visualizer.show()
 
 
 if __name__ == "__main__":
