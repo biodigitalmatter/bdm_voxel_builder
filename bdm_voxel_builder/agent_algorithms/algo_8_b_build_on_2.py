@@ -48,22 +48,27 @@ Build on:
 
 
 @dataclass
-class Algo8(AgentAlgorithm):
+class Algo8b(AgentAlgorithm):
     """
     basic build_on existing algorithm
 
+    extend with erase if too dense
+
+    ...
     agent is attracted toward existing + newly built geomoetry by 'built_ph_layer'
     build_chance is rewarded if within the given ph limits
     if enough chances gained, agent builds
 
+    if the 
+
     """
 
-    name: str = "build_on_existing_no_decay"
+    name: str = "build_on_and_erase"
     relevant_data_layers: Tuple[str] = "ground"
     seed_iterations: int = 10
 
     # EXISTING GEOMETRY
-    box_template = [15, 16, 15, 16, 0, 5]
+    box_template = [20, 25, 22, 25, 1, 6]
     ground_level_Z = 0
 
 
@@ -92,7 +97,8 @@ class Algo8(AgentAlgorithm):
     check_collision = True
     keep_in_bounds = True
 
-    layer_to_dump = 'existing_geo'
+
+    layer_to_dump : str = 'existing_geo'
 
     def initialization(self):
         """

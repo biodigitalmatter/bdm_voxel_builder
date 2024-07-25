@@ -104,7 +104,7 @@ def main(configfile):
             if visualizer.should_save_file:
                 visualizer.save_file()
 
-        visualizer.show()
+            visualizer.show()
 
 
 if __name__ == "__main__":

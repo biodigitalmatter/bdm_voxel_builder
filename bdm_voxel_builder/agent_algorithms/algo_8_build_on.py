@@ -63,7 +63,7 @@ class Algo8(AgentAlgorithm):
     seed_iterations: int = 10
 
     # EXISTING GEOMETRY
-    box_template = [15, 16, 15, 16, 0, 5]
+    box_template = [20, 25, 22, 25, 1, 6]
     ground_level_Z = 0
 
 
