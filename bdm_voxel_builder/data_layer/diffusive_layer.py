@@ -2,8 +2,8 @@ from dataclasses import dataclass
 import enum
 import numpy as np
 import numpy.typing as npt
-
-from bdm_voxel_builder.data_layer.base import DataLayer
+from compas.colors import Color
+from bdm_voxel_builder.data_layer.base import AxisOrder, DataLayer
 from bdm_voxel_builder.helpers.numpy import (
     create_random_array,
     create_zero_array,
@@ -22,25 +22,41 @@ class GravityDir(enum.Enum):
     UP = 5
 
 
-@dataclass
 class DiffusiveLayer(DataLayer):
-    name: str = None
-    voxel_size: int = 20
-    diffusion_ratio: float = 0.12
-    diffusion_random_factor: float = 0.0
-    decay_random_factor: float = 0.0
-    decay_linear_value: float = 0.0
-    decay_ratio: float = 0.0
-    emission_factor: float = 0.1
-    gradient_resolution: float = 0.0
-    flip_colors: bool = False
-    emmision_array: npt.NDArray = None
-    gravity_dir: GravityDir = GravityDir.DOWN
-    gravity_ratio: float = 0.0
-    voxel_crop_range = [0, 1]
-
-    def __post_init__(self):
-        self.array: npt.NDArray = create_zero_array(self.voxel_size)
+    def __init__(
+        self,
+        name: str = None,
+        voxel_size: int = 20,
+        color: Color = None,
+        axis_order: AxisOrder = AxisOrder.ZYX,
+        diffusion_ratio: float = 0.12,
+        diffusion_random_factor: float = 0.0,
+        decay_random_factor: float = 0.0,
+        decay_linear_value: float = 0.0,
+        decay_ratio: float = 0.0,
+        emission_factor: float = 0.1,
+        gradient_resolution: float = 0.0,
+        flip_colors: bool = False,
+        emmision_array: npt.NDArray = None,
+        gravity_dir: GravityDir = GravityDir.DOWN,
+        gravity_ratio: float = 0.0,
+        voxel_crop_range=[0, 1],
+    ):
+        super().__init__(
+            name=name, voxel_size=voxel_size, color=color, axis_order=axis_order
+        )
+        self.diffusion_ratio = diffusion_ratio
+        self.diffusion_random_factor = diffusion_random_factor
+        self.decay_random_factor = decay_random_factor
+        self.decay_linear_value = decay_linear_value
+        self.decay_ratio = decay_ratio
+        self.emission_factor = emission_factor
+        self.gradient_resolution = gradient_resolution
+        self.flip_colors = flip_colors
+        self.emmision_array = emmision_array
+        self.gravity_dir = gravity_dir
+        self.gravity_ratio = gravity_ratio
+        self.voxel_crop_range = voxel_crop_range
         self.iteration_counter: int = 0
 
     @property
@@ -248,9 +264,7 @@ class DiffusiveLayer(DataLayer):
                 self.array,
             )
         else:  # absolut
-            self.array = np.where(
-                external_emission_array != 0, factor, self.array
-            )
+            self.array = np.where(external_emission_array != 0, factor, self.array)
 
     def block_layers(self, other_layers=[]):
         """acts as a solid obstacle, stopping diffusion of other layers
