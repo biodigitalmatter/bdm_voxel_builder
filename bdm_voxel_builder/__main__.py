@@ -34,9 +34,7 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
 
     # 3. make frame for animation
     if visualizer:
-        visualizer.update()
-
-    sim_state.counter += 1
+        visualizer.draw()
 
     # 4. DUMP JSON
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
@@ -51,6 +49,7 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
         save_pointcloud(pointcloud, values=values, note=note)
 
     print(sim_state.counter)
+    sim_state.counter += 1
 
 
 def _load_config(configfile: pathlib.Path) -> Config:
@@ -89,20 +88,14 @@ def main(configfile):
             simulate, config=config, sim_state=sim_state, iterations=iterations
         )
 
-        if visualizer.should_save_animation:
-            visualizer.save_animation(note=note)
-
-            visualizer.save_file(note=note)
-
-        visualizer.show()
+        visualizer.save_animation(note=note)
 
     else:
         for _ in range(config.iterations):
             simulate(None, config=config, sim_state=sim_state)
 
-        visualizer.update()
-
         if visualizer:
+            visualizer.draw()
             if visualizer.should_save_file:
                 visualizer.save_file(note=note)
 

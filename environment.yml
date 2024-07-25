@@ -7,7 +7,7 @@ channels:
 
 dependencies:
   - click
-  - compas
+  - compas=1
   - compas_view2
   - matplotlib
   - numpy

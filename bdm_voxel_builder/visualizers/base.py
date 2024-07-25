@@ -23,6 +23,10 @@ class Visualizer(abc.ABC):
     def show():
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def draw():
+        raise NotImplementedError
+
     def add_data_layer(self, data_layer: DataLayer):
         if data_layer not in self.data_layers:
             self.data_layers.append(data_layer)

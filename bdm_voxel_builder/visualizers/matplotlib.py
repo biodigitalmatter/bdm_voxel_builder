@@ -93,7 +93,7 @@ class MPLVisualizer(Visualizer):
     def clear(self):
         self.ax1.clear()
 
-    def update(self):
+    def draw(self):
         for layer in self.data_layers:
             pts = np.array(convert_array_to_pts(layer.array)).transpose()
             self.ax1.scatter(
