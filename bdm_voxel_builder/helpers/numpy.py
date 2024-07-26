@@ -66,14 +66,11 @@ def sort_pts_by_values(arr: npt.NDArray, multiply=1):
     return sortedpts, values
 
 
-def create_zero_array(n, n_dim=3):
-    # create voxel-like array
-    return np.zeros(n**n_dim).reshape([n] * n_dim)
+def create_random_array(shape: int | tuple[int]):
+    if isinstance(shape, int):
+        shape = [shape] * 3
 
-
-def create_random_array(n):
-    # create voxel-like array
-    return np.random.Generator().random(n**3).reshape([n] * 3)
+    return np.random.Generator().random(shape)
 
 
 def set_value_at_index(layer, index=[0, 0, 0], value=1):
