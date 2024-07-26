@@ -2,14 +2,12 @@ from dataclasses import dataclass
 from typing import Dict, Tuple
 
 import numpy as np
-import numpy.typing as npt
 from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import pheromon_loop
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
-from bdm_voxel_builder.helpers.numpy import make_solid_box_xxyyzz
 from bdm_voxel_builder.simulation_state import SimulationState
 
 """
