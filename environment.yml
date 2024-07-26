@@ -7,11 +7,10 @@ channels:
 
 dependencies:
   - click
-  - compas=1
-  - compas_view2
+  - compas=>2.3.0
   - matplotlib
   - numpy
-  - openvdb
+  - openvdb>=11.0.0
   - poetry
   - pytest
   - ruff
