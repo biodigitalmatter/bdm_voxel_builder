@@ -70,7 +70,7 @@ def create_random_array(shape: int | tuple[int]):
     if isinstance(shape, int):
         shape = [shape] * 3
 
-    return np.random.Generator().random(shape)
+    return np.random.default_rng().random(shape)
 
 
 def set_value_at_index(layer, index=[0, 0, 0], value=1):
@@ -105,7 +105,7 @@ def get_cube_array_indices(self_contain=False):
     return nbs_w_corners
 
 
-def conditional_fill(array, n, condition="<", value=0.5, override_self=False):
+def conditional_fill(array, condition="<", value=0.5):
     """returns new voxel_array with 0,1 values based on condition"""
     if condition == "<":
         mask_inv = array < value
@@ -115,10 +115,9 @@ def conditional_fill(array, n, condition="<", value=0.5, override_self=False):
         mask_inv = array <= value
     elif condition == ">=":
         mask_inv = array >= value
-    a = create_zero_array(n)
+    a = np.zeros_like(array)
     a[mask_inv] = 0
-    if override_self:
-        array = a
+
     return a
 
 
@@ -196,7 +195,7 @@ def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool=True):
     a[x2 & x1 & y1 & y2 & z1 & z2] = 1
     if return_bool:
         # a.astype(np.bool)
-        a = np.astype(a, np.bool)
+        a = np.asarray(a, np.bool_)
     else:
         pass
     return a

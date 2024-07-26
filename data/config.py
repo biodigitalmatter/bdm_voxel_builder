@@ -1,3 +1,4 @@
+from bdm_voxel_builder.agent_algorithms.algo_8_b_build_on_2 import Algo8b
 from bdm_voxel_builder.config_setup import Config
 
 from bdm_voxel_builder.agent_algorithms.algo_7_queen_box import Algo7QueenBox
@@ -15,7 +16,7 @@ interval = 50
 config = Config(
     iterations=100,
     scale=voxel_size,
-    algo=Algo7QueenBox(agent_count=20, voxel_size=voxel_size),
+    algo=Algo8b(agent_count=20, voxel_size=voxel_size),
     visualizer=CompasViewerVisualizer(save_file=True),
     save_interval=interval,
     visualize_interval=interval,
