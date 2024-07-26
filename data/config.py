@@ -25,15 +25,17 @@ config = Config(
 
 # # Algo8b testing
 # voxel_size = 60
+# iterations = 100
 # plot_this = None
-# plot_this = ("existing_geo", "agent_space")
+# plot_this = ('ground')
+# plot_this = ("clay_layer", "agent_space")
 
 # config = Config(
-#     iterations=10,
+#     iterations=iterations,
 #     scale=voxel_size,
 #     algo=Algo8b(
-#         agent_count=50,
-#         voxel_size=voxel_size
+#         agent_count=100,
+#         voxel_size=voxel_size,
 #     ),
 #     visualizer=MPLVisualizer(
 #         save_file=False,
@@ -41,7 +43,8 @@ config = Config(
 #         save_animation=True,
 #         color_4d=False,
 #         selected_layers = plot_this,
-#         clear=True
+#         clear=True,
+        
 #     ),
-#     save_interval=50
+#     save_interval=iterations-1
 # )

@@ -220,33 +220,33 @@ class Agent:
             nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
         return nbs_w_corners
 
-    def get_nb_slice(self, array, 
-            x_radius = 1,
-            pose = None, format_values = 0, pad_values = 0):
-        """takes sub array around pose, in x/y/z radius optionally offsetted
-        format values: returns sum '0', avarage '1', or entire_array_slice: '2'"""
-        if not isinstance(pose, (np.dtype, list)):
-            pose = self.pose
+    # def get_nb_slice(self, array, 
+    #         x_radius = 1,
+    #         pose = None, format_values = 0, pad_values = 0):
+    #     """takes sub array around pose, in x/y/z radius optionally offsetted
+    #     format values: returns sum '0', avarage '1', or entire_array_slice: '2'"""
+    #     if not isinstance(pose, (np.dtype, list)):
+    #         pose = self.pose
 
-        pad_x = x_radius
+    #     pad_x = x_radius
 
-        a = int(x - x_radius) + pad_x
-        b = int(x + x_radius + 1) + pad_x
+    #     a = int(x - x_radius) + pad_x
+    #     b = int(x + x_radius + 1) + pad_x
 
-        c = pad_values
-        np.pad(array, ((pad_x,pad_x),(pad_x,pad_x),( pad_x, pad_x)), 'constant', constant_values=((c,c),(c,c),(c,c)))
-        v = array[a:b,a:b,a:b]
-        # print(array)
-        # print(v)
+    #     c = pad_values
+    #     np.pad(array, ((pad_x,pad_x),(pad_x,pad_x),( pad_x, pad_x)), 'constant', constant_values=((c,c),(c,c),(c,c)))
+    #     v = array[a:b,a:b,a:b]
+    #     # print(array)
+    #     # print(v)
     
 
-        if format_values == 0:
-            return np.sum(v)
-        elif format_values == 1:
-            return np.average(v)
-        elif format_values == 2:
-            return v
-        else: return v
+    #     if format_values == 0:
+    #         return np.sum(v)
+    #     elif format_values == 1:
+    #         return np.average(v)
+    #     elif format_values == 2:
+    #         return v
+    #     else: return v
 
     def get_nb_slice_parametric(self, array, 
             x_radius = 1, y_radius = 1, z_radius = 0, 
@@ -507,7 +507,9 @@ class Agent:
             erase_if_over = 0.9,
             erase_if_below = 1,
             build_strength = 1,
-            erase_strength = 1):
+            erase_strength = 1,
+            _print = False
+            ):
         """
         returns build_chance, erase_chance
         if layer nb value sum is between 
@@ -519,11 +521,19 @@ class Agent:
         z_offset = 0] = slice_shape
         """
         # get the sum of the values in the slice
-        v = self.get_nb_slice_parametric(pheromone_layer, *slice_shape, self.pose, format_values=0)
+        sum_values = self.get_nb_slice_parametric(pheromone_layer, *slice_shape, self.pose, format_values=0,)
+        # print(v)
+        radiis = slice_shape[:3]
+        slice_volume = 1
+        for x in radiis:
+            slice_volume *= (x + 0.5) * 2
+        density = sum_values / slice_volume
+        if _print:
+            print('slice v', density, slice_volume)
         build_chance, erase_chance = [0,0]
-        if build_if_over < v < build_if_below:
+        if build_if_over < density < build_if_below:
             build_chance = build_strength
-        if erase_if_over < v < erase_if_below:
+        if erase_if_over < density < erase_if_below:
             erase_chance = erase_strength
         return build_chance, erase_chance
 

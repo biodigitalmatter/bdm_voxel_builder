@@ -77,48 +77,56 @@ class Algo8b(AgentAlgorithm):
 
 
     ################### Main control: ##################
+    # MOVE SETTINGS
+    move_ph_random_strength = 0.000000007
+    move_ph_attractor_strength = 10000
+    move_up = 1
+    move_side = 0.9 
+    move_down = 0.1 
+    move_dir_pref_weigth = 0.5
+
     # Built Chance Reward if in pheromon limits 
     built_ph__min_to_build: float = 0.005
     built_ph__max_to_build: float = 5
-    built_ph__build_chance_reward = 0.4
+    built_ph__build_chance_reward = 0
 
     reach_to_build: int = 10
-    reach_to_erase: int = 1
+    reach_to_erase: int = 10
 
     # slice below:
     check_d1 = True
     # built volumes density below the agent in a disc shape
     slice_shape_1__ = [1,1,0,0,0,-1] # radius x,y,z , offset x,y,z
-    density_1__build_if_over = 0
+    density_1__build_if_over = 0.1
     density_1__build_if_below = 1
-    density_2__build_chance_reward = 1
+    density_1__build_chance_reward = 5
     density_1__erase_if_over = 1
     density_1__erase_if_below = 1
-    density_2__erase_chance_reward = 0
+    density_1__erase_chance_reward = 0
 
     # slice around:
-    check_d2 = False
+    check_d2 = True
     # built volumes density below the agent in a disc shape
     slice_shape_2__ = [2,2,0,0,0,0] # radius x,y,z , offset x,y,z
-    density_2__build_if_over = 0
-    density_2__build_if_below = 1
-    density_2__build_chance_reward = 0
+    density_2__build_if_over = 0.01
+    density_2__build_if_below = 0.4
+    density_2__build_chance_reward = 3
 
     density_2__erase_if_over = 0.7
     density_2__erase_if_below = 1
-    density_2__erase_chance_reward = 1
+    density_2__erase_chance_reward = 3
 
     # slice above:
     check_d3 = True
     # built volumes density below the agent in a disc shape
-    slice_shape_2__ = [1,1,0,0,0,1] # radius x,y,z , offset x,y,z
+    slice_shape_3__ = [1,1,0,0,0,1] # radius x,y,z , offset x,y,z
     density_3__build_if_over = 0
     density_3__build_if_below = 1
     density_3__build_chance_reward = 0
 
-    density_3__erase_if_over = 0.7
+    density_3__erase_if_over = 0.4
     density_3__erase_if_below = 1
-    density_3__erase_chance_reward = 1
+    density_3__erase_chance_reward = 5
 
     decay_clay_bool : bool = False
     ####################################################
@@ -130,10 +138,6 @@ class Algo8b(AgentAlgorithm):
     # Agent deployment
     deployment_zone__a = 5
     deployment_zone__b = -5
-
-    # MOVE SETTINGS
-    move_ph_random_strength = 0.000000007
-    move_ph_attractor_strength = 10000
 
     check_collision = True
     keep_in_bounds = True
@@ -278,6 +282,9 @@ class Algo8b(AgentAlgorithm):
         random_cube = np.random.random(26) * self.move_ph_random_strength
         ph_cube += random_cube
 
+        # # get move dir pref
+        # dir_cube = agent.direction_preference_26_pheromones_v2(self.move_up, self.move_side, self.move_down)
+        # ph_cube += dir_cube * self.move_dir_pref_weigth
         moved = agent.move_on_ground_by_ph_cube(
             ground=ground,
             pheromon_cube=ph_cube,
@@ -306,36 +313,37 @@ class Algo8b(AgentAlgorithm):
         build_chance = agent.build_chance
         erase_chance = agent.erase_chance
 
-        # pheromone density in place
-        v = agent.get_chance_by_pheromone_strength(
-            move_to_ph_layer,
-            limit1 = self.built_ph__min_to_build,
-            limit2 = self.built_ph__max_to_build,
-            strength = self.built_ph__build_chance_reward,
-            flat_value = True,
-        )
-        build_chance += v
-        erase_chance += 0
+        # # pheromone density in place
+        # v = agent.get_chance_by_pheromone_strength(
+        #     move_to_ph_layer,
+        #     limit1 = self.built_ph__min_to_build,
+        #     limit2 = self.built_ph__max_to_build,
+        #     strength = self.built_ph__build_chance_reward,
+        #     flat_value = True,
+        # )
+        # build_chance += v
+        # erase_chance += 0
 
         # built volumes density below the agent
         if self.check_d1: 
-            b, e = self.get_chances_by_density_normal_by_slice(
-                clay_layer,
+            b, e = agent.get_chances_by_density_normal_by_slice(
+                clay_layer.array,
                 self.slice_shape_1__,   
                 self.density_1__build_if_over,
                 self.density_1__build_if_below,
                 self.density_1__erase_if_below,
                 self.density_1__erase_if_over,
-                self.density_1__chance_reward,
-                self.density_1__chance_reward,
+                self.density_1__build_chance_reward,
+                self.density_1__erase_chance_reward
             )
+            # print(b,e)
             build_chance += b
             erase_chance += e
         
         # built volumes density around the agent
         if self.check_d2:
-            b, e = self.get_chances_by_density_normal_by_slice(
-                clay_layer,
+            b, e = agent.get_chances_by_density_normal_by_slice(
+                clay_layer.array,
                 self.slice_shape_2__,
                 self.density_2__build_if_over,
                 self.density_2__build_if_below,
@@ -349,8 +357,8 @@ class Algo8b(AgentAlgorithm):
 
         # built volumes density above the agent
         if self.check_d3:
-            b, e = self.get_chances_by_density_normal_by_slice(
-                clay_layer,
+            b, e = agent.get_chances_by_density_normal_by_slice(
+                clay_layer.array,
                 self.slice_shape_3__,   
                 self.density_3__build_if_over,
                 self.density_3__build_if_below,
@@ -387,8 +395,13 @@ class Algo8b(AgentAlgorithm):
             if agent.build_chance >= self.reach_to_build:
                 built = agent.build_on_layer(ground)
                 agent.build_on_layer(clay_layer)
+                # print('built', agent.pose, agent.build_chance)
             # erase
             elif agent.erase_chance >= self.reach_to_erase:
                 erased = agent.erase_6(ground)
                 erased = agent.erase_6(clay_layer)
+                # print('erased', agent.pose, agent.erase_chance)
+            if erased or built:
+                agent.erase_chance = 0
+                agent.build_chance = 0
         return built, erased
