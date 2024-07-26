@@ -1,7 +1,7 @@
-from numbers import Number
 from typing import Tuple
 
 import numpy as np
+import numpy.typing as npt
 from compas.geometry import Box
 from compas.colors import Color
 from compas.geometry import Pointcloud
@@ -15,7 +15,8 @@ class DataLayer:
         name: str = None,
         bbox: int | Tuple[int, int, int] | Box = None,
         voxel_size: int = 20,
-        color: Color = Color.black(),
+        color: Color = None,
+        array: npt.NDArray = None,
     ):
         self.name = name
 
@@ -24,18 +25,21 @@ class DataLayer:
 
         if not bbox:
             self.bbox = Box(voxel_size)
-        elif isinstance(bbox, Number):
+        elif isinstance(bbox, float):
             self.bbox = Box(bbox)
-        elif isinstance(bbox, Tuple[Number]):
+        elif isinstance(bbox, Tuple):
             self.bbox = Box(*bbox)
         elif isinstance(bbox, Box):
             self.bbox = bbox
         else:
             raise ValueError("bbox not understood")
 
-        self.color = color
+        self.color = color or Color.black()
 
-        self.array = np.zeros([int(d) for d in self.bbox.dimensions])
+        if array is not None:
+            self.array = array
+        else:
+            self.array = np.zeros([int(d) for d in self.bbox.dimensions])
 
     @property
     def voxel_size(self):
