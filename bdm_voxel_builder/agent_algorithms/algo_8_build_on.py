@@ -6,7 +6,7 @@ from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import pheromon_loop
+from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.simulation_state import SimulationState
 
@@ -94,7 +94,7 @@ class Algo8(AgentAlgorithm):
 
     layer_to_dump : str = 'existing_geo'
 
-    def initialization(self):
+    def initialization(self, **kwargs):
         """
         creates the simulation environment setup
         with preset values in the definition
@@ -160,7 +160,7 @@ class Algo8(AgentAlgorithm):
         ground = layers["ground"]
         built_ph_layer = layers["built_ph_layer"]
         existing_geo = layers['existing_geo']
-        pheromon_loop(
+        diffuse_diffusive_layer(
             built_ph_layer,
             emmission_array=existing_geo.array * 1,
             blocking_layer=ground,

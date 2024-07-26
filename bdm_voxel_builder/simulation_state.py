@@ -7,7 +7,7 @@ class SimulationState:
     def __init__(self, config):
         self.counter: int = 0
 
-        self.data_layers: List[DiffusiveLayer] = config.algo.initialization()
+        self.data_layers: List[DiffusiveLayer] = config.algo.initialization(iterations = config.iterations)
 
         # prediffuse
         for _ in range(config.algo.seed_iterations):

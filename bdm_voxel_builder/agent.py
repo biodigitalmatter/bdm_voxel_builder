@@ -1,6 +1,8 @@
 from bdm_voxel_builder.helpers.numpy import NB_INDEX_DICT, set_value_at_index, get_sub_array
+from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 
 import numpy as np
+from math import trunc
 
 class Agent:
     def __init__(self, 
@@ -88,7 +90,7 @@ class Agent:
         """check if there is sg around the agent
         return list of bool:
             [below, aside, above]"""
-        values = self.get_nb_values_6(layer, self.pose)
+        values = self.get_layer_nb_values_6(layer, self.pose)
         values = values.tolist()
         above = values.pop(0)
         below = values.pop(1)
@@ -145,7 +147,7 @@ class Agent:
         return direction_preference
     
     # INTERACTION WITH LAYERS
-    def get_layer_value_at_index(self, layer, index = [0,0,0], reintroduce = True):
+    def get_layer_value_at_index(self, layer, index = [0,0,0], reintroduce = True, round_ = False, eliminate_dec = False):
         # print('get value at index', index)
         if reintroduce:
             index2 = np.mod(index, layer.voxel_size)
@@ -154,8 +156,11 @@ class Agent:
         i,j,k = index2
         try:
             v = layer.array[i][j][k]
-        except:
+        except Exception as e:
+            print(e)
             v = 0
+        if round_:  v = round(v)
+        if eliminate_dec: v = trunc(v)
         return v
 
 
@@ -182,24 +187,45 @@ class Agent:
             nb_cell_index_list.append(d + pose)
         return nb_cell_index_list
 
-    def get_nb_values_6(self, layer, pose = None, reintroduce=True):
+    def get_layer_nb_values_6(self, layer, pose = None, round_values = False, trunc_decimals = False):
         # nb_value_dict = {}
         value_list = []
         for key in self.compass_array.keys():
             d = self.compass_array[key]
             nb_cell_index = d + pose
             # dont check index in boundary
-            v = self.get_layer_value_at_index(layer, nb_cell_index, reintroduce)
+            v = self.get_layer_value_at_index(layer, nb_cell_index)
             value_list.append(v)
-        return np.asarray(value_list)
+        v = np.asarray(value_list)
+        if round_values: v.round()
+        if trunc_decimals: v.int_(v)
+        return v
+
+    def get_nb_values_6_of_array(self, array, voxel_size, pose = None, round_values = False, trunc_decimals = False):
+        # nb_value_dict = {}
+        value_list = []
+        for key in self.compass_array.keys():
+            d = self.compass_array[key]
+            nb_cell_index = np.clip((d + pose), 0, voxel_size - 1)
+            # dont check index in boundary
+            x,y,z = nb_cell_index
+            v = array[x][y][z]
+            value_list.append(v)
+        v = np.asarray(value_list)
+        if round_values: v.round()
+        if trunc_decimals: v.int_(v)
+        return v
     
-    def get_nb_values_26(self, layer, pose = None):
+    def get_layer_nb_values_26(self, layer, pose = None, round_values = False, trunc_decimals = False):
         value_list = []
         for d in self.cube_array:
             nb_cell_index = d + pose
             v = self.get_layer_value_at_index(layer, nb_cell_index)
             value_list.append(v)
-        return np.asarray(value_list)
+        v = np.asarray(value_list)
+        if round_values: v.round()
+        if trunc_decimals: v.int_(v)
+        return v
     
     def get_cube_array_indices(self, self_contain = False):
         """26 nb indicies, ordered: top-middle-bottom"""
@@ -220,6 +246,47 @@ class Agent:
             nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
         return nbs_w_corners
 
+    def get_layer_density(self, layer, trunc_decimals = False):
+        # check clay density
+        clay_values= self.get_layer_nb_values_26(layer, self.pose, trunc_decimals)
+        print('clay values:\n', clay_values)
+        clay_density = sum(clay_values) / 26
+        return clay_density
+    
+    
+    def get_layer_density_in_slice_shape(
+            self, 
+            diffusive_layer,  
+            slice_shape = [1,1,0,0,0,-1],
+            trunc_decimals = False
+            ):
+        """
+        returns layer density
+        if trunc_decimals, values in float array are converted to closest integrer in direction of 0
+        slice shape = [ 
+        x_radius = 1, 
+        y_radius = 1, 
+        z_radius = 0, 
+        x_offset = 0,
+        y_offset = 0,
+        z_offset = 0
+        ]
+        *radius: amount of indices in both direction added. r = 1 at i = 0 returns array[-1:2]
+        """
+        # get the sum of the values in the slice
+        values = self.get_nb_slice_parametric(diffusive_layer.array, *slice_shape, self.pose, format_values=0,)
+        if trunc_decimals:
+            np.int_(values)
+        sum_values = np.sum(values)
+        radiis = slice_shape[:3]
+        slice_volume = 1
+        for x in radiis:
+            slice_volume *= (x + 0.5) * 2
+        density = sum_values / slice_volume
+        
+        return density
+    
+                   
     # def get_nb_slice(self, array, 
     #         x_radius = 1,
     #         pose = None, format_values = 0, pad_values = 0):
@@ -303,7 +370,7 @@ class Agent:
     #         return v
     #     else: return v
 
-    def get_move_mask_6(self, ground_layer):
+    def get_move_mask_6(self, solid_layer):
         """return ground directions as bools
         checks nbs of the nb cells
         if value > 0: return True"""
@@ -316,9 +383,9 @@ class Agent:
         for nb_pose in cells_to_check:
             # print('nb_pose;', nb_pose)
             # check nbs of nb cell
-            nbs_values = self.get_nb_cell_values(ground_layer, nb_pose)
+            nbs_values = self.get_nb_cell_values(solid_layer, nb_pose)
             # check nb cell
-            nb_value = self.get_layer_value_at_index(ground_layer, nb_pose)
+            nb_value = self.get_layer_value_at_index(solid_layer, nb_pose)
             if np.sum(nbs_values) > 0 and nb_value == 0:
                 check_failed.append(False)
             else: 
@@ -326,7 +393,7 @@ class Agent:
         exclude_pheromones = np.asarray(check_failed)
         return exclude_pheromones
     
-    def get_move_mask_26(self, ground_layer, fly = False, check_self_collision = False):
+    def get_move_mask_26(self, solid_layer, fly = False, check_self_collision = False):
         """return move mask 1D array for the 26 nb voxel around self.pose
         the voxel
             most be non-solid
@@ -345,7 +412,7 @@ class Agent:
         # iterate through nb cells
         for nb_pose in cells_to_check:
             # check if nb cell is empty
-            nb_value = self.get_layer_value_at_index(ground_layer, nb_pose) 
+            nb_value = self.get_layer_value_at_index(solid_layer, nb_pose) 
             if check_self_collision:
                 nb_value_collision = self.get_layer_value_at_index(self.space_layer, nb_pose)
                 nb_value += nb_value_collision
@@ -353,7 +420,49 @@ class Agent:
             if nb_value == 0:
                 if not fly:
                     # check if nb cells have any face_nb cell which is solid
-                    nbs_values = self.get_nb_values_6(ground_layer, nb_pose)
+                    nbs_values = self.get_layer_nb_values_6(solid_layer, nb_pose)
+                    # print(nbs_values)
+                    if np.sum(nbs_values) > 0:
+                        exclude.append(False) 
+                    else: 
+                        exclude.append(True)
+                else:
+                    exclude.append(False)
+            else:
+                exclude.append(True)
+        # print(exclude)
+        exclude_pheromones = np.asarray(exclude)
+        return exclude_pheromones
+
+    def get_move_mask_26_from_an_array(self, solid_array, voxel_size, fly = False, check_self_collision = False):
+        """return move mask 1D array for the 26 nb voxel around self.pose
+        the voxel
+            most be non-solid
+            must has at least one solid face_nb 
+        return:
+            True if can not move there
+            False if can move there
+
+        if fly == True, cells do not have to be neighbors of solid
+        """
+        # get nb cell indicies
+        # nb_cells = self.get_nb_indices_6(self.pose)
+        nb_cells = self.get_nb_indices_26(self.pose)
+        cells_to_check = list(nb_cells)
+        exclude = [] # FALSE if agent can move there, True if cannot
+        # iterate through nb cells
+        for nb_pose in cells_to_check:
+            # check if nb cell is empty
+            x,y,z = np.clip(np.asarray(nb_pose), 0, voxel_size - 1)
+            nb_value = solid_array[x][y][z]
+            if check_self_collision:
+                nb_value_collision = self.get_layer_value_at_index(self.space_layer, nb_pose)
+                nb_value += nb_value_collision
+            # print(nb_value)
+            if nb_value == 0:
+                if not fly:
+                    # check if nb cells have any face_nb cell which is solid
+                    nbs_values = self.get_nb_values_6_of_array(solid_array, voxel_size, nb_pose )
                     # print(nbs_values)
                     if np.sum(nbs_values) > 0:
                         exclude.append(False) 
@@ -427,11 +536,47 @@ class Agent:
         # update location in space layer
         self.space_layer.set_layer_value_at_index(self.pose, 1)
         return True
+    
+    
+    def move_by_pheromons(self, solid_array, pheromon_cube, voxel_size = None, fly = None, only_bounds = True, check_self_collision = False):
+        """move in the direciton of the strongest pheromon
+        checks invalid moves 
+        solid layer collision
+        self collision
+        return bool_
+        """
+        direction_cube = self.get_nb_indices_26(self.pose)
+
+        # # limit options to inside
+        if only_bounds:
+            direction_cube = np.clip(direction_cube,0,voxel_size - 1)
+
+        # add penalty for invalid moves
+        # based on one or several layers
+        exclude = self.get_move_mask_26_from_an_array(solid_array, voxel_size, fly, check_self_collision=check_self_collision)
+        pheromon_cube[exclude] = -1
+
+        # select best dir
+        choice = np.argmax(pheromon_cube)
+        new_pose = direction_cube[choice]
+
+        # update space layers before move
+        if self.leave_trace:
+            self.track_layer.set_layer_value_at_index(self.pose, 1)
+        self.space_layer.set_layer_value_at_index(self.pose, 0)
+
+        # move
+        self.pose = new_pose
+        # self.move_26(move_vector, self.space_layer.voxel_size)
+
+        # update location in space layer
+        self.space_layer.set_layer_value_at_index(self.pose, 1)
+        return True
 
     def get_direction_cube_values_for_layer_domain(self, layer, domain, strength = 1):
         # mirrored above domain end and squezed with the domain length
         # centered at 1
-        ph_cube = self.get_nb_values_26(layer, self.pose)
+        ph_cube = self.get_layer_nb_values_26(layer, self.pose)
         start , end = domain
         center = (start + end) / 2
         # ph_cube -= center
@@ -440,14 +585,14 @@ class Agent:
         return ph_cube
 
     def get_direction_cube_values_for_layer(self, layer, strength):
-        ph_cube = self.get_nb_values_26(layer, self.pose)
+        ph_cube = self.get_layer_nb_values_26(layer, self.pose)
         return ph_cube * strength
 
     # METHODS TO CALCULATE BUILD PROPABILITIES
 
     def get_chances_by_density(
             self, 
-            pheromone_layer,       
+            diffusive_layer,       
             build_if_over = 0,
             build_if_below = 5,
             erase_if_over = 27,
@@ -458,7 +603,7 @@ class Agent:
         returns build_chance, erase_chance
         if layer nb value sum is between 
         """
-        v = self.get_nb_values_26(pheromone_layer, self.pose)
+        v = self.get_layer_nb_values_26(diffusive_layer, self.pose)
         v = np.sum(v)
         build_chance, erase_chance = [0,0]
         if build_if_over < v < build_if_below:
@@ -470,7 +615,7 @@ class Agent:
 
     def get_chances_by_density_by_slice(
             self, 
-            pheromone_layer,  
+            diffusive_layer,  
             slice_shape = [1,1,0,0,0,-1],   
             build_if_over = 0,
             build_if_below = 5,
@@ -489,7 +634,7 @@ class Agent:
         z_offset = 0] = slice_shape
         """
         # get the sum of the values in the slice
-        v = self.get_nb_slice_parametric(pheromone_layer, *slice_shape, self.pose, format_values=0)
+        v = self.get_nb_slice_parametric(diffusive_layer.array, *slice_shape, self.pose, format_values=0)
 
         build_chance, erase_chance = [0,0]
         if build_if_over < v < build_if_below:
@@ -500,7 +645,7 @@ class Agent:
 
     def get_chances_by_density_normal_by_slice(
             self, 
-            pheromone_layer,  
+            diffusive_layer,  
             slice_shape = [1,1,0,0,0,-1],   
             build_if_over = 0,
             build_if_below = 0.5,
@@ -521,7 +666,7 @@ class Agent:
         z_offset = 0] = slice_shape
         """
         # get the sum of the values in the slice
-        sum_values = self.get_nb_slice_parametric(pheromone_layer, *slice_shape, self.pose, format_values=0,)
+        sum_values = self.get_nb_slice_parametric(diffusive_layer.array, *slice_shape, self.pose, format_values=0,)
         # print(v)
         radiis = slice_shape[:3]
         slice_volume = 1
@@ -548,10 +693,10 @@ class Agent:
         build_chance = (build_below * b + build_aside * s + build_above * t) * build_strength
         return build_chance
     
-    def get_chance_by_pheromone_strength(self, pheromon_layer, limit1, limit2, strength, flat_value = True):
+    def get_chance_by_pheromone_strength(self, diffusive_layer, limit1, limit2, strength, flat_value = True):
         """gets pheromone v at pose. 
         if in limits, returns strength or strength * value"""
-        v = self.get_layer_value_at_index(pheromon_layer, self.pose)
+        v = self.get_layer_value_at_index(diffusive_layer, self.pose)
         # build
         if limit1 is None:
             flag = v <= limit2
@@ -603,6 +748,7 @@ class Agent:
         try:
             set_value_at_index(layer, self.pose, 1)
             bool_ = True
+            self.build_chance = 0
         except Exception as e:
             print(e)
             print('cant build here:', self.pose)
@@ -613,6 +759,7 @@ class Agent:
         try:
             set_value_at_index(layer, self.pose, 1)
             bool_ = True
+            self.build_chance = 0
         except Exception as e:
             print(e)
             print('cant build here:', self.pose)
@@ -621,13 +768,13 @@ class Agent:
     
     def erase(self, layer, only_face_nb = True):
         if only_face_nb:
-            v = self.get_nb_values_6(layer, self.pose, reintroduce=False)
+            v = self.get_layer_nb_values_6(layer, self.pose, reintroduce=False)
             places = self.get_nb_indices_6(self.pose)
             places = np.asarray(places)
             choice = np.argmax(v)
             place = places[choice]    
         else:
-            v = self.get_nb_values_26()
+            v = self.get_layer_nb_values_26()
             choice = np.argmax(v)
             cube = self.get_nb_indices_26(self.pose)
             vector = cube[choice]
@@ -636,13 +783,14 @@ class Agent:
         try:
             set_value_at_index(layer, place, 0)
             bool_ = True
+            self.erase_chance = 0
         except Exception as e:
             print(e)
             print('cant erase this:', place)
             # print(places)
             # print(choice)
             # print(v)
-            x,y,z = place
+            # x,y,z = place
             bool_ = False
         return bool_
     
@@ -673,7 +821,7 @@ class Agent:
 
     def check_build_conditions(self, layer, only_face_nbs = True):
         if only_face_nbs:
-            v = self.get_nb_values_6(layer, self.pose)
+            v = self.get_layer_nb_values_6(layer, self.pose)
             if np.sum(v) > 0:
                 return True
         else:

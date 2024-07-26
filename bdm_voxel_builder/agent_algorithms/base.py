@@ -19,7 +19,7 @@ class AgentAlgorithm:
     def calculate_build_chances(self):
         raise NotImplementedError
 
-    def initialization(self):
+    def initialization(self, **kwargs):
         raise NotImplementedError
 
     def build(self):

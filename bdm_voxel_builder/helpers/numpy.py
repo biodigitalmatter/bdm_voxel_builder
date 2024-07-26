@@ -199,7 +199,7 @@ def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool=True):
     a[x2 & x1 & y1 & y2 & z1 & z2] = 1
     if return_bool:
         # a.astype(np.bool)
-        a = np.astype(a, np.bool)
+        a = np.asanyarray(a, np.bool_)
     else:
         pass
     return a
