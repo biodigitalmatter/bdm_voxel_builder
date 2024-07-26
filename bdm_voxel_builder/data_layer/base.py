@@ -1,11 +1,11 @@
+import math
 from typing import Tuple
 
 import numpy as np
 import numpy.typing as npt
-from compas.geometry import Box
-from compas.colors import Color
-from compas.geometry import Pointcloud
 import pyopenvdb as vdb
+from compas.colors import Color
+from compas.geometry import Box, Pointcloud
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
@@ -47,7 +47,7 @@ class DataLayer:
     @property
     def voxel_size(self):
         return int(self.bbox.dimensions[0])
-    
+
     def to_grid(self):
         grid = vdb.FloatGrid()
         grid.copyFromArray(self.array)
@@ -61,11 +61,11 @@ class DataLayer:
 
         grid = self.to_grid()
 
+        # rotate the grid to make Y up for vdb_view and houdini
+        grid.transform.rotate(-math.pi / 2, vdb.Axis.X)
         vdb.write(str(path), grids=[grid])
 
         return path
-
-
 
     def get_pts(self):
         return convert_array_to_pts(self.array, get_data=False)
