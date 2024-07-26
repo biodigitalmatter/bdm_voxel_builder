@@ -1,5 +1,7 @@
 from pathlib import Path
-import requests, zipfile, io
+import requests
+import zipfile
+import io
 
 REPO_DIR = Path(__file__).parent.parent
 DATA_DIR = REPO_DIR / "data"
