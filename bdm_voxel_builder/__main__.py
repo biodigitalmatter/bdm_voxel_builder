@@ -35,13 +35,13 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
                 algo.reset_agent(agent)
 
     # 3. make frame for animation
-    if visualizer:
-        visualizer.draw()
+    if sim_state.counter % config.visualize_interval == 0 or sim_state.counter == config.iterations - 1:
+        visualizer.draw(iteration_count=sim_state.counter)
 
     # 4. DUMP JSON
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
-    if sim_state.counter % config.save_interval == 0:
+    if sim_state.counter % config.save_interval == 0 or sim_state.counter == config.iterations - 1:
         layer_to_dump = algo.layer_to_dump
         a1 = sim_state.data_layers[layer_to_dump].array.copy()
         a1[:, :, : algo.ground_level_Z] = 0
@@ -98,7 +98,6 @@ def main(configfile):
             simulate(None, config=config, sim_state=sim_state)
 
         if visualizer:
-            visualizer.draw()
             if visualizer.should_save_file:
                 visualizer.save_file(note=note)
 

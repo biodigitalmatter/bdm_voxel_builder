@@ -13,5 +13,6 @@ class Config:
     scale: int = 40
     iterations: int=200
     save_interval: int=100
+    visualize_interval: int=1
     datalayers_to_visualize: List[str] = None
 

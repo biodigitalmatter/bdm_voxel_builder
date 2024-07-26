@@ -20,11 +20,11 @@ class Visualizer(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def show():
+    def show(self):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def draw():
+    def draw(self, iteration_count=None):
         raise NotImplementedError
 
     def add_data_layer(self, data_layer: DataLayer):
