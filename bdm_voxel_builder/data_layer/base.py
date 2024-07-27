@@ -1,30 +1,71 @@
-from dataclasses import dataclass
-from enum import Enum, auto
+import math
+from typing import Tuple
 
+import numpy as np
 import numpy.typing as npt
+import pyopenvdb as vdb
 from compas.colors import Color
-from compas.geometry import Pointcloud
+from compas.geometry import Box, Pointcloud
 
-from bdm_voxel_builder.helpers.numpy import convert_array_to_pts, create_zero_array
-
-
-class AxisOrder(Enum):
-    XYZ = auto()
-    ZYX = auto()
+from bdm_voxel_builder import TEMP_DIR
+from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
+from bdm_voxel_builder.helpers.savepaths import get_savepath
 
 
-@dataclass
 class DataLayer:
-    name: str = None
-    voxel_size: int = 20
-    color: Color = None
-    axis_order: AxisOrder = AxisOrder.ZYX
+    def __init__(
+        self,
+        name: str = None,
+        bbox: int | Tuple[int, int, int] | Box = None,
+        voxel_size: int = 20,
+        color: Color = None,
+        array: npt.NDArray = None,
+    ):
+        self.name = name
 
-    def __post_init__(self):
-        if self.color is None:
-            self.color = Color.black()
+        if not bbox and not voxel_size:
+            raise ValueError("either bbox or voxel_size must be provided")
 
-        self.array: npt.NDArray = create_zero_array(self.voxel_size)
+        if not bbox:
+            self.bbox = Box(voxel_size)
+        elif isinstance(bbox, float):
+            self.bbox = Box(bbox)
+        elif isinstance(bbox, Tuple):
+            self.bbox = Box(*bbox)
+        elif isinstance(bbox, Box):
+            self.bbox = bbox
+        else:
+            raise ValueError("bbox not understood")
+
+        self.color = color or Color.black()
+
+        if array is not None:
+            self.array = array
+        else:
+            self.array = np.zeros([int(d) for d in self.bbox.dimensions])
+
+    @property
+    def voxel_size(self):
+        return int(self.bbox.dimensions[0])
+
+    def to_grid(self):
+        grid = vdb.FloatGrid()
+        grid.copyFromArray(self.array)
+
+        grid.name = f"layer_{self.name}"
+
+        return grid
+
+    def save_vdb(self):
+        path = get_savepath(TEMP_DIR, ".vdb", note=f"layer_{self.name}")
+
+        grid = self.to_grid()
+
+        # rotate the grid to make Y up for vdb_view and houdini
+        grid.transform.rotate(-math.pi / 2, vdb.Axis.X)
+        vdb.write(str(path), grids=[grid])
+
+        return path
 
     def get_pts(self):
         return convert_array_to_pts(self.array, get_data=False)

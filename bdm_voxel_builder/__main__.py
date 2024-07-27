@@ -51,6 +51,8 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
         pointcloud, values = pointcloud_from_ndarray(a1, return_values=True)
         save_pointcloud(pointcloud, values=values, note=note)
 
+        sim_state.data_layers[layer_to_dump].save_vdb()
+
     print(sim_state.counter)
     sim_state.counter += 1
 

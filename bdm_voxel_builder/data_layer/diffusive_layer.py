@@ -1,15 +1,18 @@
 import enum
+from typing import Tuple
+
 import numpy as np
 import numpy.typing as npt
 from compas.colors import Color
-from bdm_voxel_builder.data_layer.base import AxisOrder, DataLayer
+from compas.geometry import Box
+
+from bdm_voxel_builder.data_layer.base import DataLayer
+from bdm_voxel_builder.helpers.math import remap
 from bdm_voxel_builder.helpers.numpy import (
     create_random_array,
-    create_zero_array,
     crop_array,
     get_mask_zone_xxyyzz,
 )
-from bdm_voxel_builder.helpers.math import remap
 
 
 class GravityDir(enum.Enum):
@@ -25,9 +28,9 @@ class DiffusiveLayer(DataLayer):
     def __init__(
         self,
         name: str = None,
-        voxel_size: int = 20,
+        bbox: int | Tuple[int, int, int] | Box = None,
+        voxel_size: int = None,
         color: Color = None,
-        axis_order: AxisOrder = AxisOrder.ZYX,
         diffusion_ratio: float = 0.12,
         diffusion_random_factor: float = 0.0,
         decay_random_factor: float = 0.0,
@@ -42,7 +45,10 @@ class DiffusiveLayer(DataLayer):
         voxel_crop_range=[0, 1],
     ):
         super().__init__(
-            name=name, voxel_size=voxel_size, color=color, axis_order=axis_order
+            name=name,
+            bbox=bbox,
+            voxel_size=voxel_size,
+            color=color,
         )
         self.diffusion_ratio = diffusion_ratio
         self.diffusion_random_factor = diffusion_random_factor
@@ -86,7 +92,7 @@ class DiffusiveLayer(DataLayer):
             mask_inv = self.array <= value
         elif condition == ">=":
             mask_inv = self.array >= value
-        a = create_zero_array(self.voxel_size)
+        a = np.zeros_like(self.array)
         a[mask_inv] = 0
         if override_self:
             self.array = a
@@ -145,7 +151,7 @@ class DiffusiveLayer(DataLayer):
         axes = [0, 0, 1, 1, 2, 2]
         # order: left, right, front
         # diffuse per six face_neighbors
-        total_diffusions = create_zero_array(self.voxel_size)
+        total_diffusions = np.zeros_like(self.array)
         for i in range(6):
             # y: shift neighbor
             y = np.copy(self.array)
@@ -176,9 +182,7 @@ class DiffusiveLayer(DataLayer):
                 diff_ratio = self.diffusion_ratio
             else:
                 diff_ratio = self.diffusion_ratio * (
-                    1
-                    - create_random_array(self.voxel_size)
-                    * self.diffusion_random_factor
+                    1 - np.zeros_like(self.array) * self.diffusion_random_factor
                 )
             # summ up the diffusions per faces
             total_diffusions += diff_ratio * (self.array - y)
@@ -198,7 +202,7 @@ class DiffusiveLayer(DataLayer):
         axes = [0, 0, 1, 1, 2, 2]
         # order: left, right, front
         # diffuse per six face_neighbors
-        total_diffusions = create_zero_array(self.voxel_size)
+        total_diffusions = np.zeros_like(self.array)
         if self.gravity_ratio != 0:
             # y: shift neighbor
             y = np.copy(self.array)
@@ -312,7 +316,6 @@ class DiffusiveLayer(DataLayer):
         input:
             zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
         """
-        # np.zeros_like(self.array)
         if add_values:
             zone = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool=False)
             zone *= value
