@@ -1,7 +1,10 @@
 from bdm_voxel_builder import data_layer as dl
+import numpy as np
 print('hello')
-layer = dl.DataLayer(voxel_size=5)
-
-layer.add_values_in_zone_xxyyzz([1,6,1,2,3,9], value = 1, add_values = False)
-
-print(layer.array)
+array = np.zeros([3,3,3])
+try:
+    v = array[4][5][2]
+except Exception as e:
+    print(e)
+    v = 0
+print(v)

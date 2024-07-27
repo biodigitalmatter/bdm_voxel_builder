@@ -6,7 +6,7 @@ from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import pheromon_loop
+from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.simulation_state import SimulationState
 
@@ -143,7 +143,7 @@ class Algo8b(AgentAlgorithm):
 
     layer_to_dump : str = 'clay_layer'
 
-    def initialization(self):
+    def initialization(self, **kwargs):
         """
         creates the simulation environment setup
         with preset values in the definition
@@ -206,7 +206,7 @@ class Algo8b(AgentAlgorithm):
     def update_environment(self, state: SimulationState):
         layers = state.data_layers
         emission_array_for_move_ph = layers['clay_layer'].array
-        pheromon_loop(
+        diffuse_diffusive_layer(
             layers["move_to_ph_layer"],
             emmission_array=emission_array_for_move_ph,
             blocking_layer=layers["ground"],
@@ -325,7 +325,7 @@ class Algo8b(AgentAlgorithm):
         # built volumes density below the agent
         if self.check_d1: 
             b, e = agent.get_chances_by_density_normal_by_slice(
-                clay_layer.array,
+                clay_layer,
                 self.slice_shape_1__,   
                 self.density_1__build_if_over,
                 self.density_1__build_if_below,
@@ -341,7 +341,7 @@ class Algo8b(AgentAlgorithm):
         # built volumes density around the agent
         if self.check_d2:
             b, e = agent.get_chances_by_density_normal_by_slice(
-                clay_layer.array,
+                clay_layer,
                 self.slice_shape_2__,
                 self.density_2__build_if_over,
                 self.density_2__build_if_below,
@@ -356,7 +356,7 @@ class Algo8b(AgentAlgorithm):
         # built volumes density above the agent
         if self.check_d3:
             b, e = agent.get_chances_by_density_normal_by_slice(
-                clay_layer.array,
+                clay_layer,
                 self.slice_shape_3__,   
                 self.density_3__build_if_over,
                 self.density_3__build_if_below,
