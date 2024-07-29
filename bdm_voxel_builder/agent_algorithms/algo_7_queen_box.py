@@ -9,7 +9,7 @@ from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.helpers.numpy import make_solid_box_xxyyzz
-from bdm_voxel_builder.simulation_state import SimulationState
+from bdm_voxel_builder.environment import Environment
 
 
 @dataclass
@@ -133,7 +133,7 @@ class Algo7QueenBox(AgentAlgorithm):
         }
         return layers
 
-    def update_environment(self, state: SimulationState):
+    def update_environment(self, state: Environment):
         layers = state.data_layers
 
         ground = layers["ground"]
@@ -183,7 +183,7 @@ class Algo7QueenBox(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
 
-    def move_agent(self, agent, state: SimulationState):
+    def move_agent(self, agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -239,7 +239,7 @@ class Algo7QueenBox(AgentAlgorithm):
 
         return moved
 
-    def calculate_build_chances(self, agent, state: SimulationState):
+    def calculate_build_chances(self, agent, state: Environment):
         """simple build chance getter
 
         returns build_chance, erase_chance
@@ -269,9 +269,7 @@ class Algo7QueenBox(AgentAlgorithm):
 
         return build_chance, erase_chance
 
-    def build_over_limits(
-        self, agent, state: SimulationState, build_chance, erase_chance
-    ):
+    def build_over_limits(self, agent, state: Environment, build_chance, erase_chance):
         """agent builds on construction_layer, if pheromon value in cell hits limit
         chances are either momentary values or stacked by history
         return bool"""

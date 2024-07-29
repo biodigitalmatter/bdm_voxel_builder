@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 import numpy as np
 from compas.colors import Color
@@ -8,7 +7,7 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
-from bdm_voxel_builder.simulation_state import SimulationState
+from bdm_voxel_builder.environment import Environment
 
 """
 Algorithm structure overview:
@@ -197,8 +196,7 @@ class Algo8b(AgentAlgorithm):
         }
         return layers
 
-
-    def update_environment(self, state: SimulationState):
+    def update_environment(self, state: Environment):
         layers = state.data_layers
         emission_array_for_move_ph = layers["clay_layer"].array
         diffuse_diffusive_layer(
@@ -250,7 +248,7 @@ class Algo8b(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
 
-    def move_agent(self, agent, state: SimulationState):
+    def move_agent(self, agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -296,7 +294,7 @@ class Algo8b(AgentAlgorithm):
         # print('agent moved flag', moved)
         return moved
 
-    def calculate_build_chances(self, agent, state: SimulationState):
+    def calculate_build_chances(self, agent, state: Environment):
         """simple build chance getter
 
         returns build_chance, erase_chance
@@ -372,9 +370,7 @@ class Algo8b(AgentAlgorithm):
             agent.build_chance = build_chance
             agent.erase_chance = erase_chance
 
-    def build_by_chance(
-        self, agent, state: SimulationState
-    ):
+    def build_by_chance(self, agent, state: Environment):
         """agent builds on construction_layer, if pheromon value in cell hits limit
         chances are either momentary values or stacked by history
         return bool"""

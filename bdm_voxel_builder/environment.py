@@ -3,11 +3,13 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 
 
-class SimulationState:
+class Environment:
     def __init__(self, config):
-        self.counter: int = 0
+        self.iteration_count: int = 0
 
-        self.data_layers: List[DiffusiveLayer] = config.algo.initialization(iterations = config.iterations)
+        self.data_layers: List[DiffusiveLayer] = config.algo.initialization(
+            iterations=config.iterations
+        )
 
         # prediffuse
         for _ in range(config.algo.seed_iterations):
