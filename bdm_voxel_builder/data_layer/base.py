@@ -5,11 +5,12 @@ import numpy as np
 import numpy.typing as npt
 import pyopenvdb as vdb
 from compas.colors import Color
-from compas.geometry import Box, Pointcloud
+from compas.geometry import Box, Pointcloud, Transformation, transform_points_numpy
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
 from bdm_voxel_builder.helpers.savepaths import get_savepath
+from bdm_voxel_builder.helpers.vdb import xform_to_vdb
 
 
 class DataLayer:
@@ -20,6 +21,7 @@ class DataLayer:
         voxel_size: int = 20,
         color: Color = None,
         array: npt.NDArray = None,
+        xform: Transformation = None,
     ):
         self.name = name
 
@@ -27,32 +29,42 @@ class DataLayer:
             raise ValueError("either bbox or voxel_size must be provided")
 
         if not bbox:
-            self.bbox = Box(voxel_size)
+            self.local_bbox = Box(voxel_size)
         elif isinstance(bbox, float):
-            self.bbox = Box(bbox)
+            self.local_bbox = Box(bbox)
         elif isinstance(bbox, Sequence):
-            self.bbox = Box(*bbox)
+            self.local_bbox = Box(*bbox)
         elif isinstance(bbox, Box):
-            self.bbox = bbox
+            self.local_bbox = bbox
         else:
             raise ValueError("bbox not understood")
 
         self.color = color or Color.black()
 
-        if array is not None:
-            self.array = array
+        if array is None:
+            self.array = np.zeros([int(d) for d in self.local_bbox.dimensions])
         else:
-            self.array = np.zeros([int(d) for d in self.bbox.dimensions])
+            self.array = array
+
+        if not xform:
+            self.xform = Transformation()
+        else:
+            self.xform = xform
 
     @property
     def voxel_size(self):
-        return int(self.bbox.dimensions[0])
+        return int(self.local_bbox.dimensions[0])
+
+    def get_world_bbox(self) -> Box:
+        return self.local_bbox.transformed(self.xform)
 
     def to_grid(self):
         grid = vdb.FloatGrid()
         grid.copyFromArray(self.array)
 
         grid.name = f"layer_{self.name}"
+
+        grid.transform = xform_to_vdb(self.xform)
 
         return grid
 
@@ -67,8 +79,14 @@ class DataLayer:
 
         return path
 
-    def get_pts(self):
+    def get_index_pts(self) -> list[list[float]]:
         return convert_array_to_pts(self.array, get_data=False)
 
-    def get_pointcloud(self):
-        return Pointcloud(self.get_pts())
+    def get_index_pointcloud(self):
+        return Pointcloud(self.get_index_pts())
+
+    def get_world_pts(self) -> list[list[float]]:
+        return transform_points_numpy(self.get_index_pts(), self.xform).tolist()
+
+    def get_world_pointcloud(self) -> Pointcloud:
+        return self.get_index_pointcloud().transformed(self.xform)
