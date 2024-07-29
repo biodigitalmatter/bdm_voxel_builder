@@ -33,6 +33,12 @@ iterate:
 """
 Algorithm Objectives:
 
+Algo8c
+idea is that when agent are 'on' the clay, 
+they start to move more randomly, 
+or more towards direction preference
+
+        
 initial stage algorithm - start to grow on attractive features of existing/scanned volumes
 
 Find scan:
@@ -54,6 +60,12 @@ class Algo8c(AgentAlgorithm):
 
     extend with erase if too dense
 
+    Algo8c
+    idea is that when agent are 'on' the clay, 
+    they start to move more randomly, 
+    and more towards direction preference
+    if too dense, erase
+
     ...
     agent is attracted toward existing + newly built geomoetry by 'pheromon_layer_move'
     build_chance is rewarded if within the given ph limits
@@ -72,60 +84,11 @@ class Algo8c(AgentAlgorithm):
 
     # EXISTING GEOMETRY
     add_box = True
-    box_template = [20, 25, 22, 25, 1, 6]
+    box_template = [20, 22, 20, 22, 3, 4]
     ground_level_Z = 0
-
-    ################### Main control: ##################
-    # MOVE SETTINGS
-    move_ph_random_strength = 0.000000007
-    move_ph_attractor_strength = 10000
-    move_up = 1
-    move_side = 0.9 
-    move_down = 0.1 
-    move_dir_pref_weigth = 0
-
-    # Built Chance Reward if in pheromon limits 
-    built_ph__min_to_build: float = 0.005
-    built_ph__max_to_build: float = 5
-    built_ph__build_reward = 0
 
     reach_to_build: int = 1
     reach_to_erase: int = 1
-
-    # # slice below:
-    # check_1__below = True
-    # # built volumes density below the agent in a disc shape
-    # slice_shape_1__ = [1,1,0,0,0,-1] # radius x,y,z , offset x,y,z
-    # density_1__build_if_over = 0.1
-    # density_1__build_if_below = 1
-    # density_1__build_reward = 5
-    # density_1__erase_if_over = 1
-    # density_1__erase_if_below = 1
-    # density_1__erase_reward = 0
-
-    # # slice around:
-    # check_2__around = True
-    # # built volumes density below the agent in a disc shape
-    # slice_shape_2__ = [2,2,0,0,0,0] # radius x,y,z , offset x,y,z
-    # density_2__build_if_over = 0.01
-    # density_2__build_if_below = 0.4
-    # density_2__build_reward = 3
-
-    # density_2__erase_if_over = 0.7
-    # density_2__erase_if_below = 1
-    # density_2__erase_reward = 3
-
-    # # slice above:
-    # check_3__above = True
-    # # built volumes density below the agent in a disc shape
-    # slice_shape_3__ = [1,1,0,0,0,1] # radius x,y,z , offset x,y,z
-    # density_3__build_if_over = 0
-    # density_3__build_if_below = 1
-    # density_3__build_reward = 0
-
-    # density_3__erase_if_over = 0.4
-    # density_3__erase_if_below = 1
-    # density_3__erase_reward = 5
 
     decay_clay_bool : bool = False
     ####################################################
@@ -182,7 +145,7 @@ class Algo8c(AgentAlgorithm):
             color=Color.from_rgb255(*rgb_queen),
             flip_colors=True,
             diffusion_ratio= 1/7,
-            decay_ratio=1/10000000,
+            decay_ratio=1/10000000000,
             gradient_resolution=0
         )
         clay_layer = DiffusiveLayer(
@@ -226,10 +189,10 @@ class Algo8c(AgentAlgorithm):
         )
         if self.decay_clay_bool:
             layers['clay_layer'].decay_linear()
-        # print('ph bounds:', np.amax(pheromon_layer_move.array),np.amin(pheromon_layer_move.array))
+        
+        ph_array = layers['pheromon_layer_move'].array
+        print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
   
-
-
     def setup_agents(self, data_layers: Dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
@@ -276,55 +239,49 @@ class Algo8c(AgentAlgorithm):
         move agent
         return True if moved, False if not or in ground
         """
-        # layers = state.data_layers
         pheromon_layer_move = state.data_layers["pheromon_layer_move"]
         ground = state.data_layers['ground']
         clay_layer = state.data_layers['clay_layer']
 
+        # check in in solid volume
         gv = agent.get_layer_value_at_pose(ground, print_=False)
         cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
-        # print('ground value before move:', gv, agent.pose)
         if gv != 0 or cv != 0:
             return False
-        
-        # check clay density
 
+        # print clay density for examination   
         clay_density = agent.get_layer_density(clay_layer, trunc_decimals=False, print_=False)
         if clay_density > 0:
-            txt = 'clay_density = {}'
+            txt = 'move: clay_density = {}'
             print(txt.format(clay_density))
-        # print('move pheromon density:{}'.format(agent.get_layer_density(pheromon_layer_move, )))
-
-        """idea is that when agent are 'on' the clay, they start to move more randomly, or more towards direction preference"""
+        
         # move by pheromon_layer_move
-        move_pheromon_cube = agent.get_direction_cube_values_for_layer(pheromon_layer_move, self.move_ph_attractor_strength)
-        # get random directions cube
+        move_pheromon_cube = agent.get_direction_cube_values_for_layer(pheromon_layer_move, 1)
         random_cube = np.random.random(26)
-        # # get move dir pref
-        up_direction_cube = agent.direction_preference_26_pheromones_v2(1, 0.8, 0.2)
+        directional_bias_cube = agent.direction_preference_26_pheromones_v2(1, 0.8, 0.2)
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
         ############################################################################
         if clay_density < 0.1: 
             """pheromon values are really small here"""
-            move_pheromon_cube *= 2000
-            random_cube *= 0.00000000000001
+            move_pheromon_cube *= 10000
+            random_cube *= 0.01
             direction_cube = move_pheromon_cube + random_cube
 
         elif 0.1 <= clay_density < 0.7:
             """clay isnt that attractive anymore, they prefer climbing"""
             move_pheromon_cube *= 0.001
             random_cube *= 0.5
-            up_direction_cube *= 1
-            direction_cube = move_pheromon_cube + random_cube + up_direction_cube
+            directional_bias_cube *= 1
+            direction_cube = move_pheromon_cube + random_cube + directional_bias_cube
 
         elif 0.7 <= clay_density:
             """clay is super dense, they really climb up"""
             move_pheromon_cube *= 0.001
             random_cube *= 0.0001
-            up_direction_cube *= 100
-            direction_cube = move_pheromon_cube + random_cube + up_direction_cube
+            directional_bias_cube *= 100
+            direction_cube = move_pheromon_cube + random_cube + directional_bias_cube
         ############################################################################
 
         # move by pheromons avoid collision
@@ -357,19 +314,17 @@ class Algo8c(AgentAlgorithm):
 
         # print('calculate chances: Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
 
-        
-
         ##########################################################################
         # build probability settings #############################################
         ##########################################################################
-        low_density__build_reward = 0
+        low_density__build_reward = 0.1
         low_density__erase_reward = 0
 
-        normal_density__build_reward = 2
+        normal_density__build_reward = 0.3
         normal_density__erase_reward = 0
 
-        high_density__build_reward = 1
-        high_density__erase_reward = 1
+        high_density__build_reward = 0
+        high_density__erase_reward = 0.8
 
         slice_shape_above = [1,1,0, 0,0,1] # radius x,y,z , offset x,y,z
         high_density__roof__build_reward = -1
@@ -378,8 +333,10 @@ class Algo8c(AgentAlgorithm):
 
         # check clay density
         clay_density = agent.get_layer_density(clay_layer, trunc_decimals = False)
-        # print(clay_density)
-        if clay_density < 0.2:
+        if 0 <= clay_density < 0.1: 
+            # extrem low ph density
+            pass
+        elif 0.1 <= clay_density < 0.2:
             build_chance += low_density__build_reward
             erase_chance += low_density__erase_reward
         elif 0.2 <= clay_density < 0.8:
@@ -398,52 +355,6 @@ class Algo8c(AgentAlgorithm):
         #     build_chance += high_density__roof__build_reward
         #     erase_chance += high_density__roof__erase_reward
 
-        # # built volumes density below the agent
-        # if self.check_1__below: 
-        #     b, e = agent.get_chances_by_density_normal_by_slice(
-        #         clay_layer,
-        #         self.slice_shape_1__,   
-        #         self.density_1__build_if_over,
-        #         self.density_1__build_if_below,
-        #         self.density_1__erase_if_below,
-        #         self.density_1__erase_if_over,
-        #         self.density_1__build_reward,
-        #         self.density_1__erase_reward
-        #     )
-        #     # print(b,e)
-        #     build_chance += b
-        #     erase_chance += e
-        
-        # # built volumes density around the agent
-        # if self.check_2__around:
-        #     b, e = agent.get_chances_by_density_normal_by_slice(
-        #         clay_layer,
-        #         self.slice_shape_2__,
-        #         self.density_2__build_if_over,
-        #         self.density_2__build_if_below,
-        #         self.density_2__erase_if_below,
-        #         self.density_2__erase_if_over,
-        #         self.density_2__build_reward,
-        #         self.density_2__erase_reward,
-        #     )
-        #     build_chance += b
-        #     erase_chance += e
-
-        # # built volumes density above the agent
-        # if self.check_3__above:
-        #     b, e = agent.get_chances_by_density_normal_by_slice(
-        #         clay_layer,
-        #         self.slice_shape_3__,   
-        #         self.density_3__build_if_over,
-        #         self.density_3__build_if_below,
-        #         self.density_3__erase_if_below,
-        #         self.density_3__erase_if_over,
-        #         self.density_3__build_reward,
-        #         self.density_3__erase_reward,
-        #     )
-        #     build_chance += b
-        #     erase_chance += e
-
         # update probabilities
         if self.stacked_chances:
             # print(erase_chance)
@@ -456,8 +367,10 @@ class Algo8c(AgentAlgorithm):
         # MANUAL TEST
         # agent.build_chance += 0.3
         # agent.erase_chance += 0
-
-        # print('chances calculated: Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
+        if clay_density > 0:
+            txt = 'build calc: clay_density = {}'
+            print(txt.format(clay_density))
+            print('Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
 
 
     def build_by_chance(
