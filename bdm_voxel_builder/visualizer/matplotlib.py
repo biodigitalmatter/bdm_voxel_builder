@@ -10,7 +10,7 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
 from bdm_voxel_builder.helpers.savepaths import get_savepath
 from bdm_voxel_builder.simulation_state import SimulationState
-from bdm_voxel_builder.visualizers.base import Visualizer
+from bdm_voxel_builder.visualizer.base import Visualizer
 
 
 class MPLVisualizer(Visualizer):

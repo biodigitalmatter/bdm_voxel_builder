@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List
 
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.visualizers.base import Visualizer
+from bdm_voxel_builder.visualizer.base import Visualizer
 
 
 @dataclass

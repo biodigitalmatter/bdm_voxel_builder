@@ -5,7 +5,7 @@ from compas.geometry import Pointcloud, Point
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
 from bdm_voxel_builder.helpers.savepaths import get_savepath
-from bdm_voxel_builder.visualizers.base import Visualizer
+from bdm_voxel_builder.visualizer.base import Visualizer
 
 class CompasViewerVisualizer(Visualizer):
     FILE_SUFFIX = ".json"

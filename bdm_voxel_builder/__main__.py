@@ -7,7 +7,7 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder import DATA_DIR
 from bdm_voxel_builder.helpers.numpy import save_ndarray
 from bdm_voxel_builder.simulation_state import SimulationState
-from bdm_voxel_builder.visualizers.matplotlib import MPLVisualizer
+from bdm_voxel_builder.visualizer.matplotlib import MPLVisualizer
 
 from bdm_voxel_builder.helpers.compas import pointcloud_from_ndarray, save_pointcloud
 
