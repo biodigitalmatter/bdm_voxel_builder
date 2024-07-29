@@ -6,6 +6,7 @@ import pyopenvdb as vdb
 from compas.geometry import Box
 
 from bdm_voxel_builder.data_layer.base import DataLayer
+from bdm_voxel_builder.helpers.vdb import xform_to_compas
 
 
 class ImportedLayer(DataLayer):
@@ -42,4 +43,5 @@ class ImportedLayer(DataLayer):
             name=name or grid.name,
             bbox=Box.from_diagonal((bbox_min, bbox_max)),
             array=arr,
+            xform=xform_to_compas(grid.transform),
         )

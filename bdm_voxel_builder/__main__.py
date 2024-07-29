@@ -6,12 +6,12 @@ import click
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder import DATA_DIR
 from bdm_voxel_builder.helpers.numpy import save_ndarray
-from bdm_voxel_builder.simulation_state import SimulationState
+from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.visualizer.matplotlib import MPLVisualizer
 
 from bdm_voxel_builder.helpers.compas import pointcloud_from_ndarray, save_pointcloud
 
-def simulate(frame, config: Config = None, sim_state: SimulationState = None):
+def simulate(frame, config: Config = None, sim_state: Environment = None):
     algo = config.algo
     visualizer = config.visualizer
 
@@ -34,13 +34,19 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
                 algo.reset_agent(agent)
 
     # 3. make frame for animation
-    if sim_state.counter % config.visualize_interval == 0 or sim_state.counter == config.iterations - 1:
-        visualizer.draw(iteration_count=sim_state.counter)
+    if (
+        sim_state.iteration_count % config.visualize_interval == 0
+        or sim_state.iteration_count == config.iterations - 1
+    ):
+        visualizer.draw(iteration_count=sim_state.iteration_count)
 
     # 4. DUMP JSON
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
-    if sim_state.counter % config.save_interval == 0 or sim_state.counter == config.iterations - 1:
+    if (
+        sim_state.iteration_count % config.save_interval == 0
+        or sim_state.iteration_count == config.iterations - 1
+    ):
         layer_to_dump = algo.layer_to_dump
         a1 = sim_state.data_layers[layer_to_dump].array.copy()
         a1[:, :, : algo.ground_level_Z] = 0
@@ -52,8 +58,8 @@ def simulate(frame, config: Config = None, sim_state: SimulationState = None):
 
         sim_state.data_layers[layer_to_dump].save_vdb()
 
-    print(sim_state.counter)
-    sim_state.counter += 1
+    print(sim_state.iteration_count)
+    sim_state.iteration_count += 1
 
 
 def _load_config(configfile: pathlib.Path) -> Config:
@@ -75,7 +81,7 @@ def main(configfile):
     visualizer = config.visualizer
     iterations = config.iterations
 
-    sim_state = SimulationState(config)
+    sim_state = Environment(config)
 
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 

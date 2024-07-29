@@ -1,16 +1,13 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 import numpy as np
-import numpy.typing as npt
 from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
-from bdm_voxel_builder.helpers.numpy import make_solid_box_xxyyzz
-from bdm_voxel_builder.simulation_state import SimulationState
+from bdm_voxel_builder.environment import Environment
 
 """
 Algorithm structure overview:
@@ -32,13 +29,13 @@ iterate:
 
 """
 Algorithm Objectives:
-
 Algo8c
 idea is that when agent are 'on' the clay, 
 they start to move more randomly, 
 or more towards direction preference
 
-        
+...
+
 initial stage algorithm - start to grow on attractive features of existing/scanned volumes
 
 Find scan:
@@ -70,7 +67,7 @@ class Algo8c(AgentAlgorithm):
     agent is attracted toward existing + newly built geomoetry by 'pheromon_layer_move'
     build_chance is rewarded if within the given ph limits
     if enough chances gained, agent builds / erases
-    erase: explosive :) 
+    erase: explosive :)
     6 or 26 voxels are cleaned
 
     if below sg > just build
@@ -79,7 +76,7 @@ class Algo8c(AgentAlgorithm):
     """
 
     name: str = "algo_8c_grownup"
-    relevant_data_layers: Tuple[str] = "clay"
+    relevant_data_layers: str = "clay"
     seed_iterations: int = 40
 
     # EXISTING GEOMETRY
@@ -90,7 +87,7 @@ class Algo8c(AgentAlgorithm):
     reach_to_build: int = 1
     reach_to_erase: int = 1
 
-    decay_clay_bool : bool = False
+    decay_clay_bool: bool = False
     ####################################################
 
     stacked_chances: bool = True
@@ -104,10 +101,7 @@ class Algo8c(AgentAlgorithm):
     check_collision = True
     keep_in_bounds = True
 
-
-    layer_to_dump : str = 'clay_layer'
-
-
+    layer_to_dump: str = "clay_layer"
 
     def initialization(self, **kwargs):
         """
@@ -116,8 +110,10 @@ class Algo8c(AgentAlgorithm):
 
         returns: layers
         """
-        number_of_iterations = kwargs.get('iterations')
-        clay_decay_linear_value = max(1 / (self.agent_count * number_of_iterations * 100), 0.00001)
+        number_of_iterations = kwargs.get("iterations")
+        clay_decay_linear_value = max(
+            1 / (self.agent_count * number_of_iterations * 100), 0.00001
+        )
         ### LAYERS OF THE ENVIRONMENT
         rgb_agents = [34, 116, 240]
         rgb_trace = [17, 60, 120]
@@ -152,41 +148,40 @@ class Algo8c(AgentAlgorithm):
             name="clay_layer",
             voxel_size=self.voxel_size,
             color=Color.from_rgb255(*rgb_existing),
-            flip_colors=True, 
-            decay_linear_value=clay_decay_linear_value
+            flip_colors=True,
+            decay_linear_value=clay_decay_linear_value,
         )
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.add_values_in_zone_xxyyzz([0,self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1)
+        ground.add_values_in_zone_xxyyzz(
+            [0, self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1
+        )
+
         if self.add_box:
             ground.add_values_in_zone_xxyyzz(self.box_template, 1)
             pheromon_layer_move.add_values_in_zone_xxyyzz(self.box_template, 1)
             clay_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
-
-
-        
 
         # WRAP ENVIRONMENT
         layers = {
             "agent_space": agent_space,
             "ground": ground,
             "pheromon_layer_move": pheromon_layer_move,
-            'clay_layer' : clay_layer,
-            'track_layer' : track_layer
+            "clay_layer": clay_layer,
+            "track_layer": track_layer,
         }
         return layers
 
-
-    def update_environment(self, state: SimulationState):
+    def update_environment(self, state: Environment):
         layers = state.data_layers
-        emission_array_for_move_ph = layers['clay_layer'].array
+        emission_array_for_move_ph = layers["clay_layer"].array
         diffuse_diffusive_layer(
             layers["pheromon_layer_move"],
             emmission_array=emission_array_for_move_ph,
             blocking_layer=layers["ground"],
             gravity_shift_bool=False,
-            decay=True,
-            grade=False
+            grade=False,
+            decay=True
         )
         if self.decay_clay_bool:
             layers['clay_layer'].decay_linear()
@@ -194,8 +189,8 @@ class Algo8c(AgentAlgorithm):
         # print to examine
         ph_array = layers['pheromon_layer_move'].array
         print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
-  
-    def setup_agents(self, data_layers: Dict[str, DiffusiveLayer]):
+
+    def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
         track_layer = data_layers["track_layer"]
@@ -234,7 +229,7 @@ class Algo8c(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
 
-    def move_agent(self, agent, state: SimulationState):
+    def move_agent(self, agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -242,8 +237,8 @@ class Algo8c(AgentAlgorithm):
         return True if moved, False if not or in ground
         """
         pheromon_layer_move = state.data_layers["pheromon_layer_move"]
-        ground = state.data_layers['ground']
-        clay_layer = state.data_layers['clay_layer']
+        ground = state.data_layers["ground"]
+        clay_layer = state.data_layers["clay_layer"]
 
         # check in in solid volume
         gv = agent.get_layer_value_at_pose(ground, print_=False)
@@ -265,7 +260,7 @@ class Algo8c(AgentAlgorithm):
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
         ############################################################################
-        if clay_density < 0.1: 
+        if clay_density < 0.1:
             """pheromon values are really small here"""
             move_pheromon_cube *= 10000
             random_cube *= 0.01
@@ -304,7 +299,7 @@ class Algo8c(AgentAlgorithm):
 
         return moved
 
-    def calculate_build_chances(self, agent, state: SimulationState):
+    def calculate_build_chances(self, agent, state: Environment):
         """simple build chance getter
 
         returns build_chance, erase_chance
@@ -313,8 +308,6 @@ class Algo8c(AgentAlgorithm):
         clay_layer = state.data_layers['clay_layer']
         build_chance = 0
         erase_chance = 0
-
-        # print('calculate chances: Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
 
         ##########################################################################
         # build probability settings #############################################
@@ -328,7 +321,7 @@ class Algo8c(AgentAlgorithm):
         high_density__build_reward = 0
         high_density__erase_reward = 0.8
 
-        slice_shape_above = [1,1,0, 0,0,1] # radius x,y,z , offset x,y,z
+        slice_shape_above = [1, 1, 0, 0, 0, 1]  # radius x,y,z , offset x,y,z
         high_density__roof__build_reward = -1
         high_density__roof__erase_reward = 20
         ##########################################################################
@@ -375,9 +368,7 @@ class Algo8c(AgentAlgorithm):
             print('Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
 
 
-    def build_by_chance(
-        self, agent, state: SimulationState
-    ):
+    def build_by_chance(self, agent, state: Environment):
         """agent builds on construction_layer, if pheromon value in cell hits limit
         chances are either momentary values or stacked by history
         return bool"""

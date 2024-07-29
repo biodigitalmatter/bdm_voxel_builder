@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 import numpy as np
 from compas.colors import Color
@@ -8,7 +7,7 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
-from bdm_voxel_builder.simulation_state import SimulationState
+from bdm_voxel_builder.environment import Environment
 
 """
 Algorithm structure overview:
@@ -57,17 +56,15 @@ class Algo8(AgentAlgorithm):
     """
 
     name: str = "build_on_existing_no_decay"
-    relevant_data_layers: Tuple[str] = "ground"
+    relevant_data_layers: str = "ground"
     seed_iterations: int = 10
 
     # EXISTING GEOMETRY
     box_template = [20, 25, 22, 25, 1, 6]
     ground_level_Z = 0
 
-
-
     ################### Main control: ##################
-    # Built Chance Reward if in pheromon limits 
+    # Built Chance Reward if in pheromon limits
     built_ph__min_to_build: float = 0.005
     built_ph__max_to_build: float = 5
     built_ph__build_chance_reward = 0.4
@@ -91,8 +88,7 @@ class Algo8(AgentAlgorithm):
     check_collision = True
     keep_in_bounds = True
 
-
-    layer_to_dump : str = 'existing_geo'
+    layer_to_dump: str = "existing_geo"
 
     def initialization(self, **kwargs):
         """
@@ -121,58 +117,53 @@ class Algo8(AgentAlgorithm):
             voxel_size=self.voxel_size,
             color=Color.from_rgb255(*rgb_queen),
             flip_colors=True,
-            diffusion_ratio= 1,
-            decay_ratio=1/10000000,
-            gradient_resolution=100000
+            diffusion_ratio=1,
+            decay_ratio=1 / 10000000,
+            gradient_resolution=100000,
         )
         existing_geo = DiffusiveLayer(
             name="existing_geo",
             voxel_size=self.voxel_size,
             color=Color.from_rgb255(*rgb_existing),
-            flip_colors=True, 
+            flip_colors=True,
         )
-            # decay_linear_value=1/(self.agent_count * 3000 * 1000)
-
+        # decay_linear_value=1/(self.agent_count * 3000 * 1000)
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.add_values_in_zone_xxyyzz([0,self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1)
+        ground.add_values_in_zone_xxyyzz(
+            [0, self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1
+        )
         ground.add_values_in_zone_xxyyzz(self.box_template, 1)
         built_ph_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
         existing_geo.add_values_in_zone_xxyyzz(self.box_template, 1)
         # built_ph_layer.array += existing_geo.array
-
-
-        
 
         # WRAP ENVIRONMENT
         layers = {
             "agent_space": agent_space,
             "ground": ground,
             "built_ph_layer": built_ph_layer,
-            'existing_geo' : existing_geo
+            "existing_geo": existing_geo,
         }
         return layers
 
-
-    def update_environment(self, state: SimulationState):
+    def update_environment(self, state: Environment):
         layers = state.data_layers
 
         ground = layers["ground"]
         built_ph_layer = layers["built_ph_layer"]
-        existing_geo = layers['existing_geo']
+        existing_geo = layers["existing_geo"]
         diffuse_diffusive_layer(
             built_ph_layer,
             emmission_array=existing_geo.array * 1,
             blocking_layer=ground,
             gravity_shift_bool=False,
-            decay=True
+            decay=True,
         )
         # existing_geo.decay_linear()
         # print('ph bounds:', np.amax(built_ph_layer.array),np.amin(built_ph_layer.array))
-  
 
-
-    def setup_agents(self, data_layers: Dict[str, DiffusiveLayer]):
+    def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
 
@@ -210,7 +201,7 @@ class Algo8(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
 
-    def move_agent(self, agent, state: SimulationState):
+    def move_agent(self, agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -219,7 +210,7 @@ class Algo8(AgentAlgorithm):
         """
         # layers = state.data_layers
         built_ph_layer = state.data_layers["built_ph_layer"]
-        ground = state.data_layers['ground']
+        ground = state.data_layers["ground"]
 
         gv = agent.get_layer_value_at_pose(ground, print_=False)
         # print('ground value before move:', gv, agent.pose)
@@ -227,7 +218,9 @@ class Algo8(AgentAlgorithm):
             return False
 
         # move by built_ph_layer
-        ph_cube = agent.get_direction_cube_values_for_layer(built_ph_layer, self.move_ph_attractor_strength)
+        ph_cube = agent.get_direction_cube_values_for_layer(
+            built_ph_layer, self.move_ph_attractor_strength
+        )
 
         # get random directions cube
         random_cube = np.random.random(26) * self.move_ph_random_strength
@@ -251,7 +244,7 @@ class Algo8(AgentAlgorithm):
         # print('agent moved flag', moved)
         return moved
 
-    def calculate_build_chances(self, agent, state: SimulationState):
+    def calculate_build_chances(self, agent, state: Environment):
         """simple build chance getter
 
         returns build_chance, erase_chance
@@ -264,10 +257,10 @@ class Algo8(AgentAlgorithm):
         # pheromone density in position
         v = agent.get_chance_by_pheromone_strength(
             built_ph_layer,
-            limit1 = self.built_ph__min_to_build,
-            limit2 = self.built_ph__max_to_build,
-            strength = self.built_ph__build_chance_reward,
-            flat_value = True,
+            limit1=self.built_ph__min_to_build,
+            limit2=self.built_ph__max_to_build,
+            strength=self.built_ph__build_chance_reward,
+            flat_value=True,
         )
 
         build_chance += v
@@ -284,16 +277,14 @@ class Algo8(AgentAlgorithm):
 
         # return build_chance, erase_chance
 
-    def build_by_chance(
-        self, agent, state: SimulationState
-    ):
+    def build_by_chance(self, agent, state: Environment):
         """agent builds on construction_layer, if pheromon value in cell hits limit
         chances are either momentary values or stacked by history
         return bool"""
         built = False
         erased = False
         ground = state.data_layers["ground"]
-        existing_geo = state.data_layers['existing_geo']
+        existing_geo = state.data_layers["existing_geo"]
         build_condition = agent.check_build_conditions(ground)
         if build_condition:
             # build

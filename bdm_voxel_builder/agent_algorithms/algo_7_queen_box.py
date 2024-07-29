@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -10,7 +9,7 @@ from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.helpers.numpy import make_solid_box_xxyyzz
-from bdm_voxel_builder.simulation_state import SimulationState
+from bdm_voxel_builder.environment import Environment
 
 
 @dataclass
@@ -22,7 +21,7 @@ class Algo7QueenBox(AgentAlgorithm):
     """
 
     name: str = "queen_box"
-    relevant_data_layers: Tuple[str] = "ground"
+    relevant_data_layers: str = "ground"
     seed_iterations: int = 25
 
     # BUILD SETTINGS
@@ -71,8 +70,7 @@ class Algo7QueenBox(AgentAlgorithm):
     # solid_box = [10,20,10,20,0,6]
     # solid_box = [0,1,0,1,0,1]
 
-    layer_to_dump : str = 'ground'
-
+    layer_to_dump: str = "ground"
 
     def initialization(self, **kwargs):
         """
@@ -135,7 +133,7 @@ class Algo7QueenBox(AgentAlgorithm):
         }
         return layers
 
-    def update_environment(self, state: SimulationState):
+    def update_environment(self, state: Environment):
         layers = state.data_layers
 
         ground = layers["ground"]
@@ -148,7 +146,7 @@ class Algo7QueenBox(AgentAlgorithm):
             gravity_shift_bool=False,
         )
 
-    def setup_agents(self, data_layers: Dict[str, DiffusiveLayer]):
+    def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
 
@@ -185,7 +183,7 @@ class Algo7QueenBox(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
 
-    def move_agent(self, agent, state: SimulationState):
+    def move_agent(self, agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -241,7 +239,7 @@ class Algo7QueenBox(AgentAlgorithm):
 
         return moved
 
-    def calculate_build_chances(self, agent, state: SimulationState):
+    def calculate_build_chances(self, agent, state: Environment):
         """simple build chance getter
 
         returns build_chance, erase_chance
@@ -271,9 +269,7 @@ class Algo7QueenBox(AgentAlgorithm):
 
         return build_chance, erase_chance
 
-    def build_over_limits(
-        self, agent, state: SimulationState, build_chance, erase_chance
-    ):
+    def build_over_limits(self, agent, state: Environment, build_chance, erase_chance):
         """agent builds on construction_layer, if pheromon value in cell hits limit
         chances are either momentary values or stacked by history
         return bool"""
@@ -295,4 +291,6 @@ class Algo7QueenBox(AgentAlgorithm):
 
     def build_by_chance(self, agent, state):
         """build - select build style here"""
-        return self.build_over_limits(agent, state, agent.build_chance, agent.erase_chance)
+        return self.build_over_limits(
+            agent, state, agent.build_chance, agent.erase_chance
+        )

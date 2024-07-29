@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 import numpy as np
 from compas.colors import Color
@@ -8,7 +7,7 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
-from bdm_voxel_builder.simulation_state import SimulationState
+from bdm_voxel_builder.environment import Environment
 
 """
 Algorithm structure overview:
@@ -56,7 +55,7 @@ class Algo8b(AgentAlgorithm):
     agent is attracted toward existing + newly built geomoetry by 'move_to_ph_layer'
     build_chance is rewarded if within the given ph limits
     if enough chances gained, agent builds / erases
-    erase: explosive :) 
+    erase: explosive :)
     6 or 26 voxels are cleaned
 
     if below sg > just build
@@ -65,25 +64,23 @@ class Algo8b(AgentAlgorithm):
     """
 
     name: str = "build_on_and_erase6nbs"
-    relevant_data_layers: Tuple[str] = "ground"
+    relevant_data_layers: str = "ground"
     seed_iterations: int = 10
 
     # EXISTING GEOMETRY
     box_template = [20, 25, 22, 25, 1, 6]
     ground_level_Z = 0
 
-
-
     ################### Main control: ##################
     # MOVE SETTINGS
     move_ph_random_strength = 0.000000007
     move_ph_attractor_strength = 10000
     move_up = 1
-    move_side = 0.9 
-    move_down = 0.1 
+    move_side = 0.9
+    move_down = 0.1
     move_dir_pref_weigth = 0.5
 
-    # Built Chance Reward if in pheromon limits 
+    # Built Chance Reward if in pheromon limits
     built_ph__min_to_build: float = 0.005
     built_ph__max_to_build: float = 5
     built_ph__build_chance_reward = 0
@@ -94,7 +91,7 @@ class Algo8b(AgentAlgorithm):
     # slice below:
     check_d1 = True
     # built volumes density below the agent in a disc shape
-    slice_shape_1__ = [1,1,0,0,0,-1] # radius x,y,z , offset x,y,z
+    slice_shape_1__ = [1, 1, 0, 0, 0, -1]  # radius x,y,z , offset x,y,z
     density_1__build_if_over = 0.1
     density_1__build_if_below = 1
     density_1__build_chance_reward = 5
@@ -105,7 +102,7 @@ class Algo8b(AgentAlgorithm):
     # slice around:
     check_d2 = True
     # built volumes density below the agent in a disc shape
-    slice_shape_2__ = [2,2,0,0,0,0] # radius x,y,z , offset x,y,z
+    slice_shape_2__ = [2, 2, 0, 0, 0, 0]  # radius x,y,z , offset x,y,z
     density_2__build_if_over = 0.01
     density_2__build_if_below = 0.4
     density_2__build_chance_reward = 3
@@ -117,7 +114,7 @@ class Algo8b(AgentAlgorithm):
     # slice above:
     check_d3 = True
     # built volumes density below the agent in a disc shape
-    slice_shape_3__ = [1,1,0,0,0,1] # radius x,y,z , offset x,y,z
+    slice_shape_3__ = [1, 1, 0, 0, 0, 1]  # radius x,y,z , offset x,y,z
     density_3__build_if_over = 0
     density_3__build_if_below = 1
     density_3__build_chance_reward = 0
@@ -126,7 +123,7 @@ class Algo8b(AgentAlgorithm):
     density_3__erase_if_below = 1
     density_3__erase_chance_reward = 5
 
-    decay_clay_bool : bool = False
+    decay_clay_bool: bool = False
     ####################################################
 
     stacked_chances: bool = True
@@ -140,8 +137,7 @@ class Algo8b(AgentAlgorithm):
     check_collision = True
     keep_in_bounds = True
 
-
-    layer_to_dump : str = 'clay_layer'
+    layer_to_dump: str = "clay_layer"
 
     def initialization(self, **kwargs):
         """
@@ -170,56 +166,51 @@ class Algo8b(AgentAlgorithm):
             voxel_size=self.voxel_size,
             color=Color.from_rgb255(*rgb_queen),
             flip_colors=True,
-            diffusion_ratio= 1,
-            decay_ratio=1/10000000,
-            gradient_resolution=100000
+            diffusion_ratio=1,
+            decay_ratio=1 / 10000000,
+            gradient_resolution=100000,
         )
         clay_layer = DiffusiveLayer(
             name="clay_layer",
             voxel_size=self.voxel_size,
             color=Color.from_rgb255(*rgb_existing),
-            flip_colors=True, 
+            flip_colors=True,
         )
-            # decay_linear_value=1/(self.agent_count * 3000 * 1000)
-
+        # decay_linear_value=1/(self.agent_count * 3000 * 1000)
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.add_values_in_zone_xxyyzz([0,self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1)
+        ground.add_values_in_zone_xxyyzz(
+            [0, self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1
+        )
         ground.add_values_in_zone_xxyyzz(self.box_template, 1)
         move_to_ph_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
         clay_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
         # move_to_ph_layer.array += clay_layer.array
-
-
-        
 
         # WRAP ENVIRONMENT
         layers = {
             "agent_space": agent_space,
             "ground": ground,
             "move_to_ph_layer": move_to_ph_layer,
-            'clay_layer' : clay_layer
+            "clay_layer": clay_layer,
         }
         return layers
 
-
-    def update_environment(self, state: SimulationState):
+    def update_environment(self, state: Environment):
         layers = state.data_layers
-        emission_array_for_move_ph = layers['clay_layer'].array
+        emission_array_for_move_ph = layers["clay_layer"].array
         diffuse_diffusive_layer(
             layers["move_to_ph_layer"],
             emmission_array=emission_array_for_move_ph,
             blocking_layer=layers["ground"],
             gravity_shift_bool=False,
-            decay=True
+            decay=True,
         )
         if self.decay_clay_bool:
-            layers['clay_layer'].decay_linear()
+            layers["clay_layer"].decay_linear()
         # print('ph bounds:', np.amax(move_to_ph_layer.array),np.amin(move_to_ph_layer.array))
-  
 
-
-    def setup_agents(self, data_layers: Dict[str, DiffusiveLayer]):
+    def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
 
@@ -257,7 +248,7 @@ class Algo8b(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
 
-    def move_agent(self, agent, state: SimulationState):
+    def move_agent(self, agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -266,7 +257,7 @@ class Algo8b(AgentAlgorithm):
         """
         # layers = state.data_layers
         move_to_ph_layer = state.data_layers["move_to_ph_layer"]
-        ground = state.data_layers['ground']
+        ground = state.data_layers["ground"]
 
         gv = agent.get_layer_value_at_pose(ground, print_=False)
         # print('ground value before move:', gv, agent.pose)
@@ -274,7 +265,9 @@ class Algo8b(AgentAlgorithm):
             return False
 
         # move by move_to_ph_layer
-        ph_cube = agent.get_direction_cube_values_for_layer(move_to_ph_layer, self.move_ph_attractor_strength)
+        ph_cube = agent.get_direction_cube_values_for_layer(
+            move_to_ph_layer, self.move_ph_attractor_strength
+        )
 
         # get random directions cube
         random_cube = np.random.random(26) * self.move_ph_random_strength
@@ -301,13 +294,13 @@ class Algo8b(AgentAlgorithm):
         # print('agent moved flag', moved)
         return moved
 
-    def calculate_build_chances(self, agent, state: SimulationState):
+    def calculate_build_chances(self, agent, state: Environment):
         """simple build chance getter
 
         returns build_chance, erase_chance
         """
         move_to_ph_layer = state.data_layers["move_to_ph_layer"]
-        clay_layer = state.data_layers['clay_layer']
+        clay_layer = state.data_layers["clay_layer"]
         build_chance = agent.build_chance
         erase_chance = agent.erase_chance
 
@@ -323,21 +316,21 @@ class Algo8b(AgentAlgorithm):
         # erase_chance += 0
 
         # built volumes density below the agent
-        if self.check_d1: 
+        if self.check_d1:
             b, e = agent.get_chances_by_density_normal_by_slice(
                 clay_layer,
-                self.slice_shape_1__,   
+                self.slice_shape_1__,
                 self.density_1__build_if_over,
                 self.density_1__build_if_below,
                 self.density_1__erase_if_below,
                 self.density_1__erase_if_over,
                 self.density_1__build_chance_reward,
-                self.density_1__erase_chance_reward
+                self.density_1__erase_chance_reward,
             )
             # print(b,e)
             build_chance += b
             erase_chance += e
-        
+
         # built volumes density around the agent
         if self.check_d2:
             b, e = agent.get_chances_by_density_normal_by_slice(
@@ -357,7 +350,7 @@ class Algo8b(AgentAlgorithm):
         if self.check_d3:
             b, e = agent.get_chances_by_density_normal_by_slice(
                 clay_layer,
-                self.slice_shape_3__,   
+                self.slice_shape_3__,
                 self.density_3__build_if_over,
                 self.density_3__build_if_below,
                 self.density_3__erase_if_below,
@@ -377,16 +370,14 @@ class Algo8b(AgentAlgorithm):
             agent.build_chance = build_chance
             agent.erase_chance = erase_chance
 
-    def build_by_chance(
-        self, agent, state: SimulationState
-    ):
+    def build_by_chance(self, agent, state: Environment):
         """agent builds on construction_layer, if pheromon value in cell hits limit
         chances are either momentary values or stacked by history
         return bool"""
         built = False
         erased = False
         ground = state.data_layers["ground"]
-        clay_layer = state.data_layers['clay_layer']
+        clay_layer = state.data_layers["clay_layer"]
         build_condition = agent.check_build_conditions(ground)
         if build_condition:
             # build
