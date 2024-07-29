@@ -8,8 +8,8 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # SHORT RUN test compasview
 voxel_size = 60
-iterations = 1000
-agent_count = 5
+iterations = 100
+agent_count = 50
 interval = 100
 info = 25
 config = Config(
@@ -22,5 +22,6 @@ config = Config(
         ),
     save_interval=interval,
     visualize_interval=interval
+
 )
 

@@ -81,7 +81,7 @@ class Algo8c(AgentAlgorithm):
 
     # EXISTING GEOMETRY
     add_box = True
-    box_template = [20, 22, 20, 22, 3, 4]
+    box_template = [20, 22, 20, 22, 1, 4]
     ground_level_Z = 0
 
     reach_to_build: int = 1
@@ -91,8 +91,8 @@ class Algo8c(AgentAlgorithm):
     ####################################################
 
     stacked_chances: bool = True
-    reset_after_build: bool = True
-    reset_after_erased: bool = True
+    reset_after_build: bool = False
+    reset_after_erased: bool = False
 
     # Agent deployment
     deployment_zone__a = 5
@@ -186,9 +186,9 @@ class Algo8c(AgentAlgorithm):
         if self.decay_clay_bool:
             layers['clay_layer'].decay_linear()
         
-        # print to examine
-        ph_array = layers['pheromon_layer_move'].array
-        print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
+        # # print to examine
+        # ph_array = layers['pheromon_layer_move'].array
+        # print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
 
     def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
@@ -248,37 +248,39 @@ class Algo8c(AgentAlgorithm):
 
         # print clay density for examination   
         clay_density = agent.get_layer_density(clay_layer, trunc_decimals=False, print_=False)
-        if clay_density > 0:
-            txt = 'move: clay_density = {}'
-            print(txt.format(clay_density))
+        # if clay_density > 0:
+        #     txt = 'move: clay_density = {}'
+        #     print(txt.format(clay_density))
         
         # move by pheromon_layer_move
         move_pheromon_cube = agent.get_direction_cube_values_for_layer(pheromon_layer_move, 1)
-        random_cube = np.random.random(26)
         directional_bias_cube = agent.direction_preference_26_pheromones_v2(1, 0.8, 0.2)
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
         ############################################################################
+        ############# randomize ##########
+
+
         if clay_density < 0.1:
-            """pheromon values are really small here"""
-            move_pheromon_cube *= 10000
-            random_cube *= 0.01
-            direction_cube = move_pheromon_cube + random_cube
+            """far from the clay, agents are aiming to get there"""
+            direction_cube = move_pheromon_cube
+            random_mod = 0.3
 
         elif 0.1 <= clay_density < 0.7:
-            """clay isnt that attractive anymore, they prefer climbing"""
+            """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube *= 0.01
-            random_cube *= 0.1
             directional_bias_cube *= 1
-            direction_cube = move_pheromon_cube + random_cube + directional_bias_cube
+            direction_cube = move_pheromon_cube + directional_bias_cube
+            random_mod = 0.6
 
         elif 0.7 <= clay_density:
             """clay is super dense, they really climb up"""
             move_pheromon_cube *= 0.001
-            random_cube *= 1
             directional_bias_cube *= 100
-            direction_cube = move_pheromon_cube + random_cube + directional_bias_cube
+            direction_cube = move_pheromon_cube + directional_bias_cube
+            random_mod = 0.6
+        
         ############################################################################
 
         # move by pheromons avoid collision
@@ -290,6 +292,7 @@ class Algo8c(AgentAlgorithm):
             fly=False,
             only_bounds=self.keep_in_bounds,
             check_self_collision=self.check_collision,
+            random_batch_size=int(random_mod * 26)
         )
 
         # doublecheck if in bounds
@@ -362,10 +365,10 @@ class Algo8c(AgentAlgorithm):
         # MANUAL TEST
         # agent.build_chance += 0.3
         # agent.erase_chance += 0
-        if clay_density > 0:
-            txt = 'build calc: clay_density = {}'
-            print(txt.format(clay_density))
-            print('Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
+        # if clay_density > 0:
+        #     txt = 'build calc: clay_density = {}'
+        #     print(txt.format(clay_density))
+        #     print('Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
 
 
     def build_by_chance(self, agent, state: Environment):
@@ -383,12 +386,12 @@ class Algo8c(AgentAlgorithm):
             if agent.build_chance >= self.reach_to_build:
                 # built = agent.build_on_layer(ground)
                 built = agent.build_on_layer(clay_layer)
-                print('built', agent.pose, agent.build_chance)
+                # print('built', agent.pose, agent.build_chance)
             # erase
             elif agent.erase_chance >= self.reach_to_erase:
                 # erased = agent.erase_26(ground)
                 erased = agent.erase_26(clay_layer)
-                print('erased', agent.pose, agent.erase_chance)
+                # print('erased', agent.pose, agent.erase_chance)
             if erased or built:
                 agent.erase_chance = 0
                 agent.build_chance = 0

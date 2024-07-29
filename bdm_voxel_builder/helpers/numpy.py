@@ -204,3 +204,13 @@ def crop_array(arr, start=0, end=1):
     arr = np.minimum(arr, end)
     arr = np.maximum(arr, start)
     return arr
+
+def random_choice_index_from_best_n(list_array, n):
+    array = list_array
+    a = np.sort(array)
+    best_of = a[(len(array)-n):]
+    random_choice_from_the_best_nth = np.random.choice(best_of)
+    matching_i = np.argwhere(array == random_choice_from_the_best_nth).transpose()
+    random_choice_index_from_best_n = np.random.choice(matching_i[0])
+    # print('random value of the best [{}] value = {}, index = {}'.format(n, array[best_index], index_of_random_choice_of_best_n_value))
+    return random_choice_index_from_best_n

@@ -3,7 +3,7 @@ from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 
 import numpy as np
 from math import trunc
-
+from bdm_voxel_builder.helpers.numpy import random_choice_index_from_best_n
 class Agent:
     def __init__(self, 
         pose = [0,0,0], 
@@ -540,11 +540,12 @@ class Agent:
         return True
     
     
-    def move_by_pheromons(self, solid_array, pheromon_cube, voxel_size = None, fly = None, only_bounds = True, check_self_collision = False):
-        """move in the direciton of the strongest pheromon
+    def move_by_pheromons(self, solid_array, pheromon_cube, voxel_size = None, fly = None, only_bounds = True, check_self_collision = False, random_batch_size = 1):
+        """move in the direciton of the strongest pheromon - random choice of best three
         checks invalid moves 
         solid layer collision
         self collision
+        selects a random direction from the 'n' best options
         return bool_
         """
         direction_cube = self.get_nb_indices_26(self.pose)
@@ -558,9 +559,13 @@ class Agent:
         exclude = self.get_move_mask_26_from_an_array(solid_array, voxel_size, fly, check_self_collision=check_self_collision)
         pheromon_cube[exclude] = -1
 
-        # select best dir
-        choice = np.argmax(pheromon_cube)
-        new_pose = direction_cube[choice]
+        # select randomly from the best n value
+        i = random_choice_index_from_best_n(pheromon_cube, random_batch_size)
+        # searchsorted
+
+        # select best option
+        # choice = np.argmax(pheromon_cube)
+        new_pose = direction_cube[i]
 
         # update space layers before move
         if self.leave_trace:
