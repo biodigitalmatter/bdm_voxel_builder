@@ -554,17 +554,22 @@ class Agent:
         if only_bounds:
             direction_cube = np.clip(direction_cube,0,voxel_size - 1)
 
-        # add penalty for invalid moves
-        # based on one or several layers
+        # add penalty for invalid moves based on an array
         exclude = self.get_move_mask_26_from_an_array(solid_array, voxel_size, fly, check_self_collision=check_self_collision)
         pheromon_cube[exclude] = -1
 
         # select randomly from the best n value
-        i = random_choice_index_from_best_n(pheromon_cube, random_batch_size)
-        # searchsorted
+        if random_batch_size <= 1:
+            pass
+            i = np.argmax(pheromon_cube)
+        else:
+            i = random_choice_index_from_best_n(pheromon_cube, random_batch_size)
 
-        # select best option
-        # choice = np.argmax(pheromon_cube)
+        if pheromon_cube[i] == -1:
+            # agent cant move to valid voxel
+            return False
+
+        # best option
         new_pose = direction_cube[i]
 
         # update space layers before move

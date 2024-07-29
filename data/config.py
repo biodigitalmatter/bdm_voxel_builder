@@ -7,8 +7,8 @@ from bdm_voxel_builder.agent_algorithms.algo_8_c_build_on_3 import Algo8c
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # SHORT RUN test compasview
-voxel_size = 60
-iterations = 100
+voxel_size = 50
+iterations = 1000
 agent_count = 50
 interval = 100
 info = 25

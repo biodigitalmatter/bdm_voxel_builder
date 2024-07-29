@@ -20,18 +20,8 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
 
     # 2. MOVE and BUILD
     for agent in sim_state.agents:
-        # MOVE
-        moved = algo.move_agent(agent, sim_state)
-        if not moved:
-            algo.reset_agent(agent)
-        # BUILD
-        if moved:
-            algo.calculate_build_chances(agent, sim_state)
-            built, erased = algo.build_by_chance(agent, sim_state)
-            if built and algo.reset_after_build:
-                algo.reset_agent(agent)
-            if erased and algo.reset_after_erased:
-                algo.reset_agent(agent)
+        # execute move and build actions
+        algo.agent_action(agent, sim_state)
 
     # 3. make frame for animation
     if (

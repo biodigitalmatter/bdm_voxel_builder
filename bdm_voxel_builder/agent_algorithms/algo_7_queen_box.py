@@ -294,3 +294,20 @@ class Algo7QueenBox(AgentAlgorithm):
         return self.build_over_limits(
             agent, state, agent.build_chance, agent.erase_chance
         )
+
+    # ACTION FUNCTION - move first
+    def agent_action(self, agent, state: Environment):
+        """first build, then move
+        to allow continous movement"""
+        # MOVE
+        moved = self.move_agent(agent, state)
+        if not moved:
+            self.reset_agent(agent)
+        
+        # get move probabilty
+        self.calculate_build_chances(agent, state)
+
+        # BUILD
+        built, erased = self.build_by_chance(agent, state)
+        if built or erased and self.reset_after_build:
+            self.reset_agent(agent)

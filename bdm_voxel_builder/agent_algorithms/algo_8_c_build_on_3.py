@@ -307,7 +307,6 @@ class Algo8c(AgentAlgorithm):
 
         returns build_chance, erase_chance
         """
-        pheromon_layer_move = state.data_layers["pheromon_layer_move"]
         clay_layer = state.data_layers['clay_layer']
         build_chance = 0
         erase_chance = 0
@@ -329,22 +328,24 @@ class Algo8c(AgentAlgorithm):
         high_density__roof__erase_reward = 20
         ##########################################################################
 
-        # check clay density
+        # get clay density
         clay_density = agent.get_layer_density(clay_layer, trunc_decimals = False)
-        if 0 <= clay_density < 0.1: 
+
+        # set chances
+        if 0 <= clay_density < 1/26: 
             # extrem low ph density
             pass
-        elif 0.1 <= clay_density < 0.2:
+        elif 1/26 <= clay_density < 3/26:
             build_chance += low_density__build_reward
             erase_chance += low_density__erase_reward
-        elif 0.2 <= clay_density < 0.8:
+        elif 3/26 <= clay_density < 4/5:
             build_chance += normal_density__build_reward
             erase_chance += normal_density__erase_reward
-        elif 0.8 <= clay_density:
+        elif 4/5 <= clay_density:
             build_chance += high_density__build_reward
             erase_chance += high_density__erase_reward
         
-        # # check clay density above
+        # # TODO check clay density only above
         # clay_density_above = agent.get_layer_density_in_slice_shape(
         #         clay_layer,
         #         slice_shape_above
@@ -361,15 +362,6 @@ class Algo8c(AgentAlgorithm):
         else:
             agent.build_chance = build_chance
             agent.erase_chance = erase_chance
-        
-        # MANUAL TEST
-        # agent.build_chance += 0.3
-        # agent.erase_chance += 0
-        # if clay_density > 0:
-        #     txt = 'build calc: clay_density = {}'
-        #     print(txt.format(clay_density))
-        #     print('Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
-
 
     def build_by_chance(self, agent, state: Environment):
         """agent builds on construction_layer, if pheromon value in cell hits limit
@@ -396,3 +388,37 @@ class Algo8c(AgentAlgorithm):
                 agent.erase_chance = 0
                 agent.build_chance = 0
         return built, erased
+
+    # # ACTION FUNCTION - build first
+    # def agent_action(self, agent, state: Environment):
+    #     """first build, then move
+    #     to allow continous movement"""
+    #     # get move probabilty
+    #     self.calculate_build_chances(agent, state)
+
+    #     # BUILD
+    #     built, erased = self.build_by_chance(agent, state)
+    #     if built or erased and self.reset_after_build:
+    #         self.reset_agent(agent)
+        
+    #     # MOVE
+    #     moved = self.move_agent(agent, state)
+    #     if not moved:
+    #         self.reset_agent(agent)
+
+    # ACTION FUNCTION - move first
+    def agent_action(self, agent, state: Environment):
+        """first build, then move
+        to allow continous movement"""
+        # MOVE
+        moved = self.move_agent(agent, state)
+        if not moved:
+            self.reset_agent(agent)
+        
+        # get move probabilty
+        self.calculate_build_chances(agent, state)
+
+        # BUILD
+        built, erased = self.build_by_chance(agent, state)
+        if built or erased and self.reset_after_build:
+            self.reset_agent(agent)
