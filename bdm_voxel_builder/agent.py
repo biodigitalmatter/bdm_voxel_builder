@@ -830,5 +830,4 @@ class Agent:
             if 0 < get_sub_array(layer, 1, self.pose, format_values = 0):
                 return True
         return False
-
     # def get_chance_by_density(self, layer):

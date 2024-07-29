@@ -185,11 +185,13 @@ class Algo8c(AgentAlgorithm):
             emmission_array=emission_array_for_move_ph,
             blocking_layer=layers["ground"],
             gravity_shift_bool=False,
-            decay=True
+            decay=True,
+            grade=False
         )
         if self.decay_clay_bool:
             layers['clay_layer'].decay_linear()
         
+        # print to examine
         ph_array = layers['pheromon_layer_move'].array
         print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
   
@@ -271,15 +273,15 @@ class Algo8c(AgentAlgorithm):
 
         elif 0.1 <= clay_density < 0.7:
             """clay isnt that attractive anymore, they prefer climbing"""
-            move_pheromon_cube *= 0.001
-            random_cube *= 0.5
+            move_pheromon_cube *= 0.01
+            random_cube *= 0.1
             directional_bias_cube *= 1
             direction_cube = move_pheromon_cube + random_cube + directional_bias_cube
 
         elif 0.7 <= clay_density:
             """clay is super dense, they really climb up"""
             move_pheromon_cube *= 0.001
-            random_cube *= 0.0001
+            random_cube *= 1
             directional_bias_cube *= 100
             direction_cube = move_pheromon_cube + random_cube + directional_bias_cube
         ############################################################################
@@ -309,8 +311,8 @@ class Algo8c(AgentAlgorithm):
         """
         pheromon_layer_move = state.data_layers["pheromon_layer_move"]
         clay_layer = state.data_layers['clay_layer']
-        build_chance = agent.build_chance
-        erase_chance = agent.erase_chance
+        build_chance = 0
+        erase_chance = 0
 
         # print('calculate chances: Build_chance: {:_}, Erase_chance: {:_}'.format(agent.build_chance, agent.erase_chance))
 
@@ -381,20 +383,21 @@ class Algo8c(AgentAlgorithm):
         return bool"""
         built = False
         erased = False
-        ground = state.data_layers["ground"]
+        # ground = state.data_layers["ground"]
         clay_layer = state.data_layers['clay_layer']
-        build_condition = agent.check_build_conditions(ground)
-        if build_condition:
+        has_nb_voxel = agent.check_build_conditions(clay_layer, only_face_nbs=True)
+
+        if has_nb_voxel:
             # build
             if agent.build_chance >= self.reach_to_build:
                 # built = agent.build_on_layer(ground)
                 built = agent.build_on_layer(clay_layer)
-                # print('built', agent.pose, agent.build_chance)
+                print('built', agent.pose, agent.build_chance)
             # erase
             elif agent.erase_chance >= self.reach_to_erase:
                 # erased = agent.erase_26(ground)
                 erased = agent.erase_26(clay_layer)
-                # print('erased', agent.pose, agent.erase_chance)
+                print('erased', agent.pose, agent.erase_chance)
             if erased or built:
                 agent.erase_chance = 0
                 agent.build_chance = 0

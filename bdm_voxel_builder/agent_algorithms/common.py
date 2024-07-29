@@ -12,6 +12,7 @@ def diffuse_diffusive_layer(
     diffuse_bool: bool = True,
     decay: bool = True,
     decay_linear: bool = False,
+    grade = True,
     n_iterations: int = 1,
 ):
     """
@@ -60,5 +61,5 @@ def diffuse_diffusive_layer(
                 blocking_layer.block_layers([diffusive_layer])
 
         # apply gradient steps
-        if diffusive_layer.gradient_resolution != 0:
+        if diffusive_layer.gradient_resolution != 0 and grade:
             diffusive_layer.grade()
