@@ -13,11 +13,13 @@ class CompasViewerVisualizer(Visualizer):
     def __init__(
         self,
         save_file=False,
+        skip_layers = ('layer_name')
     ):
         super().__init__(save_file)
 
         self.viewer = Viewer()
         self.scene = self.viewer.scene
+        self.skip_layers = skip_layers
 
     def setup_layers(self):
 
@@ -38,6 +40,8 @@ class CompasViewerVisualizer(Visualizer):
     def draw(self, iteration_count=None):
         self.setup_layers()
         for layer in self.data_layers:
+            if layer.name in self.skip_layers:
+                continue
             parent = self.scene.get_node_by_name(layer.name)
 
             pts = convert_array_to_pts(layer.array, get_data=False)

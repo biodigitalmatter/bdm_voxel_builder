@@ -11,7 +11,6 @@ from bdm_voxel_builder.visualizer.matplotlib import MPLVisualizer
 
 from bdm_voxel_builder.helpers.compas import pointcloud_from_ndarray, save_pointcloud
 
-
 def simulate(frame, config: Config = None, sim_state: SimulationState = None):
     algo = config.algo
     visualizer = config.visualizer

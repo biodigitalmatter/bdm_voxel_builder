@@ -246,11 +246,13 @@ class Agent:
             nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
         return nbs_w_corners
 
-    def get_layer_density(self, layer, trunc_decimals = False):
+    def get_layer_density(self, layer, trunc_decimals = False, print_ = False):
         # check clay density
-        clay_values= self.get_layer_nb_values_26(layer, self.pose, trunc_decimals)
-        print('clay values:\n', clay_values)
+        clay_values= self.get_layer_nb_values_26(layer, self.pose, False)
         clay_density = sum(clay_values) / 26
+        if print_:
+            print('layer values:\n{}\n'.format(clay_values))
+            print('layer_density:{} in pose:{}'.format(clay_density, self.pose))
         return clay_density
     
     
