@@ -14,14 +14,14 @@ NB_INDEX_DICT = {
 }
 
 
-def _convert_array_to_pts_wo_data(arr: npt.NDArray):
+def _convert_array_to_pts_wo_data(arr: npt.NDArray) -> list[list[float]]:
     pts = []
     for i, j, k in zip(*np.nonzero(arr)):
         pts.append([i, j, k])
     return pts
 
 
-def convert_array_to_pts(arr: npt.NDArray, get_data=True):
+def convert_array_to_pts(arr: npt.NDArray, get_data=True) -> list[list[float] | npt.NDArray]:
     if not get_data:
         return _convert_array_to_pts_wo_data(arr)
 

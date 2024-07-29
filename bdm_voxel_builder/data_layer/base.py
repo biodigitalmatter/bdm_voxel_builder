@@ -1,5 +1,5 @@
 import math
-from typing import Tuple
+from typing import Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -16,7 +16,7 @@ class DataLayer:
     def __init__(
         self,
         name: str = None,
-        bbox: int | Tuple[int, int, int] | Box = None,
+        bbox: int | tuple[int, int, int] | Box = None,
         voxel_size: int = 20,
         color: Color = None,
         array: npt.NDArray = None,
@@ -30,7 +30,7 @@ class DataLayer:
             self.bbox = Box(voxel_size)
         elif isinstance(bbox, float):
             self.bbox = Box(bbox)
-        elif isinstance(bbox, Tuple):
+        elif isinstance(bbox, Sequence):
             self.bbox = Box(*bbox)
         elif isinstance(bbox, Box):
             self.bbox = bbox
