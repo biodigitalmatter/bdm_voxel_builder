@@ -16,6 +16,7 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - run: pwd
+      - run: find .
       - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
