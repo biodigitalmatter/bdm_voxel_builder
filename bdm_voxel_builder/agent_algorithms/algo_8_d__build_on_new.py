@@ -29,10 +29,12 @@ iterate:
 
 """
 Algorithm Objectives:
-Algo8c
+Algo8d
 idea is that when agent are 'on' the clay, 
 they start to move more randomly, 
 or more towards direction preference
++ they clay 'dries' and more reward is gained if close to wet parts
++ move pheromon could also take in stronger self_emmision 
 
 ...
 

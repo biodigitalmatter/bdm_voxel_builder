@@ -21,7 +21,8 @@ class Agent:
         leave_trace=False,
         save_move_history=True,
     ):
-        if self.pose is None:
+        self.pose = pose
+        if self.pose == None:
             self.pose = np.asarray([0, 0, 0])
         else:
             self.pose = np.asarray(pose)  # [i,j,k]
