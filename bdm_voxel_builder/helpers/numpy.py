@@ -75,13 +75,13 @@ def create_random_array(shape: int | tuple[int]):
     return np.random.default_rng().random(shape)
 
 
-def set_value_at_index(layer, index=[0, 0, 0], value=1):
+def set_value_at_index(layer, index=(0, 0, 0), value=1):
     # print('set value at index', index)
     i, j, k = index
     try:
         layer.array[i][j][k] = value
     except Exception as e:
-        print("set value error:%s" % e)
+        print(f"set value error: {e}")
     return layer
 
 
@@ -214,6 +214,6 @@ def random_choice_index_from_best_n(list_array, n):
     best_of = a[(len(array) - n) :]
     random_choice_from_the_best_nth = np.random.choice(best_of)
     matching_i = np.argwhere(array == random_choice_from_the_best_nth).transpose()
-    random_choice_index_from_best_n = np.random.choice(matching_i[0])
-    # print('random value of the best [{}] value = {}, index = {}'.format(n, array[best_index], index_of_random_choice_of_best_n_value))
-    return random_choice_index_from_best_n
+    random_choice_index_from_best_n_ = np.random.choice(matching_i[0])
+    # print('random value of the best [{}] value = {}, index = {}'.format(n, array[best_index], index_of_random_choice_of_best_n_value))  # noqa: E501
+    return random_choice_index_from_best_n_
