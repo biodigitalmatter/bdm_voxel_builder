@@ -1,6 +1,6 @@
-from compas_viewer import Viewer
 from compas.data import json_dump
-from compas.geometry import Pointcloud, Point
+from compas.geometry import Point, Pointcloud
+from compas_viewer import Viewer
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers.numpy import convert_array_to_pts

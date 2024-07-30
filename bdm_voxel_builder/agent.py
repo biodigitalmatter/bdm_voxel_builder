@@ -1,12 +1,13 @@
-from bdm_voxel_builder.helpers.numpy import (
-    NB_INDEX_DICT,
-    set_value_at_index,
-    get_sub_array,
-)
+from math import trunc
 
 import numpy as np
-from math import trunc
-from bdm_voxel_builder.helpers.numpy import random_choice_index_from_best_n
+
+from bdm_voxel_builder.helpers.numpy import (
+    NB_INDEX_DICT,
+    get_sub_array,
+    random_choice_index_from_best_n,
+    set_value_at_index,
+)
 
 
 class Agent:

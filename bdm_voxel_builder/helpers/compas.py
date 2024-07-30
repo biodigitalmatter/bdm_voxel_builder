@@ -1,7 +1,8 @@
 from typing import List
-from compas.geometry import Pointcloud
-from compas.data import json_dump
+
 import numpy.typing as npt
+from compas.data import json_dump
+from compas.geometry import Pointcloud
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers.numpy import sort_pts_by_values

@@ -1,7 +1,8 @@
-import numpy as np
 import compas.geometry as cg
+import numpy as np
 import pyopenvdb as vdb
 import pytest
+
 from bdm_voxel_builder.helpers.vdb import _get_vdb_matrix, xform_to_compas, xform_to_vdb
 
 

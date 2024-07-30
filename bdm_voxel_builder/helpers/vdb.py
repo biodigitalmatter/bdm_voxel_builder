@@ -1,5 +1,5 @@
-import numpy as np
 import compas.geometry as cg
+import numpy as np
 import pyopenvdb as vdb
 
 
