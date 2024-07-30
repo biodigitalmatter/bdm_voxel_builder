@@ -13,7 +13,7 @@ from bdm_voxel_builder.helpers.numpy import (
 class Agent:
     def __init__(
         self,
-        pose=[0, 0, 0],
+        pose=None,
         compass_array=NB_INDEX_DICT,
         ground_layer=None,
         space_layer=None,
@@ -21,7 +21,10 @@ class Agent:
         leave_trace=False,
         save_move_history=True,
     ):
-        self.pose = np.asarray(pose)  # [i,j,k]
+        if self.pose is None:
+            self.pose = np.asarray([0, 0, 0])
+        else:
+            self.pose = np.asarray(pose)  # [i,j,k]
         self.compass_array = compass_array
         self.compass_keys = list(compass_array.keys())
         # self.limited_to_ground = limited_to_ground
@@ -102,18 +105,10 @@ class Agent:
         below = values.pop(1)
         sides = sum(values)
 
-        if sides > 0:
-            aside = True
-        else:
-            aside = False
-        if above > 0:
-            above = True
-        else:
-            above = False
-        if below > 0:
-            below = True
-        else:
-            below = False
+        aside = sides > 0
+        above = above > 0
+        below = below > 0
+
         self.relative_booleans_bottom_up = [below, aside, above]
         return below, aside, above
 
@@ -121,24 +116,17 @@ class Agent:
         """up = 1
         side = x
         down = 0.1"""
-        if up:
-            direction_preference = np.asarray([1, x, 0.1, x, x, x])
-        else:
-            direction_preference = np.ones(6)
-        return direction_preference
+        return np.asarray([1, x, 0.1, x, x, x]) if up else np.ones(6)
 
     def direction_preference_26_pheromones(self, x=0.5, up=True):
         """up = 1
         side = x
         down = 0.1"""
-        if up:
-            u = [1] * 9
-            m = [x] * 8
-            b = [0.1] * 9
-            direction_preference = np.asarray(u + m + b)
-        else:
-            direction_preference = np.ones(26)
-        return direction_preference
+        u = [1] * 9
+        m = [x] * 8
+        b = [0.1] * 9
+
+        return np.asarray(u + m + b) if up else np.ones(26)
 
     def direction_preference_26_pheromones_v2(self, up=1, side=0.5, down=0):
         """up = 1
@@ -148,33 +136,35 @@ class Agent:
         u = [up] * 9
         m = [side] * 8
         b = [down] * 9
-        direction_preference = np.asarray(u + m + b)
-        return direction_preference
+
+        return np.asarray(u + m + b)
 
     # INTERACTION WITH LAYERS
     def get_layer_value_at_index(
         self,
         layer,
-        index=[0, 0, 0],
+        index=None,
         reintroduce=True,
         round_=False,
         eliminate_dec=False,
     ):
+        if index is None:
+            index = [0, 0, 0]
         # print('get value at index', index)
-        if reintroduce:
-            index2 = np.mod(index, layer.voxel_size)
-        else:
-            index2 = index
-        i, j, k = index2
+
+        i, j, k = np.mod(index, layer.voxel_size) if reintroduce else index
+
         try:
             v = layer.array[i][j][k]
         except Exception as e:
             print(e)
             v = 0
+
         if round_:
             v = round(v)
         if eliminate_dec:
             v = trunc(v)
+
         return v
 
     def get_layer_value_at_pose(self, layer, print_=False):
@@ -188,7 +178,7 @@ class Agent:
     def get_nb_indices_6(self, pose):
         """returns the list of nb cell indexes"""
         nb_cell_index_list = []
-        for key in self.compass_array.keys():
+        for key in self.compass_array:
             d = self.compass_array[key]
             nb_cell_index_list.append(d + pose)
         return nb_cell_index_list
@@ -205,7 +195,7 @@ class Agent:
     ):
         # nb_value_dict = {}
         value_list = []
-        for key in self.compass_array.keys():
+        for key in self.compass_array:
             d = self.compass_array[key]
             nb_cell_index = d + pose
             # dont check index in boundary
@@ -223,7 +213,7 @@ class Agent:
     ):
         # nb_value_dict = {}
         value_list = []
-        for key in self.compass_array.keys():
+        for key in self.compass_array:
             d = self.compass_array[key]
             nb_cell_index = np.clip((d + pose), 0, voxel_size - 1)
             # dont check index in boundary
@@ -278,16 +268,16 @@ class Agent:
         clay_values = self.get_layer_nb_values_26(layer, self.pose, False)
         clay_density = sum(clay_values) / 26
         if print_:
-            print("layer values:\n{}\n".format(clay_values))
-            print("layer_density:{} in pose:{}".format(clay_density, self.pose))
+            print(f"layer values:\n{clay_values}\n")
+            print(f"layer_density:{clay_density} in pose:{self.pose}")
         return clay_density
 
     def get_layer_density_in_slice_shape(
-        self, diffusive_layer, slice_shape=[1, 1, 0, 0, 0, -1], trunc_decimals=False
+        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, -1), trunc_decimals=False
     ):
-        """
-        returns layer density
-        if trunc_decimals, values in float array are converted to closest integrer in direction of 0
+        """returns layer density
+        if trunc_decimals, values in float array are converted to closest 
+        integrer in direction of 0
         slice shape = [
         x_radius = 1,
         y_radius = 1,
@@ -296,7 +286,8 @@ class Agent:
         y_offset = 0,
         z_offset = 0
         ]
-        *radius: amount of indices in both direction added. r = 1 at i = 0 returns array[-1:2]
+        *radius: amount of indices in both direction added. r = 1 at i = 0 
+        returns array[-1:2]
         """
         # get the sum of the values in the slice
         values = self.get_nb_slice_parametric(
@@ -330,7 +321,8 @@ class Agent:
     #     b = int(x + x_radius + 1) + pad_x
 
     #     c = pad_values
-    #     np.pad(array, ((pad_x,pad_x),(pad_x,pad_x),( pad_x, pad_x)), 'constant', constant_values=((c,c),(c,c),(c,c)))
+    #     np.pad(array, ((pad_x,pad_x),(pad_x,pad_x),( pad_x, pad_x)), 
+    #            'constant', constant_values=((c,c),(c,c),(c,c)))
     #     v = array[a:b,a:b,a:b]
     #     # print(array)
     #     # print(v)
@@ -395,7 +387,8 @@ class Agent:
 
         return v
 
-    # def scan_neighborhood_values(self, array, offset_radius = 1, pose = None, format_values = 0):
+    # def scan_neighborhood_values(self, array, offset_radius = 1, 
+    #                              pose = None, format_values = 0):
     #     """takes sub array around pose, in 'offset_radius'
     #     format values: returns sum '0', avarage '1', or all_values: '2'"""
     #     if isinstance(pose, bool):
@@ -698,7 +691,7 @@ class Agent:
     def get_chances_by_density_by_slice(
         self,
         diffusive_layer,
-        slice_shape=[1, 1, 0, 0, 0, -1],
+        slice_shape=(1, 1, 0, 0, 0, -1),
         build_if_over=0,
         build_if_below=5,
         erase_if_over=27,
@@ -731,7 +724,7 @@ class Agent:
     def get_chances_by_density_normal_by_slice(
         self,
         diffusive_layer,
-        slice_shape=[1, 1, 0, 0, 0, -1],
+        slice_shape=(1, 1, 0, 0, 0, -1),
         build_if_over=0,
         build_if_below=0.5,
         erase_if_over=0.9,
@@ -906,6 +899,6 @@ class Agent:
             if np.sum(v) > 0:
                 return True
         else:
-            if 0 < get_sub_array(layer, 1, self.pose, format_values=0):
+            if get_sub_array(layer, 1, self.pose, format_values=0) > 0:
                 return True
         return False
