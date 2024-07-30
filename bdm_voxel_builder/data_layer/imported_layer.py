@@ -41,8 +41,8 @@ class ImportedLayer(DataLayer):
         grid.copyToArray(arr, ijk=bbox_min)
 
         return cls(
+            grid_size=arr.shape,
             name=name or grid.name,
-            bbox=Box.from_diagonal((bbox_min, bbox_max)),
             array=arr,
             xform=xform_to_compas(grid.transform),
         )
