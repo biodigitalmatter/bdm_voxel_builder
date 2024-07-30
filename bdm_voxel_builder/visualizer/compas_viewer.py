@@ -21,7 +21,9 @@ class CompasViewerVisualizer(Visualizer):
     def setup_layers(self):
         # set up parent objects for each layer
         for layer in self.data_layers:
-            if self.scene.get_node_by_name(layer.name) is None:
+            if layer.name not in self.skip_layers and not self.scene.get_node_by_name(
+                layer.name
+            ):
                 pt = Point(0, 0, 0)
                 self.scene.add(
                     pt,

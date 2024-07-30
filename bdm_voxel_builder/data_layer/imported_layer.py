@@ -3,7 +3,6 @@ import os
 
 import numpy as np
 import pyopenvdb as vdb
-from compas.geometry import Box
 
 from bdm_voxel_builder.data_layer.base import DataLayer
 from bdm_voxel_builder.helpers.vdb import xform_to_compas
