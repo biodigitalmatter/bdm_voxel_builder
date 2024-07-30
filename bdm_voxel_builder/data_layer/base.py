@@ -16,33 +16,20 @@ from bdm_voxel_builder.helpers.vdb import xform_to_vdb
 class DataLayer:
     def __init__(
         self,
+        grid_size: int | tuple[int, int, int],
         name: str = None,
-        bbox: int | tuple[int, int, int] | Box = None,
-        voxel_size: int = 20,
         color: Color = None,
         array: npt.NDArray = None,
         xform: Transformation = None,
     ):
         self.name = name
 
-        if not bbox and not voxel_size:
-            raise ValueError("either bbox or voxel_size must be provided")
-
-        if not bbox:
-            self.local_bbox = Box(voxel_size)
-        elif isinstance(bbox, float):
-            self.local_bbox = Box(bbox)
-        elif isinstance(bbox, Sequence):
-            self.local_bbox = Box(*bbox)
-        elif isinstance(bbox, Box):
-            self.local_bbox = bbox
-        else:
-            raise ValueError("bbox not understood")
+        self.grid_size = grid_size
 
         self.color = color or Color.black()
 
         if array is None:
-            self.array = np.zeros([int(d) for d in self.local_bbox.dimensions])
+            self.array = np.zeros(self.grid_size)
         else:
             self.array = array
 
@@ -52,13 +39,32 @@ class DataLayer:
             self.xform = xform
 
     @property
-    def voxel_size(self):
-        return int(self.local_bbox.dimensions[0])
+    def grid_size(self):
+        value = self._grid_size
+
+        if not isinstance(value, Sequence):
+            return (value, value, value)
+        
+        return value
+
+    @grid_size.setter
+    def grid_size(self, value):
+        value = np.array(value, dtype=np.intp)
+        if value.min() < 1:
+            raise ValueError("grid_size must be nonzero and positive")
+        if np.unique(value).size != 1:
+            raise ValueError("Non square grid not supported yet")
+
+        self._grid_size = value.tolist()
+
+    def get_local_bbox(self) -> Box:
+        """Returns a bounding box containing the grid, 0, 0, 0 to ijk"""
+        return Box.from_diagonal(((0, 0, 0), self.grid_size))
 
     def get_world_bbox(self) -> Box:
-        return self.local_bbox.transformed(self.xform)
+        return self.get_local_bbox.transformed(self.xform)
 
-    def to_grid(self):
+    def to_vdb_grid(self):
         grid = vdb.FloatGrid()
         grid.copyFromArray(self.array)
 
@@ -71,7 +77,7 @@ class DataLayer:
     def save_vdb(self):
         path = get_savepath(TEMP_DIR, ".vdb", note=f"layer_{self.name}")
 
-        grid = self.to_grid()
+        grid = self.to_vdb_grid()
 
         # rotate the grid to make Y up for vdb_view and houdini
         grid.transform.rotate(-math.pi / 2, vdb.Axis.X)

@@ -5,6 +5,7 @@ import numpy as np
 from bdm_voxel_builder.data_layer.base import DataLayer
 from bdm_voxel_builder.helpers.numpy import (
     NB_INDEX_DICT,
+    clip_indices_to_grid_size,
     get_sub_array,
     random_choice_index_from_best_n,
     set_value_at_index,
@@ -13,6 +14,7 @@ from bdm_voxel_builder.helpers.numpy import (
 
 class Agent:
     """Object based voxel walker"""
+
     def __init__(
         self,
         pose=None,
@@ -23,13 +25,11 @@ class Agent:
         leave_trace=False,
         save_move_history=True,
     ):
-        self.pose = pose
-        if self.pose == None:
+        if pose is None:
             self.pose = np.asarray([0, 0, 0])
         else:
             self.pose = np.asarray(pose)  # [i,j,k]
         self.compass_array = compass_array
-        self.compass_keys = list(compass_array.keys())
         # self.limited_to_ground = limited_to_ground
         self.leave_trace = leave_trace
         self.space_layer = space_layer
@@ -38,8 +38,6 @@ class Agent:
         self.move_history = []
         self.save_move_history = save_move_history
         self.build_probability = 0
-        if ground_layer is None:
-            self.voxel_size = ground_layer.voxel_size
         self._cube_array = []
         self._climb_style = ""
         self._build_chance = 0
@@ -151,7 +149,7 @@ class Agent:
         round_=False,
         eliminate_dec=False,
     ):
-        i, j, k = np.mod(index, layer.voxel_size) if reintroduce else index
+        i, j, k = np.mod(index, layer.grid_size) if reintroduce else index
 
         try:
             v = layer.array[i][j][k]
@@ -182,11 +180,11 @@ class Agent:
             nb_cell_index_list.append(d + pose)
         return nb_cell_index_list
 
-    def get_nb_indices_26(self, pose):
+    def get_nb_indices_26(self, pose: tuple[int, int, int]):
         """returns the list of nb cell indexes"""
         nb_cell_index_list = []
         for d in self.cube_array:
-            nb_cell_index_list.append(d + pose)
+            nb_cell_index_list.append((d + pose).tolist())
         return nb_cell_index_list
 
     def get_layer_nb_values_6(
@@ -208,16 +206,14 @@ class Agent:
         return v
 
     def get_nb_values_6_of_array(
-        self, array, voxel_size, pose, round_values=False, trunc_decimals=False
+        self, array, grid_size, pose, round_values=False, trunc_decimals=False
     ):
-        # nb_value_dict = {}
         value_list = []
         for key in self.compass_array:
             d = self.compass_array[key]
-            nb_cell_index = np.clip((d + pose), 0, voxel_size - 1)
+            i, j, k = clip_indices_to_grid_size(d + pose, grid_size)
             # dont check index in boundary
-            x, y, z = nb_cell_index
-            v = array[x][y][z]
+            v = array[i][j][k]
             value_list.append(v)
         v = np.asarray(value_list)
         if round_values:
@@ -277,7 +273,7 @@ class Agent:
             )
         else:
             nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
-        return nbs_w_corners
+        return np.vstack(nbs_w_corners)
 
     def get_layer_density(self, layer, trunc_decimals=False, print_=False):
         # check clay density
@@ -292,7 +288,7 @@ class Agent:
         self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, -1), trunc_decimals=False
     ):
         """returns layer density
-        if trunc_decimals, values in float array are converted to closest 
+        if trunc_decimals, values in float array are converted to closest
         integrer in direction of 0
         slice shape = [
         x_radius = 1,
@@ -302,7 +298,7 @@ class Agent:
         y_offset = 0,
         z_offset = 0
         ]
-        *radius: amount of indices in both direction added. r = 1 at i = 0 
+        *radius: amount of indices in both direction added. r = 1 at i = 0
         returns array[-1:2]
         """
         # get the sum of the values in the slice
@@ -337,7 +333,7 @@ class Agent:
     #     b = int(x + x_radius + 1) + pad_x
 
     #     c = pad_values
-    #     np.pad(array, ((pad_x,pad_x),(pad_x,pad_x),( pad_x, pad_x)), 
+    #     np.pad(array, ((pad_x,pad_x),(pad_x,pad_x),( pad_x, pad_x)),
     #            'constant', constant_values=((c,c),(c,c),(c,c)))
     #     v = array[a:b,a:b,a:b]
     #     # print(array)
@@ -403,7 +399,7 @@ class Agent:
 
         return v
 
-    # def scan_neighborhood_values(self, array, offset_radius = 1, 
+    # def scan_neighborhood_values(self, array, offset_radius = 1,
     #                              pose = None, format_values = 0):
     #     """takes sub array around pose, in 'offset_radius'
     #     format values: returns sum '0', avarage '1', or all_values: '2'"""
@@ -490,7 +486,7 @@ class Agent:
         return exclude_pheromones
 
     def get_move_mask_26_from_an_array(
-        self, solid_array, voxel_size, fly=False, check_self_collision=False
+        self, solid_array, grid_size, fly=False, check_self_collision=False
     ):
         """return move mask 1D array for the 26 nb voxel around self.pose
         the voxel
@@ -510,8 +506,9 @@ class Agent:
         # iterate through nb cells
         for nb_pose in cells_to_check:
             # check if nb cell is empty
-            x, y, z = np.clip(np.asarray(nb_pose), 0, voxel_size - 1)
-            nb_value = solid_array[x][y][z]
+            i, j, k = clip_indices_to_grid_size(nb_pose, grid_size)
+
+            nb_value = solid_array[i][j][k]
             if check_self_collision:
                 nb_value_collision = self.get_layer_value_at_index(
                     self.space_layer, nb_pose
@@ -522,7 +519,7 @@ class Agent:
                 if not fly:
                     # check if nb cells have any face_nb cell which is solid
                     nbs_values = self.get_nb_values_6_of_array(
-                        solid_array, voxel_size, nb_pose
+                        solid_array, grid_size, nb_pose
                     )
                     # print(nbs_values)
                     if np.sum(nbs_values) > 0:
@@ -537,10 +534,11 @@ class Agent:
         exclude_pheromones = np.asarray(exclude)
         return exclude_pheromones
 
-    def move_on_ground(self, voxel_size=None, check_self_collision=False):
+    def move_on_ground(
+        self, grid_size: tuple[int, int, int], check_self_collision=False
+    ):
         cube = self.get_nb_indices_26(self.pose)
-        if voxel_size is not None:
-            cube = np.clip(cube, 0, voxel_size - 1)
+        cube = clip_indices_to_grid_size(cube, grid_size)
 
         random_ph = np.random.random(26)
         exclude = self.get_move_mask_26(
@@ -561,7 +559,6 @@ class Agent:
 
         # move
         self.pose = new_pose
-        # self.move_26(move_vector, self.space_layer.voxel_size)
 
         # update location in space layer
         self.space_layer.set_layer_value_at_index(self.pose, 1)
@@ -571,7 +568,7 @@ class Agent:
         self,
         ground,
         pheromon_cube,
-        voxel_size=None,
+        grid_size=None,
         fly=None,
         only_bounds=True,
         check_self_collision=False,
@@ -581,9 +578,7 @@ class Agent:
         # # limit options to inside
         # print(np.max(cube), np.min(cube))
         if only_bounds:
-            cube = np.clip(cube, 0, voxel_size - 1)
-            # print('amax new:', np.max(cube), np.min(cube))
-            # print(cube)
+            cube = clip_indices_to_grid_size(cube, grid_size)
 
         # move on ground
         exclude = self.get_move_mask_26(
@@ -604,7 +599,6 @@ class Agent:
 
         # move
         self.pose = new_pose
-        # self.move_26(move_vector, self.space_layer.voxel_size)
 
         # update location in space layer
         self.space_layer.set_layer_value_at_index(self.pose, 1)
@@ -614,7 +608,7 @@ class Agent:
         self,
         solid_array,
         pheromon_cube,
-        voxel_size=None,
+        grid_size=None,
         fly=None,
         only_bounds=True,
         check_self_collision=False,
@@ -631,11 +625,11 @@ class Agent:
 
         # # limit options to inside
         if only_bounds:
-            direction_cube = np.clip(direction_cube, 0, voxel_size - 1)
+            direction_cube = clip_indices_to_grid_size(direction_cube, grid_size)
 
         # add penalty for invalid moves based on an array
         exclude = self.get_move_mask_26_from_an_array(
-            solid_array, voxel_size, fly, check_self_collision=check_self_collision
+            solid_array, grid_size, fly, check_self_collision=check_self_collision
         )
         pheromon_cube[exclude] = -1
 
@@ -673,7 +667,6 @@ class Agent:
 
         # move
         self.pose = new_pose
-        # self.move_26(move_vector, self.space_layer.voxel_size)
 
         # update location in space layer
         self.space_layer.set_layer_value_at_index(self.pose, 1)

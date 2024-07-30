@@ -1,29 +1,27 @@
-from dataclasses import dataclass
+import abc
 
 
-@dataclass
-class AgentAlgorithm:
-    agent_count: int
-    voxel_size: int
-    layer_to_dump: str
+class AgentAlgorithm(abc.ABC):
+    def __init__(
+        self,
+        agent_count: int,
+        grid_size: int | tuple[int, int, int],
+        layer_to_dump: str,
+        name: str = None,
+    ) -> None:
+        self.agent_count = agent_count
+        self.grid_size = grid_size
+        self.layer_to_dump = layer_to_dump
+        self.name = name
 
-    def move_agents(self):
+    @abc.abstractmethod
+    def move_agent(self):
         raise NotImplementedError
 
-    def reset_agents(self):
+    @abc.abstractmethod
+    def reset_agent(self):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def setup_agents(self):
-        raise NotImplementedError
-
-    def calculate_build_chances(self):
-        raise NotImplementedError
-
-    def initialization(self, **kwargs):
-        raise NotImplementedError
-
-    def build(self):
-        raise NotImplementedError
-
-    def update_environment(self):
         raise NotImplementedError

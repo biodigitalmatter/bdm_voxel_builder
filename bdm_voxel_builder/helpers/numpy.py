@@ -123,37 +123,34 @@ def conditional_fill(array, condition="<", value=0.5):
     return a
 
 
-def make_solid_box_z(voxel_size, z_max):
-    n = voxel_size
-    test_i = np.indices((n, n, n))
+def make_solid_box_z(grid_size, z_max):
+    test_i = np.indices(grid_size)
     z = test_i[2, :, :, :] <= z_max
-    d = np.zeros((n, n, n))
+    d = np.zeros(grid_size)
     d[z] = 1
     return d
 
 
-def make_solid_box_xxz(voxel_size, x_min, x_max, z_max):
-    n = voxel_size
-    test_i = np.indices((n, n, n))
+def make_solid_box_xxz(grid_size, x_min, x_max, z_max):
+    test_i = np.indices(grid_size)
     x1 = test_i[0, :, :, :] >= x_min
     x2 = test_i[0, :, :, :] <= x_max
     z = test_i[2, :, :, :] <= z_max
-    d = np.zeros((n, n, n))
+    d = np.zeros(grid_size)
     d[x2 & x1 & z] = 1
     return d
 
 
-def make_solid_box_xxyyzz(voxel_size, x_min, x_max, y_min, y_max, z_min, z_max):
+def make_solid_box_xxyyzz(grid_size, x_min, x_max, y_min, y_max, z_min, z_max):
     """boolean box including limits"""
-    n = voxel_size
-    test_i = np.indices((n, n, n))
+    test_i = np.indices(grid_size)
     x1 = test_i[0, :, :, :] >= x_min
     x2 = test_i[0, :, :, :] <= x_max
     y1 = test_i[1, :, :, :] >= y_min
     y2 = test_i[1, :, :, :] <= y_max
     z1 = test_i[2, :, :, :] >= z_min
     z2 = test_i[2, :, :, :] <= z_max
-    d = np.zeros((n, n, n))
+    d = np.zeros(grid_size)
     d[x2 & x1 & y1 & y2 & z1 & z2] = 1
     return d
 
@@ -173,33 +170,28 @@ def get_sub_array(array, offset_radius, center=None, format_values=None):
         return v
 
 
-def get_mask_zone_xxyyzz(voxel_size, zone_xxyyzz, return_bool=True):
+def get_mask_zone_xxyyzz(
+    grid_size: tuple[int, int, int],
+    zone_xxyyzz: tuple[int, int, int, int, int, int],
+    return_bool=True,
+):
     """gets 3D boolean array within zone (including both end)
     return bool or int
     input:
-        voxel_size : int
+        grid_size: tuple[i, j, k]
         zone_xxyyzz : [x_start, x_end, y_start, y_end, z_start, z_end]
         _bool_type: bool
     """
     # make sure params are in bounds
-    n = voxel_size
-    zone_xxyyzz = np.clip(np.asarray(zone_xxyyzz), 0, n - 1)
-    x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz.tolist()
-    # print('zone:', x_min, x_max, y_min, y_max, z_min, z_max )
-    test_i = np.indices((n, n, n))
-    x1 = test_i[0, :, :, :] >= x_min
-    x2 = test_i[0, :, :, :] <= x_max
-    y1 = test_i[1, :, :, :] >= y_min
-    y2 = test_i[1, :, :, :] <= y_max
-    z1 = test_i[2, :, :, :] >= z_min
-    z2 = test_i[2, :, :, :] <= z_max
-    a = np.zeros([n, n, n])
-    a[x2 & x1 & y1 & y2 & z1 & z2] = 1
+    zone_xxyyzz = clip_indices_to_grid_size(zone_xxyyzz, grid_size)
+
+    x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz
+
+    mask = np.zeros(grid_size, dtype=np.int8)
+    mask[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = 1
     if return_bool:
-        a = np.asarray(a, np.bool_)
-    else:
-        pass
-    return a
+        return mask.astype(np.bool_)
+    return mask
 
 
 def crop_array(arr, start=0, end=1):
@@ -235,3 +227,41 @@ def random_choice_index_from_best_n(list_array, n, print_ = False):
     matching_i = np.argwhere(array == random_choice_from_the_best_nth).transpose()
     random_choice_index_from_best_n_ = np.random.choice(matching_i[0])
     return random_choice_index_from_best_n_
+
+
+def clip_indices_to_grid_size(
+    index: npt.NDArray | tuple[int], grid_size: tuple[int, int, int]
+):
+    """Clips indices (i, j, k) to grid size"""
+    return_nparray = isinstance(index, np.ndarray)
+
+    index = np.asarray(index)
+
+    if index.shape[-1] == 3:
+        a_min = [0, 0, 0]
+        a_max = np.array(grid_size) - 1
+    elif index.shape[0] == 6:
+        a_min = [0, 0, 0, 0, 0, 0]
+        # a_max should be [maxi, maxi, maxj, maxj, maxk, maxk]
+        a_max = (
+            np.array(
+                [
+                    grid_size[0],
+                    grid_size[0],
+                    grid_size[1],
+                    grid_size[1],
+                    grid_size[2],
+                    grid_size[2],
+                ]
+            )
+            - 1
+        )
+    else:
+        raise ValueError("Index shape must be 3 or 6")
+
+    clipped = np.clip(index, a_min=a_min, a_max=a_max)
+
+    if return_nparray:
+        return clipped
+    else:
+        return clipped.tolist()

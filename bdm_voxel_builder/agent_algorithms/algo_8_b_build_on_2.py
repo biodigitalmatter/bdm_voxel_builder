@@ -63,7 +63,8 @@ class Algo8b(AgentAlgorithm):
     if more then half around > erase
 
     """
-
+    agent_count: int
+    grid_size: int | tuple[int, int, int]
     name: str = "build_on_and_erase6nbs"
     relevant_data_layers: str = "ground"
     seed_iterations: int = 10
@@ -140,6 +141,15 @@ class Algo8b(AgentAlgorithm):
 
     layer_to_dump: str = "clay_layer"
 
+    def __post_init__(self):
+        """Initialize values held in parent class."""
+        super().__init__(
+            agent_count=self.agent_count,
+            grid_size=self.grid_size,
+            layer_to_dump=self.layer_to_dump,
+            name=self.name,
+        )
+
     def initialization(self, **kwargs):
         """
         creates the simulation environment setup
@@ -154,17 +164,17 @@ class Algo8b(AgentAlgorithm):
         rgb_existing = [207, 179, 171]
         ground = DiffusiveLayer(
             name="ground",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_ground),
         )
         agent_space = DiffusiveLayer(
             name="agent_space",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
         )
         move_to_ph_layer = DiffusiveLayer(
             name="move_to_ph_layer",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_queen),
             flip_colors=True,
             diffusion_ratio=1,
@@ -173,7 +183,7 @@ class Algo8b(AgentAlgorithm):
         )
         clay_layer = DiffusiveLayer(
             name="clay_layer",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
             flip_colors=True,
         )
@@ -181,7 +191,7 @@ class Algo8b(AgentAlgorithm):
 
         ### CREATE GROUND ARRAY *could be imported from scan
         ground.add_values_in_zone_xxyyzz(
-            [0, self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1
+            [0, self.grid_size, 0, self.grid_size, 0, self.ground_level_Z], 1
         )
         ground.add_values_in_zone_xxyyzz(self.box_template, 1)
         move_to_ph_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
@@ -239,9 +249,9 @@ class Algo8b(AgentAlgorithm):
 
     def reset_agent(self, agent):
         # centered setup
-        a, b = [self.deployment_zone__a, self.voxel_size + self.deployment_zone__b]
+        a, b = [self.deployment_zone__a, self.grid_size + self.deployment_zone__b]
         a = max(a, 0)
-        b = min(b, self.voxel_size - 1)
+        b = min(b, self.grid_size - 1)
         x = np.random.randint(a, b)
         y = np.random.randint(a, b)
         z = self.ground_level_Z + 1
@@ -253,7 +263,7 @@ class Algo8b(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
 
-    def move_agent(self, agent, state: Environment):
+    def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -286,14 +296,14 @@ class Algo8b(AgentAlgorithm):
         moved = agent.move_on_ground_by_ph_cube(
             ground=ground,
             pheromon_cube=ph_cube,
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
             check_self_collision=self.check_collision,
         )
 
         # check if in bounds
-        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
+        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.grid_size:
             # print(agent.pose)
             moved = False
 

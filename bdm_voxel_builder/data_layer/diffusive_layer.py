@@ -27,9 +27,8 @@ class GravityDir(enum.Enum):
 class DiffusiveLayer(DataLayer):
     def __init__(
         self,
+        grid_size: int | Tuple[int, int, int] | Box = None,
         name: str = None,
-        bbox: int | Tuple[int, int, int] | Box = None,
-        voxel_size: int = None,
         color: Color = None,
         diffusion_ratio: float = 0.12,
         diffusion_random_factor: float = 0.0,
@@ -45,9 +44,8 @@ class DiffusiveLayer(DataLayer):
         voxel_crop_range=(0, 1),
     ):
         super().__init__(
+            grid_size,
             name=name,
-            bbox=bbox,
-            voxel_size=voxel_size,
             color=color,
         )
         self.diffusion_ratio = diffusion_ratio
@@ -74,7 +72,7 @@ class DiffusiveLayer(DataLayer):
         if self.flip_colors:
             colors = 1 - colors
 
-        newshape = [self.voxel_size] * 3 + [1]
+        newshape = self.grid_size + [1]
 
         reds = np.reshape(colors * (r), newshape=newshape)
         greens = np.reshape(colors * (g), newshape=newshape)
@@ -99,7 +97,7 @@ class DiffusiveLayer(DataLayer):
         return a
 
     def set_layer_value_at_index(self, index=(0, 0, 0), value=1):
-        index2 = np.mod(index, self.voxel_size)
+        index2 = np.mod(index, self.grid_size)
         i, j, k = index2
         self.array[i][j][k] = value
         return self.array
@@ -157,7 +155,9 @@ class DiffusiveLayer(DataLayer):
             y = np.copy(self.array)
             y = np.roll(y, shifts[i % 2], axis=axes[i])
             if not reintroduce_on_the_other_end:
-                e = self.voxel_size - 1
+                # TODO: make work with non square grid
+                e = self.grid_size[0] - 1
+
                 # removing the values from the other end after rolling
                 if i == 0:
                     y[:][:][e] = 0
@@ -209,7 +209,8 @@ class DiffusiveLayer(DataLayer):
             y = np.roll(y, shifts[self.gravity_dir % 2], axis=axes[self.gravity_dir])
             if not reintroduce_on_the_other_end:
                 # TODO replace to padded array method
-                e = self.voxel_size - 1
+                # TODO fix for non square grids
+                e = self.grid_size[0] - 1
                 # removing the values from the other end after rolling
                 match self.gravity_dir:
                     case GravityDir.LEFT:
@@ -281,7 +282,7 @@ class DiffusiveLayer(DataLayer):
             self.array -= self.array * self.decay_ratio
         else:
             randomized_decay = self.decay_ratio * (
-                1 - create_random_array(self.voxel_size) * self.decay_random_factor
+                1 - create_random_array(self.grid_size) * self.decay_random_factor
             )
             randomized_decay = abs(randomized_decay) * -1
             self.array += self.array * randomized_decay
@@ -316,9 +317,9 @@ class DiffusiveLayer(DataLayer):
             zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
         """
         if add_values:
-            zone = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool=False)
+            zone = get_mask_zone_xxyyzz(self.grid_size, zone_xxyyzz, return_bool=False)
             zone *= value
             self.array += zone
         else:
-            mask = get_mask_zone_xxyyzz(self.voxel_size, zone_xxyyzz, return_bool=True)
+            mask = get_mask_zone_xxyyzz(self.grid_size, zone_xxyyzz, return_bool=True)
             self.array[mask] = value

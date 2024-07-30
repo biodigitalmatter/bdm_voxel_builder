@@ -76,6 +76,8 @@ class Algo8c(AgentAlgorithm):
 
     """
 
+    agent_count: int
+    grid_size: int | tuple[int, int, int]
     name: str = "algo_8c_build_on"
     relevant_data_layers: str = "clay"
 
@@ -105,6 +107,17 @@ class Algo8c(AgentAlgorithm):
 
     layer_to_dump: str = "clay_layer"
 
+    def __post_init__(self):
+        """Initialize values held in parent class.
+
+        Run in __post_init__ since @dataclass creates __init__ method"""
+        super().__init__(
+            agent_count=self.agent_count,
+            grid_size=self.grid_size,
+            layer_to_dump=self.layer_to_dump,
+            name=self.name,
+        )
+
     def initialization(self, **kwargs):
         """
         creates the simulation environment setup
@@ -124,22 +137,22 @@ class Algo8c(AgentAlgorithm):
         rgb_existing = (207, 179, 171)
         ground = DiffusiveLayer(
             name="ground",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_ground),
         )
         agent_space = DiffusiveLayer(
             name="agent_space",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
         )
         track_layer = DiffusiveLayer(
             name="track_layer",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
         )
         pheromon_layer_move = DiffusiveLayer(
             name="pheromon_layer_move",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_queen),
             flip_colors=True,
             diffusion_ratio=1 / 7,
@@ -148,7 +161,7 @@ class Algo8c(AgentAlgorithm):
         )
         clay_layer = DiffusiveLayer(
             name="clay_layer",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
             flip_colors=True,
             decay_linear_value=clay_decay_linear_value,
@@ -156,7 +169,7 @@ class Algo8c(AgentAlgorithm):
 
         ### CREATE GROUND ARRAY *could be imported from scan
         ground.add_values_in_zone_xxyyzz(
-            [0, self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1
+            [0, ground.grid_size[0], 0, ground.grid_size[1], 0, self.ground_level_Z], 1
         )
 
         if self.add_box:
@@ -213,11 +226,17 @@ class Algo8c(AgentAlgorithm):
         # print('agent_setup')
         return agents
 
-    def reset_agent(self, agent):
+    def reset_agent(self, agent: Agent):
+        # TODO: make work with non square grids
         # centered setup
-        a, b = [self.deployment_zone__a, self.voxel_size + self.deployment_zone__b]
+        grid_size = agent.space_layer.grid_size
+        a, b = [
+            self.deployment_zone__a,
+            grid_size[0] + self.deployment_zone__b,
+        ]
+
         a = max(a, 0)
-        b = min(b, self.voxel_size - 1)
+        b = min(b, grid_size[0] - 1)
         x = np.random.randint(a, b)
         y = np.random.randint(a, b)
         z = self.ground_level_Z + 1
@@ -230,7 +249,7 @@ class Algo8c(AgentAlgorithm):
         agent.move_history = []
         # print('agent reset functioned')
 
-    def move_agent(self, agent, state: Environment):
+    def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -300,7 +319,7 @@ class Algo8c(AgentAlgorithm):
         moved = agent.move_by_pheromons(
             solid_array=collision_array,
             pheromon_cube=direction_cube,
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
             check_self_collision=self.check_collision,
@@ -308,9 +327,9 @@ class Algo8c(AgentAlgorithm):
         )
 
         # doublecheck if in bounds
-        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
+        if any(np.array(agent.pose) < 0) or any(np.array(agent.pose) >= np.array(self.grid_size)):
+            moved = Fals
             print(f'not in bounds at{agent.pose}')
-            moved = False
 
         return moved
 
