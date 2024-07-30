@@ -18,11 +18,11 @@ iterate:
         reset_agents
 
 
-## Voxel Builder Algorithm: Algo_8_c_build_on:
+## Algo_8_c_build_on:
 
 ### Summary
 
-default voxel builder algorithm
+default, basic voxel builder algorithm
 agents build on and around an initial 'clay' volume on a 'ground' surface
 inputs: solid_ground_volume, clay_volume
 output:
@@ -51,9 +51,17 @@ resetting the agents after build results in a flat volume, since the agent gener
 not resetting the agent after build results in towerlike output
 more agents > wider tower, less agent > thinner tower. because a. reach the same level simultanously
 
-## Voxel Builder Algorithm: Algo_8_d_build_fresh
+## variation: Algo_8_d_build_fresh
 
 ### NEW in 8_d
 
+### Summary
+
 the clay array values slowly decay
 agents aim more towards the freshly built volumes.
+
+### varation: Algo_8_b_build_by_density
+
+WIP
+old version of 8c, doesnt work as intended
+yet

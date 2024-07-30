@@ -188,7 +188,7 @@ class Agent:
         return nb_cell_index_list
 
     def get_layer_nb_values_6(
-        self, layer, pose=None, round_values=False, trunc_decimals=False
+        self, layer, pose=None, round_values=False
     ):
         # nb_value_dict = {}
         value_list = []
@@ -201,12 +201,10 @@ class Agent:
         v = np.asarray(value_list)
         if round_values:
             v.round()
-        if trunc_decimals:
-            v.int_(v)
         return v
 
     def get_nb_values_6_of_array(
-        self, array, grid_size, pose, round_values=False, trunc_decimals=False
+        self, array, grid_size, pose, round_values=False
     ):
         value_list = []
         for key in self.compass_array:
@@ -218,12 +216,10 @@ class Agent:
         v = np.asarray(value_list)
         if round_values:
             v.round()
-        if trunc_decimals:
-            v.int_(v)
         return v
 
     def get_nb_values_26_of_array(
-        self, array, voxel_size, pose, round_values=False, trunc_decimals=False
+        self, array, voxel_size, pose, round_values=False
     ):
         nb_cells = self.get_nb_indices_26(pose)
         cells_to_check = list(nb_cells)
@@ -235,12 +231,10 @@ class Agent:
         v = np.asarray(value_list)
         if round_values:
             v.round()
-        if trunc_decimals:
-            v.int_(v)
         return v
 
     def get_layer_nb_values_26(
-        self, layer, pose=None, round_values=False, trunc_decimals=False
+        self, layer, pose=None, round_values=False
     ):
         value_list = []
         for d in self.cube_array:
@@ -250,8 +244,6 @@ class Agent:
         v = np.asarray(value_list)
         if round_values:
             v.round()
-        if trunc_decimals:
-            v.int_(v)
         return v
 
     def get_cube_array_indices(self, self_contain=False):
@@ -275,21 +267,29 @@ class Agent:
             nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
         return np.vstack(nbs_w_corners)
 
-    def get_layer_density(self, layer, trunc_decimals=False, print_=False):
-        # check clay density
-        clay_values = self.get_layer_nb_values_26(layer, self.pose, False)
-        clay_density = sum(clay_values) / 26
+    def get_layer_density(self, layer,  print_=False):
+        """return clay density"""
+        values = self.get_layer_nb_values_26(layer, self.pose, False)
+        density = sum(values) / 26
         if print_:
-            print(f"layer values:\n{clay_values}\n")
-            print(f"layer_density:{clay_density} in pose:{self.pose}")
-        return clay_density
+            print(f"layer values:\n{values}\n")
+            print(f"layer_density:{density} in pose:{self.pose}")
+        return density
+
+    def get_layer_density_nonzero(self, layer, print_=False):
+        # check clay density
+        a = self.get_layer_nb_values_26(layer, self.pose, False)
+        n = np.count_nonzero(a)
+        density = n / 26
+        if print_:
+            print(f"layer values:\n{n}\n")
+            print(f"number of nonzero: {n}, layer_density:{density} in pose:{self.pose}")
+        return density
 
     def get_layer_density_in_slice_shape(
-        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, -1), trunc_decimals=False
+        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, -1)
     ):
         """returns layer density
-        if trunc_decimals, values in float array are converted to closest
-        integrer in direction of 0
         slice shape = [
         x_radius = 1,
         y_radius = 1,
@@ -308,8 +308,6 @@ class Agent:
             self.pose,
             format_values=0,
         )
-        if trunc_decimals:
-            np.int_(values)
         sum_values = np.sum(values)
         radiis = slice_shape[:3]
         slice_volume = 1

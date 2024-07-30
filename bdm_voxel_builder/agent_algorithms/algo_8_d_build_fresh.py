@@ -9,8 +9,6 @@ from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.environment import Environment
 
-
-
 @dataclass
 class Algo8d(AgentAlgorithm):
     """
@@ -63,7 +61,7 @@ class Algo8d(AgentAlgorithm):
     reach_to_build: int = 1
     reach_to_erase: int = 1
 
-    decay_clay_bool: bool = True
+    # decay_clay_bool: bool = True
     ####################################################
 
     stacked_chances: bool = True
@@ -98,9 +96,9 @@ class Algo8d(AgentAlgorithm):
         returns: layers
         """
         number_of_iterations = kwargs.get("iterations")
-        clay_decay_linear_value = max(
-            1 / (self.agent_count * number_of_iterations * 100), 0.00001
-        )
+        # clay_decay_linear_value = max(
+        #     1 / (self.agent_count * number_of_iterations * 100), 0.00001
+        # )
         ### LAYERS OF THE ENVIRONMENT
         rgb_agents = (34, 116, 240)
         rgb_trace = (17, 60, 120)
@@ -136,7 +134,7 @@ class Algo8d(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
             flip_colors=True,
-            decay_linear_value=clay_decay_linear_value,
+            decay_ratio=1 / 10000000000,
         )
 
         ### CREATE GROUND ARRAY *could be imported from scan
@@ -169,8 +167,8 @@ class Algo8d(AgentAlgorithm):
             grade=False,
             decay=True,
         )
-        if self.decay_clay_bool:
-            layers["clay_layer"].decay_linear()
+        
+        layers["clay_layer"].decay()
         # # print to examine
         # ph_array = layers['pheromon_layer_move'].array
         # print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
@@ -237,21 +235,11 @@ class Algo8d(AgentAlgorithm):
         if gv != 0:
             # print("""agent in the ground""")
             return False
-        # TODO clay collision cannot be checked, if we want to optionally allow non_reset behaviour
-        # if agent.check_clay_collision:
-        #     cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
-        #     if cv != 0:
-        #         print("""agent in the clay""")
-        #         return False
-
 
         # print clay density for examination
-        clay_density = agent.get_layer_density(
-            clay_layer, trunc_decimals=False, print_=False
-        )
-        # if clay_density > 0:
-        #     txt = 'move: clay_density = {}'
-        #     print(txt.format(clay_density))
+        # clay_density = agent.get_layer_density(clay_layer)
+
+        clay_density = agent.get_layer_density_nonzero(clay_layer)
 
         # move by pheromon_layer_move
         move_pheromon_cube = agent.get_direction_cube_values_for_layer(
@@ -267,27 +255,27 @@ class Algo8d(AgentAlgorithm):
         if clay_density < 0.1:
             """far from the clay, agents are aiming to get there"""
             direction_cube = move_pheromon_cube
-            random_mod = 0.1
+            random_mod = 3
 
         elif 0.1 <= clay_density < 0.7:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
-            move_pheromon_cube *= 0.01
-            directional_bias_cube *= 1
+            move_pheromon_cube *= 1
+            directional_bias_cube *= 0.01
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 0.2
+            random_mod = 6
 
         elif clay_density >= 0.7:
             """clay is super dense, they really climb up"""
-            move_pheromon_cube *= 0.001
-            directional_bias_cube *= 100
+            move_pheromon_cube *= 1
+            directional_bias_cube *= 0.01
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 0.2
+            random_mod = 15
 
         ############################################################################
 
-        # move by pheromons avoid collision
+        # move by pheromons, avoid collision
         collision_array = clay_layer.array + ground.array
-        random_mod = int(random_mod * 26)
+
         moved = agent.move_by_pheromons(
             solid_array=collision_array,
             pheromon_cube=direction_cube,
@@ -324,19 +312,16 @@ class Algo8d(AgentAlgorithm):
         normal_density__erase_reward = 0
 
         high_density__build_reward = 0
-        high_density__erase_reward = 0.8
+        high_density__erase_reward = 1.5
 
-        slice_shape_above = [1, 1, 0, 0, 0, 1]  # radius x,y,z , offset x,y,z
-        high_density__roof__build_reward = -1
-        high_density__roof__erase_reward = 20
         ##########################################################################
 
         # get clay density
-        clay_density = agent.get_layer_density(clay_layer, trunc_decimals=False)
+        clay_density = agent.get_layer_density(clay_layer)
 
         # set chances
         if 0 <= clay_density < 1 / 26:
-            # extrem low ph density
+            # extrem low density
             pass
         elif 1 / 26 <= clay_density < 3 / 26:
             build_chance += low_density__build_reward
@@ -347,15 +332,6 @@ class Algo8d(AgentAlgorithm):
         elif clay_density >= 4 / 5:
             build_chance += high_density__build_reward
             erase_chance += high_density__erase_reward
-
-        # # TODO check clay density only above
-        # clay_density_above = agent.get_layer_density_in_slice_shape(
-        #         clay_layer,
-        #         slice_shape_above
-        #     )
-        # if clay_density_above > 0.85:
-        #     build_chance += high_density__roof__build_reward
-        #     erase_chance += high_density__roof__erase_reward
 
         # update probabilities
         if self.stacked_chances:

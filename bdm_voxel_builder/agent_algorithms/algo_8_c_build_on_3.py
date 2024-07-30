@@ -245,7 +245,7 @@ class Algo8c(AgentAlgorithm):
 
         # print clay density for examination
         clay_density = agent.get_layer_density(
-            clay_layer, trunc_decimals=False, print_=False
+            clay_layer, print_=False
         )
         # if clay_density > 0:
         #     txt = 'move: clay_density = {}'
@@ -332,7 +332,7 @@ class Algo8c(AgentAlgorithm):
         ##########################################################################
 
         # get clay density
-        clay_density = agent.get_layer_density(clay_layer, trunc_decimals=False)
+        clay_density = agent.get_layer_density(clay_layer)
 
         # set chances
         if 0 <= clay_density < 1 / 26:
