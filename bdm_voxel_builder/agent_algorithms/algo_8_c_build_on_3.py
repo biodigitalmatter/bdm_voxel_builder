@@ -243,7 +243,6 @@ class Algo8c(AgentAlgorithm):
         #         print("""agent in the clay""")
         #         return False
 
-
         # print clay density for examination
         clay_density = agent.get_layer_density(
             clay_layer, trunc_decimals=False, print_=False
@@ -298,9 +297,11 @@ class Algo8c(AgentAlgorithm):
         )
 
         # doublecheck if in bounds
-        if any(np.array(agent.pose) < 0) or any(np.array(agent.pose) >= np.array(self.grid_size)):
+        if any(np.array(agent.pose) < 0) or any(
+            np.array(agent.pose) >= np.array(self.grid_size)
+        ):
             moved = False
-            print(f'not in bounds at{agent.pose}')
+            print(f"not in bounds at{agent.pose}")
 
         return moved
 
@@ -403,11 +404,9 @@ class Algo8c(AgentAlgorithm):
             self.calculate_build_chances(agent, state)
             built, erased = self.build_by_chance(agent, state)
             # print(f'built: {built}, erased: {erased}')
-            if built == True or erased == True:
-                if self.reset_after_build:
-                    self.reset_agent(agent)
-                    # print("reset in built")
-        
+            if (built or erased) and self.reset_after_build:
+                self.reset_agent(agent)
+
         # RESET IF STUCK
         if not moved:
             self.reset_agent(agent)

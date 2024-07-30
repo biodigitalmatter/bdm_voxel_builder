@@ -73,7 +73,7 @@ class Agent:
 
     @build_chance.setter
     def build_chance(self, value):
-        if not isinstance(value, (float, int)):
+        if not isinstance(value, (float | int)):
             raise ValueError("Chance must be a number")
         self._build_chance = value
 
@@ -83,7 +83,7 @@ class Agent:
 
     @erase_chance.setter
     def erase_chance(self, value):
-        if not isinstance(value, (float, int)):
+        if not isinstance(value, float | int):
             raise ValueError("Chance must be a number")
         self._erase_chance = value
 
@@ -362,7 +362,7 @@ class Agent:
     ):
         """takes sub array around pose, in x/y/z radius optionally offsetted
         format values: returns sum '0', avarage '1', or entire_array_slice: '2'"""
-        if not isinstance(pose, (np.dtype, list)):
+        if not isinstance(pose, np.ndarray | list):
             pose = self.pose
 
         x, y, z = pose
@@ -580,7 +580,7 @@ class Agent:
         fly=None,
         only_bounds=True,
         check_self_collision=False,
-        random_batch_size : int = 1,
+        random_batch_size: int = 1,
     ):
         """move in the direciton of the strongest pheromon - random choice of best three
         checks invalid moves

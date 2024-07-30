@@ -1,5 +1,5 @@
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -53,7 +53,7 @@ class DataLayer:
         if value.min() < 1:
             raise ValueError("grid_size must be nonzero and positive")
         if np.unique(value).size != 1:
-            raise ValueError("Non square grid not supported yet")
+            raise NotImplementedError("Non square grid not supported yet")
 
         self._grid_size = value.tolist()
 
@@ -62,7 +62,7 @@ class DataLayer:
         return Box.from_diagonal(((0, 0, 0), self.grid_size))
 
     def get_world_bbox(self) -> Box:
-        return self.get_local_bbox.transformed(self.xform)
+        return self.get_local_bbox().transformed(self.xform)
 
     def to_vdb_grid(self):
         grid = vdb.FloatGrid()

@@ -1,5 +1,4 @@
 import enum
-from typing import Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -27,7 +26,7 @@ class GravityDir(enum.Enum):
 class DiffusiveLayer(DataLayer):
     def __init__(
         self,
-        grid_size: int | Tuple[int, int, int] | Box = None,
+        grid_size: int | tuple[int, int, int] | Box = None,
         name: str = None,
         color: Color = None,
         diffusion_ratio: float = 0.12,

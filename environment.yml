@@ -9,9 +9,12 @@ dependencies:
   - click
   - compas=>2.3.0
   - compas_viewer
+  - invoke
   - matplotlib
   - numpy
   - openvdb>=11.0.0
   - poetry
   - pytest
+  - python>=3.11,<4
   - ruff
+  - setuptools

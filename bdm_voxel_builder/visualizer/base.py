@@ -1,6 +1,5 @@
 import abc
 import contextlib
-from typing import List
 
 from compas.geometry import Box
 
@@ -14,7 +13,7 @@ class Visualizer(abc.ABC):
         self.should_save_file = save_file
         self.bbox = bbox
 
-        self.data_layers: List[DataLayer] = []
+        self.data_layers: list[DataLayer] = []
 
     @abc.abstractmethod
     def save_file(self, note=None):

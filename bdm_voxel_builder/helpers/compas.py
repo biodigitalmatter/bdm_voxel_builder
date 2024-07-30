@@ -1,4 +1,3 @@
-from typing import List
 
 import numpy.typing as npt
 from compas.data import json_dump
@@ -21,7 +20,7 @@ def pointcloud_from_ndarray(arr: npt.NDArray, return_values=False):
 
 
 def save_pointcloud(
-    pointcloud: Pointcloud, values: List[float] = None, note: str = None
+    pointcloud: Pointcloud, values: list[float] = None, note: str = None
 ):
     dict_ = {"pointcloud": pointcloud, "values": values}
 
