@@ -22,12 +22,9 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
           environment-file: ./environment.yml
-      - name: Conda info
+      - name: pytest
         shell: pwsh
-        run: conda info
-      - name: Conda list
-        shell: pwsh
-        run: conda list
+        run: invoke install
       - name: pytest
         shell: pwsh
         run: invoke test

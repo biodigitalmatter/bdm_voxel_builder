@@ -16,7 +16,7 @@ NB_INDEX_DICT = {
 
 def _convert_array_to_pts_wo_data(arr: npt.NDArray) -> list[list[float]]:
     pts = []
-    for i, j, k in zip(*np.nonzero(arr)):
+    for i, j, k in zip(*np.nonzero(arr), strict=False):
         pts.append([i, j, k])
     return pts
 
@@ -55,7 +55,7 @@ def sort_pts_by_values(arr: npt.NDArray, multiply=1):
     # sort:
 
     # Pair the elements using zip
-    paired_lists = list(zip(values, pts))
+    paired_lists = list(zip(values, pts, strict=False))
 
     # Sort the paired lists based on the first element of the pairs (values values)
     sorted_paired_lists = sorted(paired_lists, key=lambda x: x[0])
@@ -211,15 +211,17 @@ def random_choice_index_from_best_n_old(list_array, n, print_ = False):
     # print('random value of the best [{}] value = {}, index = {}'.format(n, array[best_index], index_of_random_choice_of_best_n_value))  # noqa: E501
     if print_:
         print(f"""random selection. input array: {list_array}
-        best options:{best_of}, choice value: {random_choice_from_the_best_nth}, index:{random_choice_index_from_best_n_}"""
+        best options:{best_of}, choice value: {random_choice_from_the_best_nth}, 
+        index:{random_choice_index_from_best_n_}"""
 )
 
     return random_choice_index_from_best_n_
 
 
 def random_choice_index_from_best_n(list_array, n, print_ = False):
-    """add a random array with very small numbers to avoid only finding the index of the selected if equals"""
-    random_sort = np.random.random(len(list_array)) * 0.000000000000000000000000000001
+    """add a random array with very small numbers to avoid only finding the 
+    index of the selected if equals"""
+    random_sort = np.random.random(len(list_array)) * 1e-30
     array = list_array * random_sort
     a = np.sort(array)
     best_of = a[(len(array) - n) :]

@@ -1,4 +1,3 @@
-from typing import List
 
 from compas.geometry import oriented_bounding_box_numpy
 
@@ -10,7 +9,7 @@ class Environment:
     def __init__(self, config):
         self.iteration_count: int = 0
 
-        self.data_layers: List[DiffusiveLayer] = config.algo.initialization(
+        self.data_layers: list[DiffusiveLayer] = config.algo.initialization(
             iterations=config.iterations
         )
 
@@ -19,7 +18,7 @@ class Environment:
             config.algo.update_environment(self)
 
         # MAKE AGENTS
-        self.agents: List[Agent] = config.algo.setup_agents(self.data_layers)
+        self.agents: list[Agent] = config.algo.setup_agents(self.data_layers)
 
     def get_compound_bbox(self):
         bboxes = [layer.get_world_bbox() for layer in self.data_layers]

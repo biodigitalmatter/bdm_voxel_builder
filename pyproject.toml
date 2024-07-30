@@ -1,24 +1,17 @@
-[tool.poetry]
+[project]
 name = "bdm-voxel-builder"
 version = "0.1.0"
 description = ""
-authors = ["Mangliár László <mangliar.laci@gmail.com>" ,"Anton Tetov <anton@tetov.se>"]
-license = "MIT"
+authors = [
+    { name = "Mangliár László", email = "mangliar.laci@gmail.com" },
+    { name = "Anton Tetov", email = "anton@tetov.se" },
+]
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.11"
-compas-view2 = "^0.11.0"
-numpy = "*"
-matplotlib = "*"
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.5.4"
-pytest = "^8.3.1"
+requires-python = ">= 3.11"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.ruff.lint]
 select = [
@@ -35,3 +28,6 @@ select = [
     # isort
     "I",
 ]
+
+[tool.setuptools]
+packages = ["bdm_voxel_builder"]
