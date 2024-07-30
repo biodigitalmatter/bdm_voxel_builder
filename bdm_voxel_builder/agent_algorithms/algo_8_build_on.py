@@ -297,7 +297,6 @@ class Algo8(AgentAlgorithm):
                 erased = agent.erase(existing_geo)
         return built, erased
 
-
     # ACTION FUNCTION - move first
     def agent_action(self, agent, state: Environment):
         """first build, then move
@@ -306,7 +305,7 @@ class Algo8(AgentAlgorithm):
         moved = self.move_agent(agent, state)
         if not moved:
             self.reset_agent(agent)
-        
+
         # get move probabilty
         self.calculate_build_chances(agent, state)
 

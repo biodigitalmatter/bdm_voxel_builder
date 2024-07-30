@@ -21,7 +21,9 @@ def _convert_array_to_pts_wo_data(arr: npt.NDArray) -> list[list[float]]:
     return pts
 
 
-def convert_array_to_pts(arr: npt.NDArray, get_data=True) -> list[list[float] | npt.NDArray]:
+def convert_array_to_pts(
+    arr: npt.NDArray, get_data=True
+) -> list[list[float] | npt.NDArray]:
     if not get_data:
         return _convert_array_to_pts_wo_data(arr)
 
@@ -205,10 +207,11 @@ def crop_array(arr, start=0, end=1):
     arr = np.maximum(arr, start)
     return arr
 
+
 def random_choice_index_from_best_n(list_array, n):
     array = list_array
     a = np.sort(array)
-    best_of = a[(len(array)-n):]
+    best_of = a[(len(array) - n) :]
     random_choice_from_the_best_nth = np.random.choice(best_of)
     matching_i = np.argwhere(array == random_choice_from_the_best_nth).transpose()
     random_choice_index_from_best_n = np.random.choice(matching_i[0])

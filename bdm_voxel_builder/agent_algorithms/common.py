@@ -12,7 +12,7 @@ def diffuse_diffusive_layer(
     diffuse_bool: bool = True,
     decay: bool = True,
     decay_linear: bool = False,
-    grade = True,
+    grade=True,
     n_iterations: int = 1,
 ):
     """
@@ -30,7 +30,6 @@ def diffuse_diffusive_layer(
 
     gravity direction: 0:left, 1:right, 2:front, 3:back, 4:down, 5:up"""
     for _ in range(n_iterations):
-
         if isinstance(emmission_array, np.ndarray):
             diffusive_layer.emission_intake(emmission_array, 1, False)
         elif isinstance(emmission_array, list):
@@ -52,7 +51,7 @@ def diffuse_diffusive_layer(
             diffusive_layer.decay()
 
         # collision
-        
+
         if blocking_layer:
             if isinstance(blocking_layer, list):
                 for i in range(len(blocking_layer)):

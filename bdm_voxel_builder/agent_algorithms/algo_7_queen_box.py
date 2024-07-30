@@ -303,7 +303,7 @@ class Algo7QueenBox(AgentAlgorithm):
         moved = self.move_agent(agent, state)
         if not moved:
             self.reset_agent(agent)
-        
+
         # get move probabilty
         self.calculate_build_chances(agent, state)
 

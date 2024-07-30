@@ -7,14 +7,11 @@ from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
 from bdm_voxel_builder.helpers.savepaths import get_savepath
 from bdm_voxel_builder.visualizer.base import Visualizer
 
+
 class CompasViewerVisualizer(Visualizer):
     FILE_SUFFIX = ".json"
 
-    def __init__(
-        self,
-        save_file=False,
-        skip_layers = ('layer_name')
-    ):
+    def __init__(self, save_file=False, skip_layers=("layer_name")):
         super().__init__(save_file)
 
         self.viewer = Viewer()
@@ -22,12 +19,17 @@ class CompasViewerVisualizer(Visualizer):
         self.skip_layers = skip_layers
 
     def setup_layers(self):
-
         # set up parent objects for each layer
         for layer in self.data_layers:
             if self.scene.get_node_by_name(layer.name) is None:
-                pt = Point(0,0,0)
-                self.scene.add(pt, name=layer.name, pointcolor=layer.color, pointsize=0.1,parent=None)
+                pt = Point(0, 0, 0)
+                self.scene.add(
+                    pt,
+                    name=layer.name,
+                    pointcolor=layer.color,
+                    pointsize=0.1,
+                    parent=None,
+                )
 
     def save_file(self, note=None):
         filepath = get_savepath(TEMP_DIR, self.FILE_SUFFIX, note=note)
@@ -48,7 +50,9 @@ class CompasViewerVisualizer(Visualizer):
 
             iteration = iteration_count or len(parent.children)
             name = f"{layer.name}_{iteration}"
-            self.scene.add(Pointcloud(pts), name=name, pointcolor=layer.color, parent=parent)
+            self.scene.add(
+                Pointcloud(pts), name=name, pointcolor=layer.color, parent=parent
+            )
 
     def show(self):
         self.viewer.show()

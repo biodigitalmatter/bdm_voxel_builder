@@ -17,11 +17,8 @@ config = Config(
     scale=voxel_size,
     algo=Algo8c(agent_count=agent_count, voxel_size=voxel_size),
     visualizer=CompasViewerVisualizer(
-        save_file=True,
-        skip_layers=('ground', 'pheromon_layer_move')
-        ),
+        save_file=True, skip_layers=("ground", "pheromon_layer_move")
+    ),
     save_interval=interval,
-    visualize_interval=interval
-
+    visualize_interval=interval,
 )
-
