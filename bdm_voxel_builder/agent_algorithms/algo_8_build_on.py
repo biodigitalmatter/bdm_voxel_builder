@@ -163,7 +163,7 @@ class Algo8(AgentAlgorithm):
         )
         # existing_geo.decay_linear()
         # print('ph bounds:',
-        #       np.amax(built_ph_layer.array),np.amin(built_ph_layer.array)) 
+        #       np.amax(built_ph_layer.array),np.amin(built_ph_layer.array))
 
     def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]

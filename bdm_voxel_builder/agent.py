@@ -2,6 +2,7 @@ from math import trunc
 
 import numpy as np
 
+from bdm_voxel_builder.data_layer.base import DataLayer
 from bdm_voxel_builder.helpers.numpy import (
     NB_INDEX_DICT,
     get_sub_array,
@@ -11,6 +12,7 @@ from bdm_voxel_builder.helpers.numpy import (
 
 
 class Agent:
+    """Object based voxel walker"""
     def __init__(
         self,
         pose=None,
@@ -143,16 +145,12 @@ class Agent:
     # INTERACTION WITH LAYERS
     def get_layer_value_at_index(
         self,
-        layer,
-        index=None,
+        layer: DataLayer,
+        index=(0, 0, 0),
         reintroduce=True,
         round_=False,
         eliminate_dec=False,
     ):
-        if index is None:
-            index = [0, 0, 0]
-        # print('get value at index', index)
-
         i, j, k = np.mod(index, layer.voxel_size) if reintroduce else index
 
         try:
