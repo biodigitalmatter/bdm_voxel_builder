@@ -1,62 +1,59 @@
-# algorithm readme
+# Algorithm Class Readme
 
-## Algorithm structure overview:
+description of the voxel builder algorithms
 
-1. settings
-2. initialization
-    create_environment
-        (load_scanned_volume)
+## generic structure:
+
+parameter settings
+initialization
+    make_layers
     setup_agents
         reset_agents
-
-3. iterate:
-    1. move_agents
+iterate:
+    update_environment
+    move_agents
         reset_agents
-    2. calculate_build_probability
-    3. build/erase
+    calculate_build_chances
+    build/erase
         reset_agents
-    4. update_environment
-    5. export built array
 
-### notes
 
-## Algo_8
+## Voxel Builder Algorithm: Algo_8_c_build_on:
 
-basic build_on existing algorithm
+### Summary
 
-agent is attracted toward existing + newly built geomoetry by 'built_ph_layer'
-build_chance is rewarded if within the given ph limits
-if enough chances gained, agent builds
+default voxel builder algorithm
+agents build on and around an initial 'clay' volume on a 'ground' surface
+inputs: solid_ground_volume, clay_volume
+output:
+    A >> flat growth around 'clay' covering the ground
+    B >> tower growth on 'clay'
 
-### next steps
+### Agent behaviour
 
-Objective: Find features by topology and start build on that
+1. find the built clay 
+2. climb upwards on it
+3. build after a while of climbing
+4. reset or not
 
-default algorithm
+### Features
 
-grow on attractive features of existing/scanned volumes
+- move on solid array
+- move direction is controlled with the mix of the pheromon environment and a global direction preference
+- move randomness controlled by setting the number of best directions for the random choice
+- build on existing volume
+- build and erase is controlled by gaining rewards
+- move and build both is regulated differently at different levels of environment layer density 
 
-### ...
+### Observations:
 
-- an initially defined volume attracts the agents by emmitting pheromons
-- agents move there
-- when close enough, they just randomly move around
-- while conducting topology analysis
-- once on good topology feature, they build / or their build probability increases 
-- do they reset after?
-- should newly built add to pheromon emmission stronger?
+resetting the agents after build results in a flat volume, since the agent generally climbs upwards for the same amount of steps
+not resetting the agent after build results in towerlike output
+more agents > wider tower, less agent > thinner tower. because a. reach the same level simultanously
 
-... should the a build probability be another DiffusiveLayer?, created by agents during theyre move?
-effecting their movement or not?
+## Voxel Builder Algorithm: Algo_8_d_build_fresh
 
-topology features:
+### NEW in 8_d
 
-1. inner edge +++
-2. inner edge undercut ++++++
-2. hole +++
-3. outer edge
-4. below overhang
-5. on thin slab?
-6. spikes
-7. bridge....
-8. wall
+the clay array values slowly decay
+agents aim more towards the freshly built volumes.

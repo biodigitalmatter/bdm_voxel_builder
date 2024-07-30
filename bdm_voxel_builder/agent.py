@@ -464,8 +464,6 @@ class Agent:
                 nb_value_collision = self.get_layer_value_at_index(
                     self.space_layer, nb_pose
                 )
-                if nb_value_collision == 1:
-                    print('self_collision')
                 nb_value += nb_value_collision
             # print(nb_value)
             if nb_value == 0:
@@ -485,7 +483,7 @@ class Agent:
         exclude_pheromones = np.asarray(exclude)
         return exclude_pheromones
 
-    def get_move_mask_26_from_an_array(
+    def get_move_mask_26_of_array(
         self, solid_array, grid_size, fly=False, check_self_collision=False
     ):
         """return move mask 1D array for the 26 nb voxel around self.pose
@@ -533,36 +531,6 @@ class Agent:
         # print(exclude)
         exclude_pheromones = np.asarray(exclude)
         return exclude_pheromones
-
-    def move_on_ground(
-        self, grid_size: tuple[int, int, int], check_self_collision=False
-    ):
-        cube = self.get_nb_indices_26(self.pose)
-        cube = clip_indices_to_grid_size(cube, grid_size)
-
-        random_ph = np.random.random(26)
-        exclude = self.get_move_mask_26(
-            self.ground_layer, check_self_collision=check_self_collision
-        )
-        random_ph[exclude] = -1
-        choice = np.argmax(random_ph)
-        # print('pose', self.pose)
-        # print('choice:', choice)
-        new_pose = cube[choice]
-        # print('new_pose:', new_pose)
-
-        # update track layer
-        if self.leave_trace:
-            self.track_layer.set_layer_value_at_index(self.pose, 1)
-        # update location in space layer
-        self.space_layer.set_layer_value_at_index(self.pose, 0)
-
-        # move
-        self.pose = new_pose
-
-        # update location in space layer
-        self.space_layer.set_layer_value_at_index(self.pose, 1)
-        return True
 
     def move_on_ground_by_ph_cube(
         self,
@@ -628,7 +596,7 @@ class Agent:
             direction_cube = clip_indices_to_grid_size(direction_cube, grid_size)
 
         # add penalty for invalid moves based on an array
-        exclude = self.get_move_mask_26_from_an_array(
+        exclude = self.get_move_mask_26_of_array(
             solid_array, grid_size, fly, check_self_collision=check_self_collision
         )
         pheromon_cube[exclude] = -1
@@ -640,21 +608,6 @@ class Agent:
         else:
             i = random_choice_index_from_best_n(pheromon_cube, random_batch_size)
         if pheromon_cube[i] == -1:
-            clay_array_temp = self.get_nb_values_26_of_array(
-                    solid_array, 
-                    voxel_size, 
-                    self.pose
-            )
-            # # examine random selection
-            # print("""\n\n\n""")
-            # print(f"""move_on_function: agent cant move to a valid voxel.
-            # ph_cube:
-            # {pheromon_cube} 
-            # pose: {self.pose} 
-            # clay_array:
-            # {clay_array_temp}"""
-            # )
-            # print(f"random i = {i}; pheromon_cube[i]={pheromon_cube[i]}")
             return False
 
         # best option

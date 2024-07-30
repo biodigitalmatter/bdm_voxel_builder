@@ -9,78 +9,51 @@ from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.environment import Environment
 
-"""
-Algorithm structure overview:
-
-settings
-initialization
-    make_layers
-    setup_agents
-        reset_agents
-
-iterate:
-    move_agents
-        reset_agents
-    calculate_build_chances
-    build/erase
-        reset_agents
-    update_environment
-"""
-
-"""
-Algorithm Objectives:
-Algo8d
-idea is that when agent are 'on' the clay, 
-they start to move more randomly, 
-or more towards direction preference
-+ they clay 'dries' and more reward is gained if close to wet parts
-+ move pheromon could also take in stronger self_emmision 
-
-...
-
-initial stage algorithm - start to grow on attractive features of 
-existing/scanned volumes
-
-Find scan:
-- an initially defined volume attracts the agents
-- move there
-
-Search for build
-- 
-Build on:
-- recognize features to start building
-
-"""
 
 
 @dataclass
-class Algo8c(AgentAlgorithm):
+class Algo8d(AgentAlgorithm):
     """
-    basic build_on existing algorithm
+    # Voxel Builder Algorithm: Algo_8_d_build_fresh:
+    
+    ## Summary
 
-    extend with erase if too dense
+    default voxel builder algorithm
+    agents build on and around an initial 'clay' volume on a 'ground' surface
+    inputs: solid_ground_volume, clay_volume
+    output:
+        ?
+    
+    ## Agent behaviour
+    
+    1. find the built clay 
+    2. climb <up> on it
+    3. build after a while of climbing
+    4. reset or not
 
-    Algo8c
-    idea is that when agent are 'on' the clay,
-    they start to move more randomly,
-    and more towards direction preference
-    if too dense, erase
+    ## Features
+    
+    - move on solid array
+    - move direction is controlled with the mix of the pheromon environment and a global direction preference
+    - move randomness controlled by setting the number of best directions for the random choice
+    - build on existing volume
+    - build and erase is controlled by gaining rewards
+    - move and build both is regulated differently at different levels of environment layer density 
 
-    ...
-    agent is attracted toward existing + newly built geomoetry by 'pheromon_layer_move'
-    build_chance is rewarded if within the given ph limits
-    if enough chances gained, agent builds / erases
-    erase: explosive :)
-    6 or 26 voxels are cleaned
+    ## NEW in 8_d
+    agents aim more towards the freshly built volumes.
+    the clay array values slowly decay
 
-    if below sg > just build
-    if more then half around > erase
+    ## Observations:
 
     """
 
-    name: str = "algo_8c_build_on"
+    agent_count: int
+    grid_size: int | tuple[int, int, int]
+    name: str = "algo_8_d"
     relevant_data_layers: str = "clay"
-    seed_iterations: int = 40
+
+    seed_iterations: int = 100
 
     # EXISTING GEOMETRY
     add_box = True
@@ -90,11 +63,11 @@ class Algo8c(AgentAlgorithm):
     reach_to_build: int = 1
     reach_to_erase: int = 1
 
-    decay_clay_bool: bool = False
+    decay_clay_bool: bool = True
     ####################################################
 
     stacked_chances: bool = True
-    reset_after_build: bool = False
+    reset_after_build: bool = True
     reset_after_erased: bool = False
 
     # Agent deployment
@@ -105,6 +78,17 @@ class Algo8c(AgentAlgorithm):
     keep_in_bounds = True
 
     layer_to_dump: str = "clay_layer"
+
+    def __post_init__(self):
+        """Initialize values held in parent class.
+
+        Run in __post_init__ since @dataclass creates __init__ method"""
+        super().__init__(
+            agent_count=self.agent_count,
+            grid_size=self.grid_size,
+            layer_to_dump=self.layer_to_dump,
+            name=self.name,
+        )
 
     def initialization(self, **kwargs):
         """
@@ -125,22 +109,22 @@ class Algo8c(AgentAlgorithm):
         rgb_existing = (207, 179, 171)
         ground = DiffusiveLayer(
             name="ground",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_ground),
         )
         agent_space = DiffusiveLayer(
             name="agent_space",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
         )
         track_layer = DiffusiveLayer(
             name="track_layer",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
         )
         pheromon_layer_move = DiffusiveLayer(
             name="pheromon_layer_move",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_queen),
             flip_colors=True,
             diffusion_ratio=1 / 7,
@@ -149,7 +133,7 @@ class Algo8c(AgentAlgorithm):
         )
         clay_layer = DiffusiveLayer(
             name="clay_layer",
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
             flip_colors=True,
             decay_linear_value=clay_decay_linear_value,
@@ -157,12 +141,11 @@ class Algo8c(AgentAlgorithm):
 
         ### CREATE GROUND ARRAY *could be imported from scan
         ground.add_values_in_zone_xxyyzz(
-            [0, self.voxel_size, 0, self.voxel_size, 0, self.ground_level_Z], 1
+            [0, ground.grid_size[0], 0, ground.grid_size[1], 0, self.ground_level_Z], 1
         )
 
         if self.add_box:
-            ground.add_values_in_zone_xxyyzz(self.box_template, 1)
-            pheromon_layer_move.add_values_in_zone_xxyyzz(self.box_template, 1)
+            # ground.add_values_in_zone_xxyyzz(self.box_template, 1)
             clay_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
 
         # WRAP ENVIRONMENT
@@ -188,7 +171,6 @@ class Algo8c(AgentAlgorithm):
         )
         if self.decay_clay_bool:
             layers["clay_layer"].decay_linear()
-
         # # print to examine
         # ph_array = layers['pheromon_layer_move'].array
         # print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
@@ -213,14 +195,20 @@ class Algo8c(AgentAlgorithm):
             # deploy agent
             self.reset_agent(agent)
             agents.append(agent)
-
+        # print('agent_setup')
         return agents
 
-    def reset_agent(self, agent):
+    def reset_agent(self, agent: Agent):
+        # TODO: make work with non square grids
         # centered setup
-        a, b = [self.deployment_zone__a, self.voxel_size + self.deployment_zone__b]
+        grid_size = agent.space_layer.grid_size
+        a, b = [
+            self.deployment_zone__a,
+            grid_size[0] + self.deployment_zone__b,
+        ]
+
         a = max(a, 0)
-        b = min(b, self.voxel_size - 1)
+        b = min(b, grid_size[0] - 1)
         x = np.random.randint(a, b)
         y = np.random.randint(a, b)
         z = self.ground_level_Z + 1
@@ -231,8 +219,9 @@ class Algo8c(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
+        # print('agent reset functioned')
 
-    def move_agent(self, agent, state: Environment):
+    def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of layers makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -243,11 +232,18 @@ class Algo8c(AgentAlgorithm):
         ground = state.data_layers["ground"]
         clay_layer = state.data_layers["clay_layer"]
 
-        # check in in solid volume
+        # check solid volume collision
         gv = agent.get_layer_value_at_pose(ground, print_=False)
-        cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
-        if gv != 0 or cv != 0:
+        if gv != 0:
+            # print("""agent in the ground""")
             return False
+        # TODO clay collision cannot be checked, if we want to optionally allow non_reset behaviour
+        # if agent.check_clay_collision:
+        #     cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
+        #     if cv != 0:
+        #         print("""agent in the clay""")
+        #         return False
+
 
         # print clay density for examination
         clay_density = agent.get_layer_density(
@@ -271,40 +267,41 @@ class Algo8c(AgentAlgorithm):
         if clay_density < 0.1:
             """far from the clay, agents are aiming to get there"""
             direction_cube = move_pheromon_cube
-            random_mod = 0.3
+            random_mod = 0.1
 
         elif 0.1 <= clay_density < 0.7:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube *= 0.01
             directional_bias_cube *= 1
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 0.6
+            random_mod = 0.2
 
         elif clay_density >= 0.7:
             """clay is super dense, they really climb up"""
             move_pheromon_cube *= 0.001
             directional_bias_cube *= 100
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 0.6
+            random_mod = 0.2
 
         ############################################################################
 
         # move by pheromons avoid collision
         collision_array = clay_layer.array + ground.array
+        random_mod = int(random_mod * 26)
         moved = agent.move_by_pheromons(
             solid_array=collision_array,
             pheromon_cube=direction_cube,
-            voxel_size=self.voxel_size,
+            grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
             check_self_collision=self.check_collision,
-            random_batch_size=int(random_mod * 26),
+            random_batch_size=random_mod,
         )
 
         # doublecheck if in bounds
-        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
-            # print(agent.pose)
+        if any(np.array(agent.pose) < 0) or any(np.array(agent.pose) >= np.array(self.grid_size)):
             moved = False
+            print(f'not in bounds at{agent.pose}')
 
         return moved
 
@@ -395,36 +392,24 @@ class Algo8c(AgentAlgorithm):
                 agent.build_chance = 0
         return built, erased
 
-    # ACTION FUNCTION - build first
+    # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
-        """first build, then move
-        to allow continous movement"""
-        # get move probabilty
-        self.calculate_build_chances(agent, state)
-
-        # BUILD
-        built, erased = self.build_by_chance(agent, state)
-        if built or erased and self.reset_after_build:
-            self.reset_agent(agent)
+        """MOVE BUILD .RESET"""
 
         # MOVE
         moved = self.move_agent(agent, state)
+
+        # BUILD
+        if moved:
+            self.calculate_build_chances(agent, state)
+            built, erased = self.build_by_chance(agent, state)
+            # print(f'built: {built}, erased: {erased}')
+            if built == True or erased == True:
+                if self.reset_after_build:
+                    self.reset_agent(agent)
+                    # print("reset in built")
+        
+        # RESET IF STUCK
         if not moved:
             self.reset_agent(agent)
-
-    # # ACTION FUNCTION - move first
-    # def agent_action(self, agent, state: Environment):
-    #     """first build, then move
-    #     to allow continous movement"""
-    #     # MOVE
-    #     moved = self.move_agent(agent, state)
-    #     if not moved:
-    #         self.reset_agent(agent)
-
-    #     # get move probabilty
-    #     self.calculate_build_chances(agent, state)
-
-    #     # BUILD
-    #     built, erased = self.build_by_chance(agent, state)
-    #     if built or erased and self.reset_after_build:
-    #         self.reset_agent(agent)
+            # print('reset in move, couldnt move')

@@ -9,71 +9,42 @@ from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.environment import Environment
 
-"""
-Algorithm structure overview:
-
-settings
-initialization
-    make_layers
-    setup_agents
-        reset_agents
-
-iterate:
-    move_agents
-        reset_agents
-    calculate_build_chances
-    build/erase
-        reset_agents
-    update_environment
-"""
-
-"""
-Algorithm Objectives:
-Algo8c
-idea is that when agent are 'on' the clay, 
-they start to move more randomly, 
-or more towards direction preference
-
-...
-
-initial stage algorithm - start to grow on attractive features of 
-existing/scanned volumes
-
-Find scan:
-- an initially defined volume attracts the agents
-- move there
-
-Search for build
-- 
-Build on:
-- recognize features to start building
-
-"""
-
-
 @dataclass
 class Algo8c(AgentAlgorithm):
     """
-    basic build_on existing algorithm
+    # Voxel Builder Algorithm: Algo_8_c_build_on:
+    
+    ## Summary
 
-    extend with erase if too dense
+    default voxel builder algorithm
+    agents build on and around an initial 'clay' volume on a 'ground' surface
+    inputs: solid_ground_volume, clay_volume
+    output:
+        A >> flat growth around 'clay' covering the ground
+        B >> tower growth on 'clay'
+    
 
-    Algo8c
-    idea is that when agent are 'on' the clay,
-    they start to move more randomly,
-    and more towards direction preference
-    if too dense, erase
+    ## Agent behaviour
+    
+    1. find the built clay 
+    2. climb <up> on it
+    3. build after a while of climbing
+    4. reset or not
 
-    ...
-    agent is attracted toward existing + newly built geomoetry by 'pheromon_layer_move'
-    build_chance is rewarded if within the given ph limits
-    if enough chances gained, agent builds / erases
-    erase: explosive :)
-    6 or 26 voxels are cleaned
+    ## Features
+    
+    - move on solid array
+    - move direction is controlled with the mix of the pheromon environment and a global direction preference
+    - move randomness controlled by setting the number of best directions for the random choice
+    - build on existing volume
+    - build and erase is controlled by gaining rewards
+    - move and build both is regulated differently at different levels of environment layer density 
 
-    if below sg > just build
-    if more then half around > erase
+    ## Observations:
 
+    resetting the agents after build results in a flat volume, since the agent generally climbs upwards for the same amount of steps
+    not resetting the agent after build results in towerlike output
+    more agents > wider tower, less agent > thinner tower. because of creating obstacles while simultanously trimbing up
     """
 
     agent_count: int
@@ -328,7 +299,7 @@ class Algo8c(AgentAlgorithm):
 
         # doublecheck if in bounds
         if any(np.array(agent.pose) < 0) or any(np.array(agent.pose) >= np.array(self.grid_size)):
-            moved = Fals
+            moved = False
             print(f'not in bounds at{agent.pose}')
 
         return moved
