@@ -13,3 +13,21 @@ pip install -e .
 ```bash
 python -m bdm_voxel_builder data/config.py
 ```
+
+## Run tests
+
+```bash
+inv test
+```
+
+## Run lint
+
+```bash
+inv lint
+```
+
+## Run format
+
+```bash
+inv format
+```
