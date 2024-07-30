@@ -210,7 +210,7 @@ class Agent:
         return v
 
     def get_nb_values_6_of_array(
-        self, array, voxel_size, pose=None, round_values=False, trunc_decimals=False
+        self, array, voxel_size, pose, round_values=False, trunc_decimals=False
     ):
         # nb_value_dict = {}
         value_list = []
@@ -221,6 +221,23 @@ class Agent:
             x, y, z = nb_cell_index
             v = array[x][y][z]
             value_list.append(v)
+        v = np.asarray(value_list)
+        if round_values:
+            v.round()
+        if trunc_decimals:
+            v.int_(v)
+        return v
+
+    def get_nb_values_26_of_array(
+        self, array, voxel_size, pose, round_values=False, trunc_decimals=False
+    ):
+        nb_cells = self.get_nb_indices_26(pose)
+        cells_to_check = list(nb_cells)
+        value_list = []
+        for nb_pose in cells_to_check:
+            x, y, z = np.clip(np.asarray(nb_pose), 0, voxel_size - 1)
+            nb_value = array[x][y][z]
+            value_list.append(nb_value)
         v = np.asarray(value_list)
         if round_values:
             v.round()
@@ -453,6 +470,8 @@ class Agent:
                 nb_value_collision = self.get_layer_value_at_index(
                     self.space_layer, nb_pose
                 )
+                if nb_value_collision == 1:
+                    print('self_collision')
                 nb_value += nb_value_collision
             # print(nb_value)
             if nb_value == 0:
@@ -601,7 +620,7 @@ class Agent:
         fly=None,
         only_bounds=True,
         check_self_collision=False,
-        random_batch_size=1,
+        random_batch_size : int = 1,
     ):
         """move in the direciton of the strongest pheromon - random choice of best three
         checks invalid moves
@@ -628,9 +647,22 @@ class Agent:
             i = np.argmax(pheromon_cube)
         else:
             i = random_choice_index_from_best_n(pheromon_cube, random_batch_size)
-
         if pheromon_cube[i] == -1:
-            # agent cant move to valid voxel
+            clay_array_temp = self.get_nb_values_26_of_array(
+                    solid_array, 
+                    voxel_size, 
+                    self.pose
+            )
+            # # examine random selection
+            # print("""\n\n\n""")
+            # print(f"""move_on_function: agent cant move to a valid voxel.
+            # ph_cube:
+            # {pheromon_cube} 
+            # pose: {self.pose} 
+            # clay_array:
+            # {clay_array_temp}"""
+            # )
+            # print(f"random i = {i}; pheromon_cube[i]={pheromon_cube[i]}")
             return False
 
         # best option

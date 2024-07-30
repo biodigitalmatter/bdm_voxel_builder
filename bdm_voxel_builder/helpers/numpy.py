@@ -208,7 +208,8 @@ def crop_array(arr, start=0, end=1):
     return arr
 
 
-def random_choice_index_from_best_n(list_array, n):
+def random_choice_index_from_best_n_old(list_array, n, print_ = False):
+    """double random choice to to avoid only finding the index of the selected if equals"""
     array = list_array
     a = np.sort(array)
     best_of = a[(len(array) - n) :]
@@ -216,4 +217,21 @@ def random_choice_index_from_best_n(list_array, n):
     matching_i = np.argwhere(array == random_choice_from_the_best_nth).transpose()
     random_choice_index_from_best_n_ = np.random.choice(matching_i[0])
     # print('random value of the best [{}] value = {}, index = {}'.format(n, array[best_index], index_of_random_choice_of_best_n_value))  # noqa: E501
+    if print_:
+        print(f"""random selection. input array: {list_array}
+        best options:{best_of}, choice value: {random_choice_from_the_best_nth}, index:{random_choice_index_from_best_n_}"""
+)
+
+    return random_choice_index_from_best_n_
+
+
+def random_choice_index_from_best_n(list_array, n, print_ = False):
+    """add a random array with very small numbers to avoid only finding the index of the selected if equals"""
+    random_sort = np.random.random(len(list_array)) * 0.000000000000000000000000000001
+    array = list_array * random_sort
+    a = np.sort(array)
+    best_of = a[(len(array) - n) :]
+    random_choice_from_the_best_nth = np.random.choice(best_of)
+    matching_i = np.argwhere(array == random_choice_from_the_best_nth).transpose()
+    random_choice_index_from_best_n_ = np.random.choice(matching_i[0])
     return random_choice_index_from_best_n_

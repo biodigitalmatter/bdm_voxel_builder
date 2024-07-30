@@ -78,7 +78,8 @@ class Algo8c(AgentAlgorithm):
 
     name: str = "algo_8c_build_on"
     relevant_data_layers: str = "clay"
-    seed_iterations: int = 40
+
+    seed_iterations: int = 100
 
     # EXISTING GEOMETRY
     add_box = True
@@ -92,7 +93,7 @@ class Algo8c(AgentAlgorithm):
     ####################################################
 
     stacked_chances: bool = True
-    reset_after_build: bool = False
+    reset_after_build: bool = True
     reset_after_erased: bool = False
 
     # Agent deployment
@@ -159,8 +160,7 @@ class Algo8c(AgentAlgorithm):
         )
 
         if self.add_box:
-            ground.add_values_in_zone_xxyyzz(self.box_template, 1)
-            pheromon_layer_move.add_values_in_zone_xxyyzz(self.box_template, 1)
+            # ground.add_values_in_zone_xxyyzz(self.box_template, 1)
             clay_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
 
         # WRAP ENVIRONMENT
@@ -186,7 +186,6 @@ class Algo8c(AgentAlgorithm):
         )
         if self.decay_clay_bool:
             layers["clay_layer"].decay_linear()
-
         # # print to examine
         # ph_array = layers['pheromon_layer_move'].array
         # print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
@@ -211,7 +210,7 @@ class Algo8c(AgentAlgorithm):
             # deploy agent
             self.reset_agent(agent)
             agents.append(agent)
-
+        # print('agent_setup')
         return agents
 
     def reset_agent(self, agent):
@@ -229,6 +228,7 @@ class Algo8c(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
+        # print('agent reset functioned')
 
     def move_agent(self, agent, state: Environment):
         """moves agents in a calculated direction
@@ -241,11 +241,18 @@ class Algo8c(AgentAlgorithm):
         ground = state.data_layers["ground"]
         clay_layer = state.data_layers["clay_layer"]
 
-        # check in in solid volume
+        # check solid volume collision
         gv = agent.get_layer_value_at_pose(ground, print_=False)
-        cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
-        if gv != 0 or cv != 0:
+        if gv != 0:
+            # print("""agent in the ground""")
             return False
+        # TODO clay collision cannot be checked, if we want to optionally allow non_reset behaviour
+        # if agent.check_clay_collision:
+        #     cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
+        #     if cv != 0:
+        #         print("""agent in the clay""")
+        #         return False
+
 
         # print clay density for examination
         clay_density = agent.get_layer_density(
@@ -269,26 +276,27 @@ class Algo8c(AgentAlgorithm):
         if clay_density < 0.1:
             """far from the clay, agents are aiming to get there"""
             direction_cube = move_pheromon_cube
-            random_mod = 0.3
+            random_mod = 0.1
 
         elif 0.1 <= clay_density < 0.7:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube *= 0.01
             directional_bias_cube *= 1
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 0.6
+            random_mod = 0.2
 
         elif clay_density >= 0.7:
             """clay is super dense, they really climb up"""
             move_pheromon_cube *= 0.001
             directional_bias_cube *= 100
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 0.6
+            random_mod = 0.2
 
         ############################################################################
 
         # move by pheromons avoid collision
         collision_array = clay_layer.array + ground.array
+        random_mod = int(random_mod * 26)
         moved = agent.move_by_pheromons(
             solid_array=collision_array,
             pheromon_cube=direction_cube,
@@ -296,12 +304,12 @@ class Algo8c(AgentAlgorithm):
             fly=False,
             only_bounds=self.keep_in_bounds,
             check_self_collision=self.check_collision,
-            random_batch_size=int(random_mod * 26),
+            random_batch_size=random_mod,
         )
 
         # doublecheck if in bounds
         if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
-            # print(agent.pose)
+            print(f'not in bounds at{agent.pose}')
             moved = False
 
         return moved
@@ -393,36 +401,24 @@ class Algo8c(AgentAlgorithm):
                 agent.build_chance = 0
         return built, erased
 
-    # ACTION FUNCTION - build first
+    # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
-        """first build, then move
-        to allow continous movement"""
-        # get move probabilty
-        self.calculate_build_chances(agent, state)
-
-        # BUILD
-        built, erased = self.build_by_chance(agent, state)
-        if built or erased and self.reset_after_build:
-            self.reset_agent(agent)
+        """MOVE BUILD .RESET"""
 
         # MOVE
         moved = self.move_agent(agent, state)
+
+        # BUILD
+        if moved:
+            self.calculate_build_chances(agent, state)
+            built, erased = self.build_by_chance(agent, state)
+            # print(f'built: {built}, erased: {erased}')
+            if built == True or erased == True:
+                if self.reset_after_build:
+                    self.reset_agent(agent)
+                    # print("reset in built")
+        
+        # RESET IF STUCK
         if not moved:
             self.reset_agent(agent)
-
-    # # ACTION FUNCTION - move first
-    # def agent_action(self, agent, state: Environment):
-    #     """first build, then move
-    #     to allow continous movement"""
-    #     # MOVE
-    #     moved = self.move_agent(agent, state)
-    #     if not moved:
-    #         self.reset_agent(agent)
-
-    #     # get move probabilty
-    #     self.calculate_build_chances(agent, state)
-
-    #     # BUILD
-    #     built, erased = self.build_by_chance(agent, state)
-    #     if built or erased and self.reset_after_build:
-    #         self.reset_agent(agent)
+            # print('reset in move, couldnt move')
