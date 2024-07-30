@@ -30,7 +30,8 @@ iterate:
 """
 Algorithm Objectives:
 
-initial stage algorithm - start to grow on attractive features of existing/scanned volumes
+initial stage algorithm - start to grow on attractive features of 
+existing/scanned volumes
 
 Find scan:
 - an initially defined volume attracts the agents
@@ -161,7 +162,8 @@ class Algo8(AgentAlgorithm):
             decay=True,
         )
         # existing_geo.decay_linear()
-        # print('ph bounds:', np.amax(built_ph_layer.array),np.amin(built_ph_layer.array))
+        # print('ph bounds:',
+        #       np.amax(built_ph_layer.array),np.amin(built_ph_layer.array)) 
 
     def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
@@ -169,7 +171,7 @@ class Algo8(AgentAlgorithm):
 
         agents = []
 
-        for i in range(self.agent_count):
+        for _ in range(self.agent_count):
             # create object
             agent = Agent(
                 space_layer=agent_space,
@@ -236,7 +238,7 @@ class Algo8(AgentAlgorithm):
         )
 
         # check if in bounds
-        if 0 > np.min(agent.pose) or np.max(agent.pose) >= self.voxel_size:
+        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
             # print(agent.pose)
             moved = False
 

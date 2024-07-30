@@ -78,7 +78,15 @@ class Algo7QueenBox(AgentAlgorithm):
         with preset values in the definition
 
         returns: [settings, layers, clai_moisture_layer]
-        layers = [agent_space, air_moisture_layer, build_boundary_pheromon, clay_moisture_layer,  ground, queen_bee_pheromon, sky_ph_layer]
+        layers = [agent_space, 
+                  air_moisture_layer, 
+                  build_boundary_pheromon,
+                  clay_moisture_layer,  
+                  ground, 
+                  queen_bee_pheromon, 
+                  sky_ph_layer]
+        
+
         settings = [agent_count, voxel_size]
         """
         ### LAYERS OF THE ENVIRONMENT
@@ -152,7 +160,7 @@ class Algo7QueenBox(AgentAlgorithm):
 
         agents = []
 
-        for i in range(self.agent_count):
+        for _ in range(self.agent_count):
             # create object
             agent = Agent(
                 space_layer=agent_space,
@@ -233,7 +241,7 @@ class Algo7QueenBox(AgentAlgorithm):
         )
 
         # check if in bounds
-        if 0 > np.min(agent.pose) or np.max(agent.pose) >= self.voxel_size:
+        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
             # print(agent.pose)
             moved = False
 

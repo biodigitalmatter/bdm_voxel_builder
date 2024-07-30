@@ -42,7 +42,7 @@ class DiffusiveLayer(DataLayer):
         emmision_array: npt.NDArray = None,
         gravity_dir: GravityDir = GravityDir.DOWN,
         gravity_ratio: float = 0.0,
-        voxel_crop_range=[0, 1],
+        voxel_crop_range=(0, 1),
     ):
         super().__init__(
             name=name,
@@ -98,13 +98,13 @@ class DiffusiveLayer(DataLayer):
             self.array = a
         return a
 
-    def set_layer_value_at_index(self, index=[0, 0, 0], value=1):
+    def set_layer_value_at_index(self, index=(0, 0, 0), value=1):
         index2 = np.mod(index, self.voxel_size)
         i, j, k = index2
         self.array[i][j][k] = value
         return self.array
 
-    def get_value_at_index(self, index=[0, 0, 0]):
+    def get_value_at_index(self, index=(0, 0, 0)):
         i, j, k = index
         v = self.array[i][j][k]
         return v
@@ -269,13 +269,12 @@ class DiffusiveLayer(DataLayer):
         else:  # absolut
             self.array = np.where(external_emission_array != 0, factor, self.array)
 
-    def block_layers(self, other_layers=[]):
+    def block_layers(self, other_layers):
         """acts as a solid obstacle, stopping diffusion of other layers
         input list of layers"""
         for i in range(len(other_layers)):
             layer = other_layers[i]
             layer.array = np.where(self.array == 1, 0 * layer.array, 1 * layer.array)
-        pass
 
     def decay(self):
         if self.decay_random_factor == 0:

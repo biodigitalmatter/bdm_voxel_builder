@@ -30,7 +30,8 @@ iterate:
 """
 Algorithm Objectives:
 
-initial stage algorithm - start to grow on attractive features of existing/scanned volumes
+initial stage algorithm - start to grow on attractive features of 
+existing/scanned volumes
 
 Find scan:
 - an initially defined volume attracts the agents
@@ -208,7 +209,11 @@ class Algo8b(AgentAlgorithm):
         )
         if self.decay_clay_bool:
             layers["clay_layer"].decay_linear()
-        # print('ph bounds:', np.amax(move_to_ph_layer.array),np.amin(move_to_ph_layer.array))
+        # print(
+        #     "ph bounds:",
+        #     np.amax(move_to_ph_layer.array),
+        #     np.amin(move_to_ph_layer.array),
+        # )
 
     def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
         agent_space = data_layers["agent_space"]
@@ -216,7 +221,7 @@ class Algo8b(AgentAlgorithm):
 
         agents = []
 
-        for i in range(self.agent_count):
+        for _ in range(self.agent_count):
             # create object
             agent = Agent(
                 space_layer=agent_space,
@@ -274,7 +279,9 @@ class Algo8b(AgentAlgorithm):
         ph_cube += random_cube
 
         # # get move dir pref
-        # dir_cube = agent.direction_preference_26_pheromones_v2(self.move_up, self.move_side, self.move_down)
+        # dir_cube = agent.direction_preference_26_pheromones_v2(
+        #     self.move_up, self.move_side, self.move_down
+        # )
         # ph_cube += dir_cube * self.move_dir_pref_weigth
         moved = agent.move_on_ground_by_ph_cube(
             ground=ground,
@@ -286,7 +293,7 @@ class Algo8b(AgentAlgorithm):
         )
 
         # check if in bounds
-        if 0 > np.min(agent.pose) or np.max(agent.pose) >= self.voxel_size:
+        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
             # print(agent.pose)
             moved = False
 

@@ -1,5 +1,5 @@
 def calculate_chance(
-    x, output_y_domain, non_flat_x_segment=None, input_x_domain=[0, 1]
+    x, output_y_domain, non_flat_x_segment=None, input_x_domain=(0, 1)
 ):
     """remaps x (from input_domain) to y on output_domain
     optionally flattens segments outside the flat_domain
@@ -20,7 +20,7 @@ def remap_trim(
     x,
     output_domain,
     cap_output_domain,
-    input_domain=[0, 1],
+    input_domain=(0, 1),
 ):
     """remaps x (from input domain) onto output domain
     trims output onto cap_output_domain"""
@@ -33,7 +33,7 @@ def remap_trim(
     return y
 
 
-def remap(x, output_domain, input_domain=[0, 1]):
+def remap(x, output_domain, input_domain=(0, 1)):
     """remaps x (from input domain) onto output domain
     trims output onto cap_output_domain"""
     i, j = input_domain

@@ -1,4 +1,5 @@
 import abc
+import contextlib
 from typing import List
 
 from compas.geometry import Box
@@ -32,7 +33,5 @@ class Visualizer(abc.ABC):
             self.data_layers.append(data_layer)
 
     def remove_data_layer(self, data_layer: DataLayer):
-        try:
+        with contextlib.suppress(ValueError()):
             self.data_layers.remove(data_layer)
-        except ValueError:
-            pass

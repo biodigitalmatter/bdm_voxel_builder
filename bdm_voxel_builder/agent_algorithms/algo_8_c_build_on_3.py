@@ -36,7 +36,8 @@ or more towards direction preference
 
 ...
 
-initial stage algorithm - start to grow on attractive features of existing/scanned volumes
+initial stage algorithm - start to grow on attractive features of 
+existing/scanned volumes
 
 Find scan:
 - an initially defined volume attracts the agents
@@ -115,11 +116,11 @@ class Algo8c(AgentAlgorithm):
             1 / (self.agent_count * number_of_iterations * 100), 0.00001
         )
         ### LAYERS OF THE ENVIRONMENT
-        rgb_agents = [34, 116, 240]
-        rgb_trace = [17, 60, 120]
-        rgb_ground = [100, 100, 100]
-        rgb_queen = [232, 226, 211]
-        rgb_existing = [207, 179, 171]
+        rgb_agents = (34, 116, 240)
+        rgb_trace = (17, 60, 120)
+        rgb_ground = (100, 100, 100)
+        rgb_queen = (232, 226, 211)
+        rgb_existing = (207, 179, 171)
         ground = DiffusiveLayer(
             name="ground",
             voxel_size=self.voxel_size,
@@ -197,7 +198,7 @@ class Algo8c(AgentAlgorithm):
 
         agents = []
 
-        for i in range(self.agent_count):
+        for _ in range(self.agent_count):
             # create object
             agent = Agent(
                 space_layer=agent_space,
@@ -277,7 +278,7 @@ class Algo8c(AgentAlgorithm):
             direction_cube = move_pheromon_cube + directional_bias_cube
             random_mod = 0.6
 
-        elif 0.7 <= clay_density:
+        elif clay_density >= 0.7:
             """clay is super dense, they really climb up"""
             move_pheromon_cube *= 0.001
             directional_bias_cube *= 100
@@ -299,7 +300,7 @@ class Algo8c(AgentAlgorithm):
         )
 
         # doublecheck if in bounds
-        if 0 > np.min(agent.pose) or np.max(agent.pose) >= self.voxel_size:
+        if np.min(agent.pose) < 0 or np.max(agent.pose) >= self.voxel_size:
             # print(agent.pose)
             moved = False
 
@@ -344,7 +345,7 @@ class Algo8c(AgentAlgorithm):
         elif 3 / 26 <= clay_density < 4 / 5:
             build_chance += normal_density__build_reward
             erase_chance += normal_density__erase_reward
-        elif 4 / 5 <= clay_density:
+        elif clay_density >= 4 / 5:
             build_chance += high_density__build_reward
             erase_chance += high_density__erase_reward
 

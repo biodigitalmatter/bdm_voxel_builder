@@ -22,7 +22,8 @@ class ImportedLayer(DataLayer):
 
             if not name and len(grids) > 1:
                 print(
-                    f"File contains more than one grid, only processing first named {grids[0].name}"
+                    "File contains more than one grid, ",
+                    f"only processing first named {grids[0].name}"
                 )
 
             name = name or grids[0].name
