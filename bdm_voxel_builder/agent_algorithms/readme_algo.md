@@ -60,7 +60,13 @@ more agents > wider tower, less agent > thinner tower. because a. reach the same
 the clay array values slowly decay
 agents aim more towards the freshly built volumes.
 
-### varation: Algo_8_b_build_by_density
+main parameter is how fast the clay 'dries'
+decay between 1/100 - 1/100000000
+
+agents dont have to necceserily reset, because its enough to reset the build_chance
+
+
+## varation: Algo_8_b_build_by_density
 
 WIP
 old version of 8c, doesnt work as intended

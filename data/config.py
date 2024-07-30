@@ -6,12 +6,12 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # SHORT RUN test compasview
-grid_size = 100
+grid_size = 50
 iterations = 500
 agent_count = 35
 interval = iterations / 4
 info = 25
-name = f'algo_8d_test_i{iterations}a{agent_count}'
+name = f'algo_8d_test_dont_reset_faster_drying_i{iterations}a{agent_count}'
 
 config = Config(
     iterations=iterations,

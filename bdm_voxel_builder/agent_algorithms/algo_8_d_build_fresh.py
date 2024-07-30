@@ -134,7 +134,7 @@ class Algo8d(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
             flip_colors=True,
-            decay_ratio=1 / 10000000000,
+            decay_ratio=1 / 100,
         )
 
         ### CREATE GROUND ARRAY *could be imported from scan
@@ -239,7 +239,7 @@ class Algo8d(AgentAlgorithm):
         # print clay density for examination
         # clay_density = agent.get_layer_density(clay_layer)
 
-        clay_density = agent.get_layer_density_nonzero(clay_layer)
+        clay_density_filled = agent.get_layer_density_nonzero(clay_layer)
 
         # move by pheromon_layer_move
         move_pheromon_cube = agent.get_direction_cube_values_for_layer(
@@ -252,21 +252,21 @@ class Algo8d(AgentAlgorithm):
         ############################################################################
         ############# randomize ##########
 
-        if clay_density < 0.1:
+        if clay_density_filled < 0.1:
             """far from the clay, agents are aiming to get there"""
             direction_cube = move_pheromon_cube
             random_mod = 3
 
-        elif 0.1 <= clay_density < 0.7:
+        elif 0.1 <= clay_density_filled < 0.7:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
-            move_pheromon_cube *= 1
+            move_pheromon_cube *= 10
             directional_bias_cube *= 0.01
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 6
+            random_mod = 4
 
-        elif clay_density >= 0.7:
+        elif clay_density_filled >= 0.7:
             """clay is super dense, they really climb up"""
-            move_pheromon_cube *= 1
+            move_pheromon_cube *= 10
             directional_bias_cube *= 0.01
             direction_cube = move_pheromon_cube + directional_bias_cube
             random_mod = 15
@@ -318,19 +318,23 @@ class Algo8d(AgentAlgorithm):
 
         # get clay density
         clay_density = agent.get_layer_density(clay_layer)
+        if clay_density > 0.1:
+            print(clay_density)
+        dense_mod = clay_density + 0.2
+        clay_density_filled = agent.get_layer_density_nonzero(clay_layer)
 
         # set chances
         if 0 <= clay_density < 1 / 26:
             # extrem low density
             pass
-        elif 1 / 26 <= clay_density < 3 / 26:
-            build_chance += low_density__build_reward
+        elif 1 / 26 <= clay_density_filled < 3 / 26:
+            build_chance += low_density__build_reward * dense_mod
             erase_chance += low_density__erase_reward
-        elif 3 / 26 <= clay_density < 4 / 5:
-            build_chance += normal_density__build_reward
+        elif 3 / 26 <= clay_density_filled < 4 / 5:
+            build_chance += normal_density__build_reward * dense_mod
             erase_chance += normal_density__erase_reward
-        elif clay_density >= 4 / 5:
-            build_chance += high_density__build_reward
+        elif clay_density_filled >= 4 / 5:
+            build_chance += high_density__build_reward * dense_mod
             erase_chance += high_density__erase_reward
 
         # update probabilities
