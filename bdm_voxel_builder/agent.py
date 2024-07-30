@@ -898,13 +898,8 @@ class Agent:
 
     def erase_26(self, layer):
         self.set_layer_value_at_nbs_26(layer, 0)
-    
-    def erase_6(self, layer):
-        nbs = self.get_nb_indices_6(self.pose)
-        for pose in nbs:
-            set_value_at_index(layer, pose, 0)
 
-    def check_build_conditions(self, layer, only_face_nbs = True):
+    def check_build_conditions(self, layer, only_face_nbs=True):
         if only_face_nbs:
             v = self.get_layer_nb_values_6(layer, self.pose)
             if np.sum(v) > 0:
