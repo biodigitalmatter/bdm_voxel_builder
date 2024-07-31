@@ -9,6 +9,7 @@ from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.environment import Environment
 
+
 @dataclass
 class Algo8d(AgentAlgorithm):
     """
@@ -384,9 +385,8 @@ class Algo8d(AgentAlgorithm):
             self.calculate_build_chances(agent, state)
             built, erased = self.build_by_chance(agent, state)
             # print(f'built: {built}, erased: {erased}')
-            if built == True or erased == True:
-                if self.reset_after_build:
-                    self.reset_agent(agent)
+            if (built is True or erased is True) and self.reset_after_build:
+                self.reset_agent(agent)
                     # print("reset in built")
         
         # RESET IF STUCK

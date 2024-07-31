@@ -9,6 +9,7 @@ from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
 from bdm_voxel_builder.environment import Environment
 
+
 @dataclass
 class Algo8c(AgentAlgorithm):
     """
