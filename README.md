@@ -23,7 +23,7 @@ inv test
 ## Run lint
 
 ```bash
-inv lint
+inv check
 ```
 
 ## Run format

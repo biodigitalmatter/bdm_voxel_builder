@@ -8,7 +8,7 @@ def format(c):
 
 
 @task
-def lint(c):
+def check(c):
     c.run("ruff check .")
 
 
