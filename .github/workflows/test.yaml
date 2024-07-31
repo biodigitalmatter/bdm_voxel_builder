@@ -15,22 +15,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: 
+        os:
           - ubuntu-latest
           - windows-latest
         python-version: ["3.11", "3.12"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: true
+
       - uses: conda-incubator/setup-miniconda@a4260408e20b96e80095f42ff7f1a15b27dd94ca # v3.0.4
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
           environment-file: ./environment.yml
+
       - name: install local package
         run: invoke install
+
       - name: check
         run: invoke check
         continue-on-error: true
+
       - name: test
         run: invoke test
