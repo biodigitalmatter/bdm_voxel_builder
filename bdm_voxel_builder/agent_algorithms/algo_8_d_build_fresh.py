@@ -14,7 +14,7 @@ from bdm_voxel_builder.environment import Environment
 class Algo8d(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo_8_d_build_fresh:
-    
+
     ## Summary
 
     default voxel builder algorithm
@@ -22,22 +22,25 @@ class Algo8d(AgentAlgorithm):
     inputs: solid_ground_volume, clay_volume
     output:
         ?
-    
+
     ## Agent behaviour
-    
-    1. find the built clay 
+
+    1. find the built clay
     2. climb <up> on it
     3. build after a while of climbing
     4. reset or not
 
     ## Features
-    
+
     - move on solid array
-    - move direction is controlled with the mix of the pheromon environment and a global direction preference
-    - move randomness controlled by setting the number of best directions for the random choice
+    - move direction is controlled with the mix of the pheromon environment and
+      a global direction preference
+    - move randomness controlled by setting the number of best directions for
+      the random choice
     - build on existing volume
     - build and erase is controlled by gaining rewards
-    - move and build both is regulated differently at different levels of environment layer density 
+    - move and build both is regulated differently at different levels of
+      environment layer density
 
     ## NEW in 8_d
     agents aim more towards the freshly built volumes.
@@ -168,7 +171,7 @@ class Algo8d(AgentAlgorithm):
             grade=False,
             decay=True,
         )
-        
+
         layers["clay_layer"].decay()
         # # print to examine
         # ph_array = layers['pheromon_layer_move'].array
@@ -288,9 +291,11 @@ class Algo8d(AgentAlgorithm):
         )
 
         # doublecheck if in bounds
-        if any(np.array(agent.pose) < 0) or any(np.array(agent.pose) >= np.array(self.grid_size)):
+        if any(np.array(agent.pose) < 0) or any(
+            np.array(agent.pose) >= np.array(self.grid_size)
+        ):
             moved = False
-            print(f'not in bounds at{agent.pose}')
+            print(f"not in bounds at{agent.pose}")
 
         return moved
 
@@ -387,8 +392,8 @@ class Algo8d(AgentAlgorithm):
             # print(f'built: {built}, erased: {erased}')
             if (built is True or erased is True) and self.reset_after_build:
                 self.reset_agent(agent)
-                    # print("reset in built")
-        
+                # print("reset in built")
+
         # RESET IF STUCK
         if not moved:
             self.reset_agent(agent)

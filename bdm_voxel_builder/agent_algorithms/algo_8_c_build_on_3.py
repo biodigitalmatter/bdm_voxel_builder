@@ -35,17 +35,24 @@ class Algo8c(AgentAlgorithm):
     ## Features
     
     - move on solid array
-    - move direction is controlled with the mix of the pheromon environment and a global direction preference
-    - move randomness controlled by setting the number of best directions for the random choice
+    - move direction is controlled with the mix of the pheromon environment 
+      and a global direction preference
+    - move randomness controlled by setting the number of best directions for 
+      the random choice
     - build on existing volume
     - build and erase is controlled by gaining rewards
-    - move and build both is regulated differently at different levels of environment layer density 
+    - move and build both is regulated differently at different levels of 
+      environment layer density 
 
     ## Observations:
 
-    resetting the agents after build results in a flat volume, since the agent generally climbs upwards for the same amount of steps
+    resetting the agents after build results in a flat volume, since the agent 
+    generally climbs upwards for the same amount of steps
+
     not resetting the agent after build results in towerlike output
-    more agents > wider tower, less agent > thinner tower. because of creating obstacles while simultanously trimbing up
+
+    more agents > wider tower, less agent > thinner tower. because of creating 
+    obstacles while simultanously trimbing up
     """
 
     agent_count: int
@@ -237,7 +244,10 @@ class Algo8c(AgentAlgorithm):
         if gv != 0:
             # print("""agent in the ground""")
             return False
-        # TODO clay collision cannot be checked, if we want to optionally allow non_reset behaviour
+
+        # TODO clay collision cannot be checked, if we want to optionally 
+        # allow non_reset behaviour
+
         # if agent.check_clay_collision:
         #     cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
         #     if cv != 0:
