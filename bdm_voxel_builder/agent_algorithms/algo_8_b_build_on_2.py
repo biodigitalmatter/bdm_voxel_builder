@@ -7,7 +7,7 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveLayer
+from bdm_voxel_builder.grid import DiffusiveGrid
 
 """
 Algorithm structure overview:
@@ -162,17 +162,17 @@ class Algo8b(AgentAlgorithm):
         rgb_ground = [100, 100, 100]
         rgb_queen = [232, 226, 211]
         rgb_existing = [207, 179, 171]
-        ground = DiffusiveLayer(
+        ground = DiffusiveGrid(
             name="ground",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_ground),
         )
-        agent_space = DiffusiveLayer(
+        agent_space = DiffusiveGrid(
             name="agent_space",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
         )
-        move_to_ph_layer = DiffusiveLayer(
+        move_to_ph_layer = DiffusiveGrid(
             name="move_to_ph_layer",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_queen),
@@ -181,7 +181,7 @@ class Algo8b(AgentAlgorithm):
             decay_ratio=1 / 10000000,
             gradient_resolution=100000,
         )
-        clay_layer = DiffusiveLayer(
+        clay_layer = DiffusiveGrid(
             name="clay_layer",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
@@ -225,7 +225,7 @@ class Algo8b(AgentAlgorithm):
         #     np.amin(move_to_ph_layer.array),
         # )
 
-    def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
+    def setup_agents(self, data_layers: dict[str, DiffusiveGrid]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
 

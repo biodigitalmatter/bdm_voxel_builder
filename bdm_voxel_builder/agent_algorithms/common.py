@@ -1,13 +1,13 @@
 import numpy as np
 import numpy.typing as npt
 
-from bdm_voxel_builder.grid import DiffusiveLayer
+from bdm_voxel_builder.grid import DiffusiveGrid
 
 
 def diffuse_diffusive_layer(
-    diffusive_layer: DiffusiveLayer,
+    diffusive_layer: DiffusiveGrid,
     emmission_array: npt.NDArray | list = None,
-    blocking_layer: DiffusiveLayer | list = None,
+    blocking_layer: DiffusiveGrid | list = None,
     gravity_shift_bool: bool = False,
     diffuse_bool: bool = True,
     decay: bool = True,

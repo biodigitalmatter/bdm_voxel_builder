@@ -1,4 +1,5 @@
 import math
+import os
 from collections.abc import Sequence
 
 import numpy as np
@@ -10,10 +11,10 @@ from compas.geometry import Box, Pointcloud, Transformation, transform_points_nu
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
 from bdm_voxel_builder.helpers.savepaths import get_savepath
-from bdm_voxel_builder.helpers.vdb import xform_to_vdb
+from bdm_voxel_builder.helpers.vdb import xform_to_compas, xform_to_vdb
 
 
-class DataLayer:
+class Grid:
     def __init__(
         self,
         grid_size: int | tuple[int, int, int],
@@ -96,3 +97,40 @@ class DataLayer:
 
     def get_world_pointcloud(self) -> Pointcloud:
         return self.get_index_pointcloud().transformed(self.xform)
+
+    @classmethod
+    def from_npy(cls, path: os.PathLike, name: str = None):
+        arr = np.load(path)
+        return cls(name=name, array=arr)
+
+    @classmethod
+    def from_vdb(cls, grid: os.PathLike | vdb.GridBase, name: str = None):
+        if isinstance(grid, os.PathLike):
+            grids = vdb.readAllGridMetadata(str(grid))
+
+            if not name and len(grids) > 1:
+                print(
+                    "File contains more than one grid, ",
+                    f"only processing first named {grids[0].name}"
+                )
+
+            name = name or grids[0].name
+            grid = vdb.read(str(grid), name)
+
+        bbox_min = grid.metadata["file_bbox_min"]
+        bbox_max = grid.metadata["file_bbox_max"]
+
+        shape = np.array(bbox_max) - np.array(bbox_min)
+        arr = np.zeros(shape)
+
+        # rotate the grid to make Z up
+        grid.transform.rotate(math.pi / 2, vdb.Axis.X)
+
+        grid.copyToArray(arr, ijk=bbox_min)
+
+        return cls(
+            grid_size=arr.shape,
+            name=name or grid.name,
+            array=arr,
+            xform=xform_to_compas(grid.transform),
+        )
