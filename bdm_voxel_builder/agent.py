@@ -778,16 +778,15 @@ class Agent:
             bool_ = False
         return bool_
 
-    def build_on_layer(self, layer):
+    def build_on_layer(self, layer, value=1.0):
         try:
-            set_value_at_index(layer, self.pose, 1)
-            bool_ = True
+            set_value_at_index(layer, self.pose, value)
             self.build_chance = 0
+            return True
         except Exception as e:
             print(e)
             print("cant build here:", self.pose)
-            bool_ = False
-        return bool_
+            return False
 
     def erase(self, layer, only_face_nb=True):
         if only_face_nb:

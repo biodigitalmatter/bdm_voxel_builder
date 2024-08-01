@@ -356,7 +356,7 @@ class Algo9a(AgentAlgorithm):
             agent.build_chance = build_chance
             agent.erase_chance = erase_chance
 
-    def build_by_chance(self, agent, state: Environment):
+    def build_by_chance(self, agent: Agent, state: Environment):
         """agent builds on construction_layer, if pheromon value in cell hits limit
         chances are either momentary values or stacked by history
         return bool"""
