@@ -21,7 +21,7 @@ class Algo8d(AgentAlgorithm):
     agents build on and around an initial 'clay' volume on a 'ground' surface
     inputs: solid_ground_volume, clay_volume
     output:
-        ?
+        
 
     ## Agent behaviour
 
@@ -60,6 +60,8 @@ class Algo8d(AgentAlgorithm):
     # EXISTING GEOMETRY
     add_box = True
     box_template = [20, 22, 20, 22, 1, 4]
+    box_template_2 = [30, 32, 25, 27, 1, 4]
+    wall = [0, 50, 28, 60, 1, 20]
     ground_level_Z = 0
 
     reach_to_build: int = 1
@@ -123,6 +125,7 @@ class Algo8d(AgentAlgorithm):
             name="track_layer",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
+            decay_ratio=1 / 10000
         )
         pheromon_layer_move = DiffusiveLayer(
             name="pheromon_layer_move",
@@ -147,8 +150,9 @@ class Algo8d(AgentAlgorithm):
         )
 
         if self.add_box:
-            # ground.add_values_in_zone_xxyyzz(self.box_template, 1)
-            clay_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
+            ground.add_values_in_zone_xxyyzz(self.wall, 1)
+            # clay_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
+            clay_layer.add_values_in_zone_xxyyzz(self.box_template_2, 1)
 
         # WRAP ENVIRONMENT
         layers = {
@@ -173,6 +177,7 @@ class Algo8d(AgentAlgorithm):
         )
 
         layers["clay_layer"].decay()
+        layers['track_layer'].decay()
         # # print to examine
         # ph_array = layers['pheromon_layer_move'].array
         # print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
@@ -243,7 +248,7 @@ class Algo8d(AgentAlgorithm):
         # print clay density for examination
         # clay_density = agent.get_layer_density(clay_layer)
 
-        clay_density_filled = agent.get_layer_density_nonzero(clay_layer)
+        clay_density_filled = agent.get_layer_density(clay_layer, nonzero=True)
 
         # move by pheromon_layer_move
         move_pheromon_cube = agent.get_direction_cube_values_for_layer(
@@ -259,21 +264,14 @@ class Algo8d(AgentAlgorithm):
         if clay_density_filled < 0.1:
             """far from the clay, agents are aiming to get there"""
             direction_cube = move_pheromon_cube
-            random_mod = 3
+            random_mod = 2
 
-        elif 0.1 <= clay_density_filled < 0.7:
+        elif 0.1 <= clay_density_filled:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube *= 10
             directional_bias_cube *= 0.01
             direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 4
-
-        elif clay_density_filled >= 0.7:
-            """clay is super dense, they really climb up"""
-            move_pheromon_cube *= 10
-            directional_bias_cube *= 0.01
-            direction_cube = move_pheromon_cube + directional_bias_cube
-            random_mod = 15
+            random_mod = 5
 
         ############################################################################
 
@@ -324,11 +322,8 @@ class Algo8d(AgentAlgorithm):
 
         # get clay density
         clay_density = agent.get_layer_density(clay_layer)
-        if clay_density > 0.1:
-            print(clay_density)
         dense_mod = clay_density + 0.2
-        clay_density_filled = agent.get_layer_density_nonzero(clay_layer)
-
+        clay_density_filled = agent.get_layer_density(clay_layer, nonzero = True)
         # set chances
         if 0 <= clay_density < 1 / 26:
             # extrem low density
@@ -368,14 +363,13 @@ class Algo8d(AgentAlgorithm):
                 # built = agent.build_on_layer(ground)
                 built = agent.build_on_layer(clay_layer)
                 # print('built', agent.pose, agent.build_chance)
+                if built: agent.build_chance = 0
             # erase
             elif agent.erase_chance >= self.reach_to_erase:
                 # erased = agent.erase_26(ground)
                 erased = agent.erase_26(clay_layer)
-                # print('erased', agent.pose, agent.erase_chance)
-            if erased or built:
-                agent.erase_chance = 0
-                agent.build_chance = 0
+                print('erased', agent.pose, agent.erase_chance)
+                if erased: agent.erase_chance = 0
         return built, erased
 
     # ACTION FUNCTION

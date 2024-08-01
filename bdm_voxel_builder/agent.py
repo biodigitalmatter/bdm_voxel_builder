@@ -267,27 +267,20 @@ class Agent:
             nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
         return np.vstack(nbs_w_corners)
 
-    def get_layer_density(self, layer,  print_=False):
+    def get_layer_density(self, layer,  print_=False, nonzero = False):
         """return clay density"""
         values = self.get_layer_nb_values_26(layer, self.pose, False)
-        density = sum(values) / 26
+        if not nonzero:
+            density = sum(values) / 26
+        else:
+            density = np.count_nonzero(values) / 26
         if print_:
             print(f"layer values:\n{values}\n")
             print(f"layer_density:{density} in pose:{self.pose}")
         return density
 
-    def get_layer_density_nonzero(self, layer, print_=False):
-        # check clay density
-        a = self.get_layer_nb_values_26(layer, self.pose, False)
-        n = np.count_nonzero(a)
-        density = n / 26
-        if print_:
-            print(f"layer values:\n{n}\n")
-            print(f"number of nonzero: {n}, layer_density:{density} in pose:{self.pose}")
-        return density
-
     def get_layer_density_in_slice_shape(
-        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, -1)
+        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, -1), nonzero = False
     ):
         """returns layer density
         slice shape = [
@@ -314,7 +307,10 @@ class Agent:
         for x in radiis:
             slice_volume *= (x + 0.5) * 2
         density = sum_values / slice_volume
-
+        if not nonzero:
+            density = sum(values) / 26
+        else:
+            density = np.count_nonzero(values) / 26
         return density
 
     # def get_nb_slice(self, array,

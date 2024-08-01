@@ -11,7 +11,7 @@ from bdm_voxel_builder.environment import Environment
 
 
 @dataclass
-class Algo8d(AgentAlgorithm):
+class Algo9a(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo_8_d_build_fresh:
 
@@ -62,8 +62,7 @@ class Algo8d(AgentAlgorithm):
 
     # EXISTING GEOMETRY
     add_box = True
-    box_template = [20, 22, 20, 22, 1, 4]
-    box_template_2 = [30, 32, 25, 27, 1, 4]
+    box_template = [0, 50, 0, 50, 2, 3]
     ground_level_Z = 0
 
     reach_to_build: int = 1
@@ -154,7 +153,6 @@ class Algo8d(AgentAlgorithm):
         if self.add_box:
             # ground.add_values_in_zone_xxyyzz(self.box_template, 1)
             clay_layer.add_values_in_zone_xxyyzz(self.box_template, 1)
-            clay_layer.add_values_in_zone_xxyyzz(self.box_template_2, 1)
 
         # WRAP ENVIRONMENT
         layers = {
@@ -270,8 +268,8 @@ class Algo8d(AgentAlgorithm):
 
         elif 0.1 <= clay_density_filled:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
-            move_pheromon_cube *= 10
-            directional_bias_cube *= 0.01
+            move_pheromon_cube *= 0.1
+            directional_bias_cube *= 10
             direction_cube = move_pheromon_cube + directional_bias_cube
             random_mod = 5
 
@@ -339,6 +337,14 @@ class Algo8d(AgentAlgorithm):
         elif clay_density_filled >= 4 / 5:
             build_chance += high_density__build_reward * dense_mod
             erase_chance += high_density__erase_reward
+
+        # check density above
+        dense_above__erase_reward = 2
+        slice_shape = [1,1,0,0,0,1]
+        density_filled_above = agent.get_layer_density_in_slice_shape(clay_layer, slice_shape, True)
+        if 2/3 <= density_filled_above:
+            erase_chance += dense_above__erase_reward
+        print(f'density: {clay_density_filled*26}, density_above: {density_filled_above*26}')
 
         # update probabilities
         if self.stacked_chances:
