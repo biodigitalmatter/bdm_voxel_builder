@@ -12,4 +12,4 @@ class Config:
     iterations: int = 200
     save_interval: int = 100
     visualize_interval: int = 1
-    datalayers_to_visualize: list[str] = None
+    grids_to_visualize: list[str] = None

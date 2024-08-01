@@ -75,16 +75,6 @@ def create_random_array(shape: int | tuple[int]):
     return np.random.default_rng().random(shape)
 
 
-def set_value_at_index(layer, index=(0, 0, 0), value=1):
-    # print('set value at index', index)
-    i, j, k = index
-    try:
-        layer.array[i][j][k] = value
-    except Exception as e:
-        print(f"set value error: {e}")
-    return layer
-
-
 def get_cube_array_indices(self_contain=False):
     """26 nb indicies, ordered: top-middle-bottom"""
     # horizontal
@@ -200,8 +190,9 @@ def crop_array(arr, start=0, end=1):
     return arr
 
 
-def random_choice_index_from_best_n_old(list_array, n, print_ = False):
-    """double random choice to to avoid only finding the index of the selected if equals"""
+def random_choice_index_from_best_n_old(list_array, n, print_=False):
+    """double random choice to to avoid only finding the index of the selected 
+    if equals"""
     array = list_array
     a = np.sort(array)
     best_of = a[(len(array) - n) :]
@@ -212,14 +203,13 @@ def random_choice_index_from_best_n_old(list_array, n, print_ = False):
     if print_:
         print(f"""random selection. input array: {list_array}
         best options:{best_of}, choice value: {random_choice_from_the_best_nth}, 
-        index:{random_choice_index_from_best_n_}"""
-)
+        index:{random_choice_index_from_best_n_}""")
 
     return random_choice_index_from_best_n_
 
 
-def random_choice_index_from_best_n(list_array, n, print_ = False):
-    """add a random array with very small numbers to avoid only finding the 
+def random_choice_index_from_best_n(list_array, n, print_=False):
+    """add a random array with very small numbers to avoid only finding the
     index of the selected if equals"""
     random_sort = np.random.random(len(list_array)) * 1e-30
     array = list_array * random_sort

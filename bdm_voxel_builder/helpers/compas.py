@@ -1,4 +1,3 @@
-
 import numpy.typing as npt
 from compas.data import json_dump
 from compas.geometry import Pointcloud
