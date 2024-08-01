@@ -19,9 +19,7 @@ config = Config(
         grid_size=grid_size,
         name=name,
     ),
-    visualizer=CompasViewerVisualizer(
-        save_file=True, skip_grids=("pheromon_move")
-    ),
+    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("pheromon_move")),
     save_interval=interval,
     visualize_interval=interval,
 )

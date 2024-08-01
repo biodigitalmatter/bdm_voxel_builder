@@ -58,7 +58,7 @@ class Algo8c(AgentAlgorithm):
     agent_count: int
     grid_size: int | tuple[int, int, int]
     name: str = "algo_8c_build_on"
-    relevant_data_grid : str = "clay"
+    relevant_data_grid: str = "clay"
 
     seed_iterations: int = 100
 
@@ -260,9 +260,7 @@ class Algo8c(AgentAlgorithm):
         #     print(txt.format(clay_density))
 
         # move by pheromon_move
-        move_pheromon_cube = agent.get_direction_cube_values_for_grid(
-            pheromon_move, 1
-        )
+        move_pheromon_cube = agent.get_direction_cube_values_for_grid(pheromon_move, 1)
         directional_bias_cube = agent.direction_preference_26_pheromones_v2(1, 0.8, 0.2)
 
         ############################################################################

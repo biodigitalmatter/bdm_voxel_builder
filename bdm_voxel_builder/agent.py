@@ -262,10 +262,7 @@ class Agent:
     def get_grid_density(self, grid: Grid, print_=False, nonzero=False):
         """return clay density"""
         values = self.get_grid_nb_values_26(grid, self.pose, False)
-        if not nonzero:
-            density = sum(values) / 26
-        else:
-            density = np.count_nonzero(values) / 26
+        density = sum(values) / 26 if not nonzero else np.count_nonzero(values) / 26
         if print_:
             print(f"grid values:\n{values}\n")
             print(f"grid_density:{density} in pose:{self.pose}")

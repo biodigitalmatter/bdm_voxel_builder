@@ -259,7 +259,7 @@ class Algo9a(AgentAlgorithm):
             direction_cube = move_pheromon_cube
             random_mod = 2
 
-        elif 0.1 <= clay_density_filled:
+        elif clay_density_filled >= 0.1:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube *= 0.1
             directional_bias_cube *= 10
@@ -338,10 +338,11 @@ class Algo9a(AgentAlgorithm):
         density_filled_above = agent.get_grid_density_in_slice_shape(
             clay_grid, slice_shape, True
         )
-        if 2 / 3 <= density_filled_above:
+        if density_filled_above >= 2 / 3:
             erase_chance += dense_above__erase_reward
         print(
-            f"density: {clay_density_filled*26}, density_above: {density_filled_above*9}"
+            f"density: {clay_density_filled*26}, ",
+            f"density_above: {density_filled_above*9}",
         )
 
         # update probabilities

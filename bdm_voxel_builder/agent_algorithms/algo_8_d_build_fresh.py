@@ -257,7 +257,7 @@ class Algo8d(AgentAlgorithm):
             direction_cube = move_pheromon_cube
             random_mod = 2
 
-        elif 0.1 <= clay_density_filled:
+        elif clay_density_filled >= 0.1:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube *= 10
             directional_bias_cube *= 0.01
