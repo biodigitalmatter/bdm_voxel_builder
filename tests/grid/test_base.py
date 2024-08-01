@@ -2,7 +2,7 @@ import compas.geometry as cg
 import numpy as np
 import pytest
 
-from bdm_voxel_builder.data_layer.base import DataLayer
+from bdm_voxel_builder.grid import DataLayer
 
 
 @pytest.fixture

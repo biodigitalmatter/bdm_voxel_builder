@@ -3,7 +3,7 @@ import contextlib
 
 from compas.geometry import Box
 
-from bdm_voxel_builder.data_layer.base import DataLayer
+from bdm_voxel_builder.grid import DataLayer
 
 
 class Visualizer(abc.ABC):

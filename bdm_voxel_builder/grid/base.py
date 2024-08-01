@@ -44,7 +44,7 @@ class DataLayer:
 
         if not isinstance(value, Sequence):
             return (value, value, value)
-        
+
         return value
 
     @grid_size.setter
