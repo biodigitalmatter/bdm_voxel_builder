@@ -191,7 +191,7 @@ def crop_array(arr, start=0, end=1):
 
 
 def random_choice_index_from_best_n_old(list_array, n, print_=False):
-    """double random choice to to avoid only finding the index of the selected 
+    """double random choice to to avoid only finding the index of the selected
     if equals"""
     array = list_array
     a = np.sort(array)

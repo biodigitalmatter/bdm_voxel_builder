@@ -1,6 +1,6 @@
 import compas.geometry as cg
 
-from bdm_voxel_builder.helpers.voxel import get_linear_transformation_between_two_boxes
+from bdm_voxel_builder.helpers.voxel import get_linear_xform_between_2_boxes
 
 
 class TestGetLinearTransformationBetweenTwoBoxes:
@@ -10,7 +10,7 @@ class TestGetLinearTransformationBetweenTwoBoxes:
         to_box = cg.Box(1, 1, 1, frame=cg.Frame.worldXY())
         expected_transformation = cg.Transformation()
         assert (
-            get_linear_transformation_between_two_boxes(from_box, to_box)
+            get_linear_xform_between_2_boxes(from_box, to_box)
             == expected_transformation
         )
 
@@ -27,7 +27,7 @@ class TestGetLinearTransformationBetweenTwoBoxes:
             ]
         )
         assert (
-            get_linear_transformation_between_two_boxes(from_box, to_box)
+            get_linear_xform_between_2_boxes(from_box, to_box)
             == expected_transformation
         )
 
@@ -53,6 +53,6 @@ class TestGetLinearTransformationBetweenTwoBoxes:
             ]
         )
         assert (
-            get_linear_transformation_between_two_boxes(from_box, to_box)
+            get_linear_xform_between_2_boxes(from_box, to_box)
             == expected_transformation
         )
