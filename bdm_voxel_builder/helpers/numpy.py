@@ -75,16 +75,6 @@ def create_random_array(shape: int | tuple[int]):
     return np.random.default_rng().random(shape)
 
 
-def set_value_at_index(layer, index=(0, 0, 0), value=1):
-    # print('set value at index', index)
-    i, j, k = index
-    try:
-        layer.array[i][j][k] = value
-    except Exception as e:
-        print(f"set value error: {e}")
-    return layer
-
-
 def get_cube_array_indices(self_contain=False):
     """26 nb indicies, ordered: top-middle-bottom"""
     # horizontal

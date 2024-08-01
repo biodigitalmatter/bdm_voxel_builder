@@ -11,24 +11,23 @@ from bdm_voxel_builder.visualizer.base import Visualizer
 class CompasViewerVisualizer(Visualizer):
     FILE_SUFFIX = ".json"
 
-    def __init__(self, save_file=False, skip_layers=("layer_name")):
-        super().__init__(save_file)
+    def __init__(self, save_file=False, skip_grids: tuple[str] = None):
+        super().__init__(save_file, skip_grids=skip_grids)
 
         self.viewer = Viewer()
         self.scene = self.viewer.scene
-        self.skip_layers = skip_layers
 
-    def setup_layers(self):
-        # set up parent objects for each layer
-        for layer in self.data_layers:
-            if layer.name not in self.skip_layers and not self.scene.get_node_by_name(
-                layer.name
+    def setup_grids(self):
+        # set up parent objects for each grids
+        for grid in self.grids:
+            if grid.name not in self.skip_grids and not self.scene.get_node_by_name(
+                grid.name
             ):
                 pt = Point(0, 0, 0)
                 self.scene.add(
                     pt,
-                    name=layer.name,
-                    pointcolor=layer.color,
+                    name=grid.name,
+                    pointcolor=grid.color,
                     pointsize=0.1,
                     parent=None,
                 )
@@ -42,18 +41,18 @@ class CompasViewerVisualizer(Visualizer):
         self.scene.clear()
 
     def draw(self, iteration_count=None):
-        self.setup_layers()
-        for layer in self.data_layers:
-            if layer.name in self.skip_layers:
+        self.setup_grids()
+        for grid in self.grids:
+            if grid.name in self.skip_grids:
                 continue
-            parent = self.scene.get_node_by_name(layer.name)
+            parent = self.scene.get_node_by_name(grid.name)
 
-            pts = convert_array_to_pts(layer.array, get_data=False)
+            pts = convert_array_to_pts(grid.array, get_data=False)
 
             iteration = iteration_count or len(parent.children)
-            name = f"{layer.name}_{iteration}"
+            name = f"{grid.name}_{iteration}"
             self.scene.add(
-                Pointcloud(pts), name=name, pointcolor=layer.color, parent=parent
+                Pointcloud(pts), name=name, pointcolor=grid.color, parent=parent
             )
 
     def show(self):

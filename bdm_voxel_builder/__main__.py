@@ -15,7 +15,7 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
     algo = config.algo
     visualizer = config.visualizer
 
-    # 1. diffuse environment's layers
+    # 1. diffuse environment's grid
     algo.update_environment(sim_state)
 
     # 2. MOVE and BUILD
@@ -37,8 +37,7 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
         sim_state.iteration_count % config.save_interval == 0
         or sim_state.iteration_count == config.iterations - 1
     ):
-        layer_to_dump = algo.layer_to_dump
-        a1 = sim_state.data_layers[layer_to_dump].array.copy()
+        a1 = sim_state.grids[algo.grid_to_dump].array.copy()
         a1[:, :, : algo.ground_level_Z] = 0
 
         save_ndarray(a1, note=note)
@@ -46,7 +45,7 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
         pointcloud, values = pointcloud_from_ndarray(a1, return_values=True)
         save_pointcloud(pointcloud, values=values, note=note)
 
-        sim_state.data_layers[layer_to_dump].save_vdb()
+        sim_state.grids[algo.grid_to_dump].save_vdb()
 
     print(sim_state.iteration_count)
     sim_state.iteration_count += 1
@@ -75,13 +74,13 @@ def main(configfile):
 
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
-    for layer in sim_state.data_layers.values():
-        if config.datalayers_to_visualize:
-            for layer_name in config.datalayers_to_visualize:
-                if layer.name == layer_name:
-                    visualizer.add_data_layer(layer)
+    for grid in sim_state.grids.values():
+        if config.grids_to_visualize:
+            for grid_name in config.grids_to_visualize:
+                if grid.name == grid_name:
+                    visualizer.add_grid(grid)
         else:
-            visualizer.add_data_layer(layer)
+            visualizer.add_grid(grid)
 
     if isinstance(visualizer, MPLVisualizer) and visualizer.should_save_animation:
         visualizer.setup_animation(

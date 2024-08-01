@@ -9,7 +9,7 @@ iterations = 100
 agent_count = 2
 interval = iterations / 10
 info = 25
-name = f'algo_9a_test_nonreset_startinclay_build_too_i{iterations}a{agent_count}'
+name = f"algo_9a_test_nonreset_startinclay_build_too_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
@@ -20,8 +20,7 @@ config = Config(
         name=name,
     ),
     visualizer=CompasViewerVisualizer(
-        save_file=True, 
-        skip_layers=( 'pheromon_layer_move')
+        save_file=True, skip_grids=("pheromon_move")
     ),
     save_interval=interval,
     visualize_interval=interval,

@@ -1,6 +1,7 @@
 import math
 import os
 from collections.abc import Sequence
+from typing import Self
 
 import numpy as np
 import numpy.typing as npt
@@ -69,14 +70,18 @@ class Grid:
         grid = vdb.FloatGrid()
         grid.copyFromArray(self.array)
 
-        grid.name = f"layer_{self.name}"
+        name = self.name or "None"
+        try:
+            grid.name = name
+        except TypeError:
+            grid.__setitem__("name", name)
 
         grid.transform = xform_to_vdb(self.xform)
 
         return grid
 
     def save_vdb(self):
-        path = get_savepath(TEMP_DIR, ".vdb", note=f"layer_{self.name}")
+        path = get_savepath(TEMP_DIR, ".vdb", note=f"grid_{self.name}")
 
         grid = self.to_vdb_grid()
 
@@ -85,6 +90,23 @@ class Grid:
         vdb.write(str(path), grids=[grid])
 
         return path
+
+    def set_value_at_index(self, index=(0, 0, 0), value=1, wrapping: bool = True):
+        if wrapping:
+            index = np.mod(index, self.grid_size)
+        i, j, k = index
+        self.array[i][j][k] = value
+        return self.array
+
+    def get_value_at_index(self, index=(0, 0, 0)):
+        i, j, k = index
+        return self.array[i][j][k]
+
+    def get_active_voxels(self, array):
+        """returns indicies of nonzero values
+        list of coordinates
+            shape = [3,n]"""
+        return np.nonzero(self.array)
 
     def get_index_pts(self) -> list[list[float]]:
         return convert_array_to_pts(self.array, get_data=False)
@@ -97,6 +119,11 @@ class Grid:
 
     def get_world_pointcloud(self) -> Pointcloud:
         return self.get_index_pointcloud().transformed(self.xform)
+
+    def get_merged_array_with(self, grid: Self):
+        a1 = self.array
+        a2 = grid.array
+        return a1 + a2
 
     @classmethod
     def from_npy(cls, path: os.PathLike, name: str = None):
@@ -111,7 +138,7 @@ class Grid:
             if not name and len(grids) > 1:
                 print(
                     "File contains more than one grid, ",
-                    f"only processing first named {grids[0].name}"
+                    f"only processing first named {grids[0].name}",
                 )
 
             name = name or grids[0].name
