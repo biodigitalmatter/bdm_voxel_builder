@@ -7,7 +7,7 @@ def get_linear_transformation_between_two_boxes(from_box: cg.Box, to_box: cg.Box
         frame_from=from_box.frame, frame_to=to_box.frame
     )
 
-    T *= cg.Scale.from_factors(from_box.diagonal.vector / to_box.diagonal.vector)
+    T *= cg.Scale.from_factors(to_box.diagonal.vector / from_box.diagonal.vector )
 
     return T
 
