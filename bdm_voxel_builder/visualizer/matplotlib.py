@@ -94,15 +94,15 @@ class MPLVisualizer(Visualizer):
         self.ax1.clear()
 
     def draw(self):
-        for layer in self.data_layers:
-            pts = np.array(convert_array_to_pts(layer.array)).transpose()
+        for grid in self.grids:
+            pts = np.array(convert_array_to_pts(grid.array)).transpose()
             self.ax1.scatter(
                 pts[0, :],
                 pts[1, :],
                 pts[2, :],
                 marker="s",
                 s=1,
-                facecolor=layer.color.rgb,
+                facecolor=grid.color.rgb,
             )
 
     def show(self):

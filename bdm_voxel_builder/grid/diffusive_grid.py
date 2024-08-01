@@ -95,33 +95,6 @@ class DiffusiveGrid(Grid):
             self.array = a
         return a
 
-    def set_layer_value_at_index(self, index=(0, 0, 0), value=1):
-        index2 = np.mod(index, self.grid_size)
-        i, j, k = index2
-        self.array[i][j][k] = value
-        return self.array
-
-    def get_value_at_index(self, index=(0, 0, 0)):
-        i, j, k = index
-        v = self.array[i][j][k]
-        return v
-
-    def get_nonzero_point_list(self, array):
-        """returns indicies of nonzero values
-        if list_of_points:
-            shape = [n,3]
-        else:
-            shape = [3,n]"""
-        non_zero_array = np.nonzero(array)
-        return np.transpose(non_zero_array)
-
-    def get_nonzero_index_coordinates(self, array):
-        """returns indicies of nonzero values
-        list of coordinates
-            shape = [3,n]"""
-        non_zero_array = np.nonzero(array)
-        return non_zero_array
-
     def grade(self):
         if self.gradient_resolution == 0:
             pass
@@ -269,12 +242,11 @@ class DiffusiveGrid(Grid):
         else:  # absolut
             self.array = np.where(external_emission_array != 0, factor, self.array)
 
-    def block_layers(self, other_layers):
-        """acts as a solid obstacle, stopping diffusion of other layers
-        input list of layers"""
-        for i in range(len(other_layers)):
-            layer = other_layers[i]
-            layer.array = np.where(self.array == 1, 0 * layer.array, 1 * layer.array)
+    def block_grids(self, other_grids: list[Grid]):
+        """acts as a solid obstacle, stopping diffusion of other grid
+        input list of grids"""
+        for grid in other_grids:
+            grid.array = np.where(self.array == 1, 0 * grid.array, 1 * grid.array)
 
     def decay(self):
         if self.decay_random_factor == 0:
@@ -302,11 +274,6 @@ class DiffusiveGrid(Grid):
         self.diffuse(diffusion_limit_by_Hirsh, reintroduce_on_the_other_end)
         # emission_out
         self.emmission_out_update()
-
-    def get_merged_array_with(self, other_layer):
-        a1 = self.array
-        a2 = other_layer.array
-        return a1 + a2
 
     def add_values_in_zone_xxyyzz(self, zone_xxyyzz, value=1, add_values=False):
         """add or replace values within zone (including both end)

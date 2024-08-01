@@ -6,7 +6,7 @@ description of the voxel builder algorithms
 
 parameter settings
 initialization
-    make_layers
+    make_grid
     setup_agents
         reset_agents
 iterate:
@@ -42,7 +42,8 @@ output:
 - move randomness controlled by setting the number of best directions for the random choice
 - build on existing volume
 - build and erase is controlled by gaining rewards
-- move and build both is regulated differently at different levels of environment layer density 
+- move and build both is regulated differently at different levels of
+  environment grid density
 
 ### Observations
 

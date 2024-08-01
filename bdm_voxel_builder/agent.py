@@ -1,6 +1,7 @@
 from math import trunc
 
 import numpy as np
+import numpy.typing as npt
 
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers.numpy import (
@@ -8,7 +9,6 @@ from bdm_voxel_builder.helpers.numpy import (
     clip_indices_to_grid_size,
     get_sub_array,
     random_choice_index_from_best_n,
-    set_value_at_index,
 )
 
 
@@ -17,24 +17,24 @@ class Agent:
 
     def __init__(
         self,
-        pose=None,
-        compass_array=NB_INDEX_DICT,
-        ground_layer=None,
-        space_layer=None,
-        track_layer=None,
-        leave_trace=False,
-        save_move_history=True,
+        pose: npt.NDArray[np.int_] = None,
+        compass_array: dict[str, npt.NDArray[np.int_]] = NB_INDEX_DICT,
+        ground_grid: Grid = None,
+        space_grid: Grid = None,
+        track_grid: Grid = None,
+        leave_trace: bool = False,
+        save_move_history: bool = True,
     ):
         if pose is None:
-            self.pose = np.asarray([0, 0, 0])
+            self.pose = np.asarray([0, 0, 0], dtype=np.int_)
         else:
             self.pose = np.asarray(pose)  # [i,j,k]
         self.compass_array = compass_array
         # self.limited_to_ground = limited_to_ground
-        self.leave_trace = leave_trace
-        self.space_layer = space_layer
-        self.track_layer = track_layer
-        self.ground_layer = ground_layer
+        self.leave_trace: bool = leave_trace
+        self.space_grid = space_grid
+        self.track_grid = track_grid
+        self.ground_grid = ground_grid
         self.move_history = []
         self.save_move_history = save_move_history
         self.build_probability = 0
@@ -96,11 +96,11 @@ class Agent:
         "back": np.asarray([0, 1, 0]),
     }
 
-    def analyze_relative_position(self, layer):
+    def analyze_relative_position(self, grid: Grid):
         """check if there is sg around the agent
         return list of bool:
             [below, aside, above]"""
-        values = self.get_layer_nb_values_6(layer, self.pose)
+        values = self.get_grid_nb_values_6(grid, self.pose)
         values = values.tolist()
         above = values.pop(0)
         below = values.pop(1)
@@ -140,19 +140,19 @@ class Agent:
 
         return np.asarray(u + m + b)
 
-    # INTERACTION WITH LAYERS
-    def get_layer_value_at_index(
+    # INTERACTION WITH GRIDS
+    def get_grid_value_at_index(
         self,
-        layer: Grid,
+        grid: Grid,
         index=(0, 0, 0),
         reintroduce=True,
         round_=False,
         eliminate_dec=False,
     ):
-        i, j, k = np.mod(index, layer.grid_size) if reintroduce else index
+        i, j, k = np.mod(index, grid.grid_size) if reintroduce else index
 
         try:
-            v = layer.array[i][j][k]
+            v = grid.array[i][j][k]
         except Exception as e:
             print(e)
             v = 0
@@ -164,10 +164,10 @@ class Agent:
 
         return v
 
-    def get_layer_value_at_pose(self, layer, print_=False):
+    def get_grid_value_at_pose(self, grid: Grid, print_=False):
         pose = self.pose
         x, y, z = pose
-        v = layer.array[x][y][z]
+        v = grid.array[x][y][z]
         if print_:
             print("queen_ph_in_pose:", pose, "v=", v)
         return v
@@ -187,25 +187,21 @@ class Agent:
             nb_cell_index_list.append((d + pose).tolist())
         return nb_cell_index_list
 
-    def get_layer_nb_values_6(
-        self, layer, pose=None, round_values=False
-    ):
+    def get_grid_nb_values_6(self, grid: Grid, pose=None, round_values=False):
         # nb_value_dict = {}
         value_list = []
         for key in self.compass_array:
             d = self.compass_array[key]
             nb_cell_index = d + pose
             # dont check index in boundary
-            v = self.get_layer_value_at_index(layer, nb_cell_index)
+            v = self.get_grid_value_at_index(grid, nb_cell_index)
             value_list.append(v)
         v = np.asarray(value_list)
         if round_values:
             v.round()
         return v
 
-    def get_nb_values_6_of_array(
-        self, array, grid_size, pose, round_values=False
-    ):
+    def get_nb_values_6_of_array(self, array, grid_size, pose, round_values=False):
         value_list = []
         for key in self.compass_array:
             d = self.compass_array[key]
@@ -218,9 +214,7 @@ class Agent:
             v.round()
         return v
 
-    def get_nb_values_26_of_array(
-        self, array, voxel_size, pose, round_values=False
-    ):
+    def get_nb_values_26_of_array(self, array, voxel_size, pose, round_values=False):
         nb_cells = self.get_nb_indices_26(pose)
         cells_to_check = list(nb_cells)
         value_list = []
@@ -233,13 +227,11 @@ class Agent:
             v.round()
         return v
 
-    def get_layer_nb_values_26(
-        self, layer, pose=None, round_values=False
-    ):
+    def get_grid_nb_values_26(self, grid: Grid, pose=None, round_values=False):
         value_list = []
         for d in self.cube_array:
             nb_cell_index = d + pose
-            v = self.get_layer_value_at_index(layer, nb_cell_index)
+            v = self.get_grid_value_at_index(grid, nb_cell_index)
             value_list.append(v)
         v = np.asarray(value_list)
         if round_values:
@@ -267,16 +259,16 @@ class Agent:
             nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
         return np.vstack(nbs_w_corners)
 
-    def get_layer_density(self, layer,  print_=False, nonzero = False):
+    def get_grid_density(self, grid: Grid, print_=False, nonzero=False):
         """return clay density"""
-        values = self.get_layer_nb_values_26(layer, self.pose, False)
+        values = self.get_grid_nb_values_26(grid, self.pose, False)
         if not nonzero:
             density = sum(values) / 26
         else:
             density = np.count_nonzero(values) / 26
         if print_:
-            print(f"layer values:\n{values}\n")
-            print(f"layer_density:{density} in pose:{self.pose}")
+            print(f"grid values:\n{values}\n")
+            print(f"grid_density:{density} in pose:{self.pose}")
         return density
 
     def get_nb_slice_parametric(
@@ -331,10 +323,10 @@ class Agent:
 
         return v
 
-    def get_layer_density_in_slice_shape(
-        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, 1), nonzero = False
+    def get_grid_density_in_slice_shape(
+        self, grid: Grid, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False
     ):
-        """returns layer density
+        """returns grid density
         slice shape = [
         x_radius = 1,
         y_radius = 1,
@@ -348,7 +340,7 @@ class Agent:
         """
         # get the sum of the values in the slice
         values = self.get_nb_slice_parametric(
-            diffusive_layer.array,
+            grid.array,
             *slice_shape,
             self.pose,
             format_values=2,
@@ -383,7 +375,7 @@ class Agent:
     #         return v
     #     else: return v
 
-    def get_move_mask_6(self, solid_layer):
+    def get_move_mask_6(self, grid: Grid):
         """return ground directions as bools
         checks nbs of the nb cells
         if value > 0: return True"""
@@ -396,9 +388,9 @@ class Agent:
         for nb_pose in cells_to_check:
             # print('nb_pose;', nb_pose)
             # check nbs of nb cell
-            nbs_values = self.get_nb_cell_values(solid_layer, nb_pose)
+            nbs_values = self.get_nb_cell_values(grid, nb_pose)
             # check nb cell
-            nb_value = self.get_layer_value_at_index(solid_layer, nb_pose)
+            nb_value = self.get_grid_value_at_index(grid, nb_pose)
             if np.sum(nbs_values) > 0 and nb_value == 0:
                 check_failed.append(False)
             else:
@@ -406,7 +398,7 @@ class Agent:
         exclude_pheromones = np.asarray(check_failed)
         return exclude_pheromones
 
-    def get_move_mask_26(self, solid_layer, fly=False, check_self_collision=False):
+    def get_move_mask_26(self, grid: Grid, fly=False, check_self_collision=False):
         """return move mask 1D array for the 26 nb voxel around self.pose
         the voxel
             most be non-solid
@@ -425,17 +417,17 @@ class Agent:
         # iterate through nb cells
         for nb_pose in cells_to_check:
             # check if nb cell is empty
-            nb_value = self.get_layer_value_at_index(solid_layer, nb_pose)
+            nb_value = self.get_grid_value_at_index(grid, nb_pose)
             if check_self_collision:
-                nb_value_collision = self.get_layer_value_at_index(
-                    self.space_layer, nb_pose
+                nb_value_collision = self.get_grid_value_at_index(
+                    self.space_grid, nb_pose
                 )
                 nb_value += nb_value_collision
             # print(nb_value)
             if nb_value == 0:
                 if not fly:
                     # check if nb cells have any face_nb cell which is solid
-                    nbs_values = self.get_layer_nb_values_6(solid_layer, nb_pose)
+                    nbs_values = self.get_grid_nb_values_6(grid, nb_pose)
                     # print(nbs_values)
                     if np.sum(nbs_values) > 0:
                         exclude.append(False)
@@ -474,8 +466,8 @@ class Agent:
 
             nb_value = solid_array[i][j][k]
             if check_self_collision:
-                nb_value_collision = self.get_layer_value_at_index(
-                    self.space_layer, nb_pose
+                nb_value_collision = self.get_grid_value_at_index(
+                    self.space_grid, nb_pose
                 )
                 nb_value += nb_value_collision
             # print(nb_value)
@@ -525,17 +517,17 @@ class Agent:
         new_pose = cube[choice]
         # print('new_pose:', new_pose)
 
-        # update track layer
+        # update track grid
         if self.leave_trace:
-            self.track_layer.set_layer_value_at_index(self.pose, 1)
-        # update location in space layer
-        self.space_layer.set_layer_value_at_index(self.pose, 0)
+            self.track_grid.set_grid_value_at_index(self.pose, 1)
+        # update location in space grid
+        self.space_grid.set_grid_value_at_index(self.pose, 0)
 
         # move
         self.pose = new_pose
 
-        # update location in space layer
-        self.space_layer.set_layer_value_at_index(self.pose, 1)
+        # update location in space grid
+        self.space_grid.set_grid_value_at_index(self.pose, 1)
         return True
 
     def move_by_pheromons(
@@ -550,7 +542,7 @@ class Agent:
     ):
         """move in the direciton of the strongest pheromon - random choice of best three
         checks invalid moves
-        solid layer collision
+        solid grid collision
         self collision
         selects a random direction from the 'n' best options
         return bool_
@@ -579,22 +571,22 @@ class Agent:
         # best option
         new_pose = direction_cube[i]
 
-        # update space layers before move
+        # update space grid before move
         if self.leave_trace:
-            self.track_layer.set_layer_value_at_index(self.pose, 1)
-        self.space_layer.set_layer_value_at_index(self.pose, 0)
+            self.track_grid.set_value_at_index(index=self.pose, value=1)
+        self.space_grid.set_value_at_index(index=self.pose, value=0)
 
         # move
         self.pose = new_pose
 
-        # update location in space layer
-        self.space_layer.set_layer_value_at_index(self.pose, 1)
+        # update location in space grid
+        self.space_grid.set_value_at_index(index=self.pose, value=1)
         return True
 
-    def get_direction_cube_values_for_layer_domain(self, layer, domain, strength=1):
+    def get_direction_cube_values_for_grid_domain(self, grid: Grid, domain, strength=1):
         # mirrored above domain end and squezed with the domain length
         # centered at 1
-        ph_cube = self.get_layer_nb_values_26(layer, self.pose)
+        ph_cube = self.get_grid_nb_values_26(grid, self.pose)
         start, end = domain
         center = (start + end) / 2
         # ph_cube -= center
@@ -602,15 +594,15 @@ class Agent:
         # print(ph_cube)
         return ph_cube
 
-    def get_direction_cube_values_for_layer(self, layer, strength):
-        ph_cube = self.get_layer_nb_values_26(layer, self.pose)
+    def get_direction_cube_values_for_grid(self, grid: Grid, strength):
+        ph_cube = self.get_grid_nb_values_26(grid, self.pose)
         return ph_cube * strength
 
     # METHODS TO CALCULATE BUILD PROPABILITIES
 
     def get_chances_by_density(
         self,
-        diffusive_layer,
+        diffusive_grid: Grid,
         build_if_over=0,
         build_if_below=5,
         erase_if_over=27,
@@ -620,9 +612,9 @@ class Agent:
     ):
         """
         returns build_chance, erase_chance
-        if layer nb value sum is between
+        if grid nb value sum is between
         """
-        v = self.get_layer_nb_values_26(diffusive_layer, self.pose)
+        v = self.get_grid_nb_values_26(diffusive_grid, self.pose)
         v = np.sum(v)
         build_chance, erase_chance = [0, 0]
         if build_if_over < v < build_if_below:
@@ -633,7 +625,7 @@ class Agent:
 
     def get_chances_by_density_by_slice(
         self,
-        diffusive_layer,
+        diffusive_grid: Grid,
         slice_shape=(1, 1, 0, 0, 0, -1),
         build_if_over=0,
         build_if_below=5,
@@ -644,7 +636,7 @@ class Agent:
     ):
         """
         returns build_chance, erase_chance
-        if layer nb value sum is between
+        if grid nb value sum is between
         [x_radius = 1,
         y_radius = 1,
         z_radius = 0,
@@ -655,7 +647,7 @@ class Agent:
         # get the sum of the values in the slice
         rx, ry, rz, ox, oy, oz = slice_shape
         v = self.get_nb_slice_parametric(
-            diffusive_layer.array, rx, ry, rz, ox, oy, oz, self.pose, format_values=0
+            diffusive_grid.array, rx, ry, rz, ox, oy, oz, self.pose, format_values=0
         )
 
         build_chance, erase_chance = [0, 0]
@@ -667,7 +659,7 @@ class Agent:
 
     def get_chances_by_density_normal_by_slice(
         self,
-        diffusive_layer,
+        diffusive_grid: Grid,
         slice_shape=(1, 1, 0, 0, 0, -1),
         build_if_over=0,
         build_if_below=0.5,
@@ -679,7 +671,7 @@ class Agent:
     ):
         """
         returns build_chance, erase_chance
-        if layer nb value sum is between
+        if grid nb value sum is between
         [x_radius = 1,
         y_radius = 1,
         z_radius = 0,
@@ -689,7 +681,7 @@ class Agent:
         """
         # get the sum of the values in the slice
         sum_values = self.get_nb_slice_parametric(
-            diffusive_layer.array,
+            diffusive_grid.array,
             *slice_shape,
             self.pose,
             format_values=0,
@@ -710,20 +702,25 @@ class Agent:
         return build_chance, erase_chance
 
     def get_chance_by_relative_position(
-        self, layer, build_below=-1, build_aside=-1, build_above=1, build_strength=1
+        self,
+        Grid: Grid,
+        build_below=-1,
+        build_aside=-1,
+        build_above=1,
+        build_strength=1,
     ):
-        b, s, t = self.analyze_relative_position(layer)
+        b, s, t = self.analyze_relative_position(Grid)
         build_chance = (
             build_below * b + build_aside * s + build_above * t
         ) * build_strength
         return build_chance
 
     def get_chance_by_pheromone_strength(
-        self, diffusive_layer, limit1, limit2, strength, flat_value=True
+        self, diffusive_grid: Grid, limit1, limit2, strength, flat_value=True
     ):
         """gets pheromone v at pose.
         if in limits, returns strength or strength * value"""
-        v = self.get_layer_value_at_index(diffusive_layer, self.pose)
+        v = self.get_grid_value_at_index(diffusive_grid, self.pose)
         # build
         if limit1 is None:
             flag = v <= limit2
@@ -767,9 +764,9 @@ class Agent:
     #  BUILD/ERASE FUNCTIONS
 
     def build(self):
-        layer = self.ground_layer
+        grid = self.ground_grid
         try:
-            set_value_at_index(layer, self.pose, 1)
+            grid.set_value_at_index(index=self.pose, value=1)
             bool_ = True
             self.build_chance = 0
         except Exception as e:
@@ -778,9 +775,9 @@ class Agent:
             bool_ = False
         return bool_
 
-    def build_on_layer(self, layer, value=1.0):
+    def build_on_grid(self, grid: Grid, value=1.0):
         try:
-            set_value_at_index(layer, self.pose, value)
+            grid.set_value_at_index(index=self.pose, value=value)
             self.build_chance = 0
             return True
         except Exception as e:
@@ -788,22 +785,22 @@ class Agent:
             print("cant build here:", self.pose)
             return False
 
-    def erase(self, layer, only_face_nb=True):
+    def erase(self, grid: Grid, only_face_nb=True):
         if only_face_nb:
-            v = self.get_layer_nb_values_6(layer, self.pose, reintroduce=False)
+            v = self.get_grid_nb_values_6(grid, self.pose, reintroduce=False)
             places = self.get_nb_indices_6(self.pose)
             places = np.asarray(places)
             choice = np.argmax(v)
             place = places[choice]
         else:
-            v = self.get_layer_nb_values_26()
+            v = self.get_grid_nb_values_26()
             choice = np.argmax(v)
             cube = self.get_nb_indices_26(self.pose)
             vector = cube[choice]
             place = self.pose + vector
 
         try:
-            set_value_at_index(layer, place, 0)
+            grid.set_value_at_index(index=place, value=0)
             bool_ = True
             self.erase_chance = 0
         except Exception as e:
@@ -816,32 +813,28 @@ class Agent:
             bool_ = False
         return bool_
 
-    def set_layer_value(self, layer, value):
-        pose = self.pose
-        set_value_at_index(layer, pose, value)
-
-    def set_layer_value_at_nbs_26(self, layer, value):
+    def set_grid_value_at_nbs_26(self, grid: Grid, value):
         nbs = self.get_nb_indices_26(self.pose)
         for pose in nbs:
-            set_value_at_index(layer, pose, value)
+            grid.set_value_at_index(index=pose, value=value)
 
-    def set_layer_value_at_nbs_6(self, layer, value):
+    def set_grid_value_at_nbs_6(self, grid: Grid, value):
         nbs = self.get_nb_indices_6(self.pose)
         for pose in nbs:
-            set_value_at_index(layer, pose, value)
+            grid.set_value_at_index(index=pose, value=value)
 
-    def erase_6(self, layer):
-        self.set_layer_value_at_nbs_6(layer, 0)
+    def erase_6(self, grid: Grid):
+        self.set_grid_value_at_nbs_6(grid, 0)
 
-    def erase_26(self, layer):
-        self.set_layer_value_at_nbs_26(layer, 0)
+    def erase_26(self, grid: Grid):
+        self.set_grid_value_at_nbs_26(grid, 0)
 
-    def check_build_conditions(self, layer, only_face_nbs=True):
+    def check_build_conditions(self, grid: Grid, only_face_nbs=True):
         if only_face_nbs:
-            v = self.get_layer_nb_values_6(layer, self.pose)
+            v = self.get_grid_nb_values_6(grid, self.pose)
             if np.sum(v) > 0:
                 return True
         else:
-            if get_sub_array(layer, 1, self.pose, format_values=0) > 0:
+            if get_sub_array(grid, 1, self.pose, format_values=0) > 0:
                 return True
         return False
