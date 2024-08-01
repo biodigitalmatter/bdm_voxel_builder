@@ -7,7 +7,7 @@ from bdm_voxel_builder.grid import DiffusiveGrid
 class Environment:
     def __init__(self, config):
         self.iteration_count: int = 0
-
+        self.end_state: bool = False
         self.grids: list[DiffusiveGrid] = config.algo.initialization(
             iterations=config.iterations
         )

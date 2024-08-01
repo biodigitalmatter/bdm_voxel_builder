@@ -164,12 +164,15 @@ class Agent:
 
         return v
 
-    def get_grid_value_at_pose(self, grid: Grid, print_=False):
+    def get_grid_value_at_pose(self, grid: Grid):
         pose = self.pose
         x, y, z = pose
         v = grid.array[x][y][z]
-        if print_:
-            print("queen_ph_in_pose:", pose, "v=", v)
+        return v
+
+    def get_array_value_at_index(self, array, index):
+        x, y, z = index
+        v = array[x][y][z]
         return v
 
     def get_nb_indices_6(self, pose):
