@@ -2,7 +2,7 @@
 from compas.geometry import oriented_bounding_box_numpy
 
 from bdm_voxel_builder.agent import Agent
-from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
+from bdm_voxel_builder.grid import DiffusiveLayer
 
 
 class Environment:

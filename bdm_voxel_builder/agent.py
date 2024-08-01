@@ -2,7 +2,7 @@ from math import trunc
 
 import numpy as np
 
-from bdm_voxel_builder.data_layer.base import DataLayer
+from bdm_voxel_builder.grid import DataLayer
 from bdm_voxel_builder.helpers.numpy import (
     NB_INDEX_DICT,
     clip_indices_to_grid_size,

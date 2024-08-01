@@ -1,7 +1,7 @@
 import pyopenvdb as vdb
 
 from bdm_voxel_builder import get
-from bdm_voxel_builder.data_layer.imported_layer import ImportedLayer
+from bdm_voxel_builder.grid import ImportedLayer
 
 
 def test_from_vdb_w_file():

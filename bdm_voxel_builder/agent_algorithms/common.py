@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 
-from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
+from bdm_voxel_builder.grid import DiffusiveLayer
 
 
 def diffuse_diffusive_layer(

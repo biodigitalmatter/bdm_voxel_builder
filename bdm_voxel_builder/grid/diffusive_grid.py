@@ -5,7 +5,7 @@ import numpy.typing as npt
 from compas.colors import Color
 from compas.geometry import Box
 
-from bdm_voxel_builder.data_layer.base import DataLayer
+from bdm_voxel_builder.grid import DataLayer
 from bdm_voxel_builder.helpers.math import remap
 from bdm_voxel_builder.helpers.numpy import (
     create_random_array,
