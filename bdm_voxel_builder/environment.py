@@ -1,15 +1,14 @@
-
 from compas.geometry import oriented_bounding_box_numpy
 
 from bdm_voxel_builder.agent import Agent
-from bdm_voxel_builder.grid import DiffusiveLayer
+from bdm_voxel_builder.grid import DiffusiveGrid
 
 
 class Environment:
     def __init__(self, config):
         self.iteration_count: int = 0
 
-        self.data_layers: list[DiffusiveLayer] = config.algo.initialization(
+        self.data_layers: list[DiffusiveGrid] = config.algo.initialization(
             iterations=config.iterations
         )
 

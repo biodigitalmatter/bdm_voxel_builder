@@ -6,7 +6,7 @@ from compas.colors import Color
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_layer
-from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveLayer
+from bdm_voxel_builder.data_layer.diffusive_layer import DiffusiveGrid
 from bdm_voxel_builder.environment import Environment
 
 
@@ -112,23 +112,23 @@ class Algo9a(AgentAlgorithm):
         rgb_ground = (100, 100, 100)
         rgb_queen = (232, 226, 211)
         rgb_existing = (207, 179, 171)
-        ground = DiffusiveLayer(
+        ground = DiffusiveGrid(
             name="ground",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_ground),
         )
-        agent_space = DiffusiveLayer(
+        agent_space = DiffusiveGrid(
             name="agent_space",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
         )
-        track_layer = DiffusiveLayer(
+        track_layer = DiffusiveGrid(
             name="track_layer",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_agents),
-            decay_ratio=1 / 10000
+            decay_ratio=1 / 10000,
         )
-        pheromon_layer_move = DiffusiveLayer(
+        pheromon_layer_move = DiffusiveGrid(
             name="pheromon_layer_move",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_queen),
@@ -137,7 +137,7 @@ class Algo9a(AgentAlgorithm):
             decay_ratio=1 / 10000000000,
             gradient_resolution=0,
         )
-        clay_layer = DiffusiveLayer(
+        clay_layer = DiffusiveGrid(
             name="clay_layer",
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
@@ -182,7 +182,7 @@ class Algo9a(AgentAlgorithm):
         # ph_array = layers['pheromon_layer_move'].array
         # print('ph bounds:', np.amax(ph_array),np.amin(ph_array))
 
-    def setup_agents(self, data_layers: dict[str, DiffusiveLayer]):
+    def setup_agents(self, data_layers: dict[str, DiffusiveGrid]):
         agent_space = data_layers["agent_space"]
         ground = data_layers["ground"]
         track_layer = data_layers["track_layer"]

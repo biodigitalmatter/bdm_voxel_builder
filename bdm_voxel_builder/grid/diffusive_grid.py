@@ -5,7 +5,7 @@ import numpy.typing as npt
 from compas.colors import Color
 from compas.geometry import Box
 
-from bdm_voxel_builder.grid import DataLayer
+from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers.math import remap
 from bdm_voxel_builder.helpers.numpy import (
     create_random_array,
@@ -23,7 +23,7 @@ class GravityDir(enum.Enum):
     UP = 5
 
 
-class DiffusiveLayer(DataLayer):
+class DiffusiveGrid(Grid):
     def __init__(
         self,
         grid_size: int | tuple[int, int, int] | Box = None,

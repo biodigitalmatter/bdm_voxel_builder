@@ -2,7 +2,7 @@ from math import trunc
 
 import numpy as np
 
-from bdm_voxel_builder.grid import DataLayer
+from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers.numpy import (
     NB_INDEX_DICT,
     clip_indices_to_grid_size,
@@ -143,7 +143,7 @@ class Agent:
     # INTERACTION WITH LAYERS
     def get_layer_value_at_index(
         self,
-        layer: DataLayer,
+        layer: Grid,
         index=(0, 0, 0),
         reintroduce=True,
         round_=False,
