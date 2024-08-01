@@ -279,68 +279,6 @@ class Agent:
             print(f"layer_density:{density} in pose:{self.pose}")
         return density
 
-    def get_layer_density_in_slice_shape(
-        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, -1), nonzero = False
-    ):
-        """returns layer density
-        slice shape = [
-        x_radius = 1,
-        y_radius = 1,
-        z_radius = 0,
-        x_offset = 0,
-        y_offset = 0,
-        z_offset = 0
-        ]
-        *radius: amount of indices in both direction added. r = 1 at i = 0
-        returns array[-1:2]
-        """
-        # get the sum of the values in the slice
-        values = self.get_nb_slice_parametric(
-            diffusive_layer.array,
-            *slice_shape,
-            self.pose,
-            format_values=0,
-        )
-        sum_values = np.sum(values)
-        radiis = slice_shape[:3]
-        slice_volume = 1
-        for x in radiis:
-            slice_volume *= (x + 0.5) * 2
-        density = sum_values / slice_volume
-        if not nonzero:
-            density = sum(values) / 26
-        else:
-            density = np.count_nonzero(values) / 26
-        return density
-
-    # def get_nb_slice(self, array,
-    #         x_radius = 1,
-    #         pose = None, format_values = 0, pad_values = 0):
-    #     """takes sub array around pose, in x/y/z radius optionally offsetted
-    #     format values: returns sum '0', avarage '1', or entire_array_slice: '2'"""
-    #     if not isinstance(pose, (np.dtype, list)):
-    #         pose = self.pose
-
-    #     pad_x = x_radius
-
-    #     a = int(x - x_radius) + pad_x
-    #     b = int(x + x_radius + 1) + pad_x
-
-    #     c = pad_values
-    #     np.pad(array, ((pad_x,pad_x),(pad_x,pad_x),( pad_x, pad_x)),
-    #            'constant', constant_values=((c,c),(c,c),(c,c)))
-    #     v = array[a:b,a:b,a:b]
-    #     # print(array)
-    #     # print(v)
-
-    #     if format_values == 0:
-    #         return np.sum(v)
-    #     elif format_values == 1:
-    #         return np.average(v)
-    #     elif format_values == 2:
-    #         return v
-    #     else: return v
-
     def get_nb_slice_parametric(
         self,
         array,
@@ -392,6 +330,40 @@ class Agent:
             return v
 
         return v
+
+    def get_layer_density_in_slice_shape(
+        self, diffusive_layer, slice_shape=(1, 1, 0, 0, 0, 1), nonzero = False
+    ):
+        """returns layer density
+        slice shape = [
+        x_radius = 1,
+        y_radius = 1,
+        z_radius = 0,
+        x_offset = 0,
+        y_offset = 0,
+        z_offset = 0
+        ]
+        *radius: amount of indices in both direction added. r = 1 at i = 0
+        returns array[-1:2]
+        """
+        # get the sum of the values in the slice
+        values = self.get_nb_slice_parametric(
+            diffusive_layer.array,
+            *slice_shape,
+            self.pose,
+            format_values=2,
+        )
+        sum_values = np.sum(values)
+        radiis = slice_shape[:3]
+        slice_volume = 1
+        for x in radiis:
+            slice_volume *= (x + 0.5) * 2
+        density = sum_values / slice_volume
+        if not nonzero:
+            density = sum(values) / slice_volume
+        else:
+            density = np.count_nonzero(values) / slice_volume
+        return density
 
     # def scan_neighborhood_values(self, array, offset_radius = 1,
     #                              pose = None, format_values = 0):
@@ -681,8 +653,9 @@ class Agent:
         z_offset = 0] = slice_shape
         """
         # get the sum of the values in the slice
+        rx, ry, rz, ox, oy, oz = slice_shape
         v = self.get_nb_slice_parametric(
-            diffusive_layer.array, *slice_shape, self.pose, format_values=0
+            diffusive_layer.array, rx, ry, rz, ox, oy, oz, self.pose, format_values=0
         )
 
         build_chance, erase_chance = [0, 0]

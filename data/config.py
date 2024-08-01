@@ -6,10 +6,10 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # SHORT RUN test compasview
 grid_size = 30
 iterations = 100
-agent_count = 5
+agent_count = 2
 interval = iterations / 10
 info = 25
-name = f'algo_9a_test_carving_i{iterations}a{agent_count}'
+name = f'algo_9a_test_nonreset_startinclay_build_too_i{iterations}a{agent_count}'
 
 config = Config(
     iterations=iterations,

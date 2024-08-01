@@ -62,7 +62,7 @@ class Algo9a(AgentAlgorithm):
 
     # EXISTING GEOMETRY
     add_box = True
-    box_template = [0, 50, 0, 50, 2, 3]
+    box_template = [0, 50, 0, 50, 1, 6]
     ground_level_Z = 0
 
     reach_to_build: int = 1
@@ -312,17 +312,18 @@ class Algo9a(AgentAlgorithm):
         low_density__build_reward = 0.1
         low_density__erase_reward = 0
 
-        normal_density__build_reward = 0.3
+        normal_density__build_reward = 0.8
         normal_density__erase_reward = 0
 
-        high_density__build_reward = 0
-        high_density__erase_reward = 1.5
+        high_density__build_reward = 0.3
+        high_density__erase_reward = 0
 
         ##########################################################################
 
         # get clay density
         clay_density = agent.get_layer_density(clay_layer)
-        dense_mod = clay_density + 0.2
+        # dense_mod = clay_density + 0.2
+        dense_mod = 1
         clay_density_filled = agent.get_layer_density(clay_layer, nonzero = True)
         # set chances
         if 0 <= clay_density < 1 / 26:
@@ -344,7 +345,7 @@ class Algo9a(AgentAlgorithm):
         density_filled_above = agent.get_layer_density_in_slice_shape(clay_layer, slice_shape, True)
         if 2/3 <= density_filled_above:
             erase_chance += dense_above__erase_reward
-        print(f'density: {clay_density_filled*26}, density_above: {density_filled_above*26}')
+        print(f'density: {clay_density_filled*26}, density_above: {density_filled_above*9}')
 
         # update probabilities
         if self.stacked_chances:
@@ -380,23 +381,23 @@ class Algo9a(AgentAlgorithm):
                 if erased: agent.erase_chance = 0
         return built, erased
 
-    # ACTION FUNCTION
+    # ACTION FUNCTION - build first!
     def agent_action(self, agent, state: Environment):
-        """MOVE BUILD .RESET"""
+        """BUILD /reset > MOVE /reset"""
+
+        # BUILD
+        self.calculate_build_chances(agent, state)
+        built, erased = self.build_by_chance(agent, state)
+        # print(f'built: {built}, erased: {erased}')
+        if (built is True or erased is True) and self.reset_after_build:
+            self.reset_agent(agent)
+            # print("reset in built")
 
         # MOVE
         moved = self.move_agent(agent, state)
-
-        # BUILD
-        if moved:
-            self.calculate_build_chances(agent, state)
-            built, erased = self.build_by_chance(agent, state)
-            # print(f'built: {built}, erased: {erased}')
-            if (built is True or erased is True) and self.reset_after_build:
-                self.reset_agent(agent)
-                # print("reset in built")
-
+        
         # RESET IF STUCK
         if not moved:
             self.reset_agent(agent)
             # print('reset in move, couldnt move')
+
