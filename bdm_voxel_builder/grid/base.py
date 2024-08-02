@@ -8,11 +8,17 @@ import numpy as np
 import numpy.typing as npt
 import pyopenvdb as vdb
 from compas.colors import Color
+from scipy.spatial import QhullError
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
-from bdm_voxel_builder.helpers.savepaths import get_savepath
-from bdm_voxel_builder.helpers.vdb import xform_to_compas, xform_to_vdb
+from bdm_voxel_builder.helpers import (
+    convert_array_to_pts,
+    get_linear_xform_between_2_boxes,
+    get_savepath,
+    xform_to_compas,
+    xform_to_vdb,
+)
+from bdm_voxel_builder.helpers.pointcloud import pointcloud_to_grid_array
 
 
 class Grid:
@@ -61,7 +67,8 @@ class Grid:
 
     def get_local_bbox(self) -> cg.Box:
         """Returns a bounding box containing the grid, 0, 0, 0 to ijk"""
-        return cg.Box.from_diagonal(((0, 0, 0), self.grid_size))
+        xsize, ysize, zsize = self.grid_size
+        return cg.Box.from_diagonal(cg.Line((0, 0, 0), (xsize, ysize, zsize)))
 
     def get_world_bbox(self) -> cg.Box:
         return self.get_local_bbox().transformed(self.xform)
@@ -102,7 +109,7 @@ class Grid:
         i, j, k = index
         return self.array[i][j][k]
 
-    def get_active_voxels(self, array):
+    def get_active_voxels(self):
         """returns indicies of nonzero values
         list of coordinates
             shape = [3,n]"""
@@ -163,34 +170,33 @@ class Grid:
         )
 
     @classmethod
-    def from_pointcloud(cls, pointcloud: cg.Pointcloud, name: str = None):
-        vdb.grid.createLevelSetFromPolygons(pointcloud.points)
-        if isinstance(grid, os.PathLike):
-            grids = vdb.readAllGridMetadata(str(grid))
+    def from_pointcloud(
+        cls,
+        pointcloud: cg.Pointcloud,
+        grid_size: list[int, int, int] | int,
+        name: str = None,
+    ):
+        try:
+            bbox_pointcloud = pointcloud.obb
+        except QhullError:
+            bbox_pointcloud = pointcloud.aabb
 
-            if not name and len(grids) > 1:
-                print(
-                    "File contains more than one grid, ",
-                    f"only processing first named {grids[0].name}",
-                )
+        
 
-            name = name or grids[0].name
-            grid = vdb.read(str(grid), name)
+        # -1 because the grid is 0 indexed
+        if isinstance(grid_size, int):
+            isize = jsize = ksize = grid_size - 1
+        else:
+            isize, jsize, ksize = (n - 1 for n in grid_size)
 
-        bbox_min = grid.metadata["file_bbox_min"]
-        bbox_max = grid.metadata["file_bbox_max"]
+        bbox_grid_frame = cg.Frame(point=(isize / 2, jsize / 2, ksize / 2))
 
-        shape = np.array(bbox_max) - np.array(bbox_min)
-        arr = np.zeros(shape)
+        bbox_grid = cg.Box(xsize=isize, ysize=jsize, zsize=ksize, frame=bbox_grid_frame)
 
-        # rotate the grid to make Z up
-        grid.transform.rotate(math.pi / 2, vdb.Axis.X)
+        xform = get_linear_xform_between_2_boxes(bbox_pointcloud, bbox_grid)
 
-        grid.copyToArray(arr, ijk=bbox_min)
-
-        return cls(
-            grid_size=arr.shape,
-            name=name or grid.name,
-            array=arr,
-            xform=xform_to_compas(grid.transform),
+        array = pointcloud_to_grid_array(
+            pointcloud=pointcloud.transformed(xform), grid_size=grid_size
         )
+
+        return cls(grid_size=grid_size, name=name, xform=xform, array=array)

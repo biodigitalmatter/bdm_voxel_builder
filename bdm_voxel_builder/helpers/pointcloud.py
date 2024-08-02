@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import os
 
 import compas.geometry as cg
@@ -34,6 +35,25 @@ def pointcloud_from_ndarray(arr: npt.NDArray, return_values=False):
         return pointcloud, values
 
     return pointcloud
+
+
+def pointcloud_to_grid_array(
+    pointcloud: cg.Pointcloud, grid_size: tuple[int, int, int]
+):
+    """Convert a pointcloud to a grid."""
+    if not isinstance(grid_size, Sequence):
+        grid_size = (grid_size, grid_size, grid_size)
+
+    grid_array = np.zeros(grid_size)
+
+    pts = np.array(pointcloud).round().astype(dtype=int)
+
+    if pts.min() < 0:
+        raise ValueError("Pointcloud contains negative values, needs to be transformed to index grid.") # noqa: E501
+
+    for i, j, k in pts:
+        grid_array[i, j, k] = 1
+    return grid_array
 
 
 def save_pointcloud(
