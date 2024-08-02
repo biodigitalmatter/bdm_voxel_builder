@@ -335,8 +335,8 @@ class Algo9a(AgentAlgorithm):
         # check density above
         dense_above__erase_reward = 2
         slice_shape = [1, 1, 0, 0, 0, 1]
-        density_filled_above = agent.get_grid_density_in_slice_shape(
-            clay_grid, slice_shape, True
+        density_filled_above = agent.get_array_density_in_slice_shape(
+            clay_grid.array, slice_shape, True
         )
         if density_filled_above >= 2 / 3:
             erase_chance += dense_above__erase_reward

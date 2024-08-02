@@ -9,6 +9,7 @@ from bdm_voxel_builder.helpers.numpy import (
     clip_indices_to_grid_size,
     get_sub_array,
     random_choice_index_from_best_n,
+    get_array_density_from_zone_xxyyzz
 )
 
 
@@ -191,7 +192,7 @@ class Agent:
         return nb_cell_index_list
 
     def get_grid_nb_values_6(self, grid: Grid, pose=None, round_values=False):
-        # nb_value_dict = {}
+        """return list of values"""
         value_list = []
         for key in self.compass_array:
             d = self.compass_array[key]
@@ -205,6 +206,7 @@ class Agent:
         return v
 
     def get_nb_values_6_of_array(self, array, grid_size, pose, round_values=False):
+        """return list of values"""
         value_list = []
         for key in self.compass_array:
             d = self.compass_array[key]
@@ -218,6 +220,7 @@ class Agent:
         return v
 
     def get_nb_values_26_of_array(self, array, voxel_size, pose, round_values=False):
+        """return list of values"""
         nb_cells = self.get_nb_indices_26(pose)
         cells_to_check = list(nb_cells)
         value_list = []
@@ -225,6 +228,39 @@ class Agent:
             x, y, z = np.clip(np.asarray(nb_pose), 0, voxel_size - 1)
             nb_value = array[x][y][z]
             value_list.append(nb_value)
+        v = np.asarray(value_list)
+        if round_values:
+            v.round()
+        return v
+
+    def get_nb_values_3x3_around_of_array(self, array, round_values=False):
+        """return list of values"""
+        nb_cells = self.get_nb_indices_26(self.pose)
+        cells_to_check = list(nb_cells)[9:17]
+        value_list = []
+        for nb_pose in cells_to_check:
+            x, y, z = nb_pose
+            xc, yc, zc = np.clip(np.asarray(nb_pose), [0,0,0], np.asarray(array.shape) - 1)
+            if x == xc and y == yc and z == zc:
+                nb_value = array[xc][yc][zc]
+                value_list.append(nb_value)
+        v = np.asarray(value_list)
+        if round_values:
+            v.round()
+        return v
+
+
+    def get_nb_values_3x3_below_of_array(self, array, round_values=False):
+        """return list of values"""
+        nb_cells = self.get_nb_indices_26(self.pose)
+        cells_to_check = list(nb_cells)[17:]
+        value_list = []
+        for nb_pose in cells_to_check:
+            x, y, z = nb_pose
+            xc, yc, zc = np.clip(np.asarray(nb_pose), [0,0,0], np.asarray(array.shape) - 1)
+            if x == xc and y == yc and z == zc:
+                nb_value = array[xc][yc][zc]
+                value_list.append(nb_value)
         v = np.asarray(value_list)
         if round_values:
             v.round()
@@ -271,7 +307,7 @@ class Agent:
             print(f"grid_density:{density} in pose:{self.pose}")
         return density
 
-    def get_nb_slice_parametric(
+    def get_array_slice_parametric(
         self,
         array,
         x_radius=1,
@@ -339,7 +375,7 @@ class Agent:
         returns array[-1:2]
         """
         # get the sum of the values in the slice
-        values = self.get_nb_slice_parametric(
+        values = self.get_array_slice_parametric(
             grid.array,
             *slice_shape,
             self.pose,
@@ -349,31 +385,54 @@ class Agent:
         radiis = slice_shape[:3]
         slice_volume = 1
         for x in radiis:
-            slice_volume *= (x + 0.5) * 2
-        density = sum_values / slice_volume
+            slice_volume *= (x + 0.5) * 2        
         if not nonzero:
-            density = sum(values) / slice_volume
+            density = sum_values / slice_volume
         else:
             density = np.count_nonzero(values) / slice_volume
+        # if density > 0:
+        #     print(f'slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}')
         return density
 
-    # def scan_neighborhood_values(self, array, offset_radius = 1,
-    #                              pose = None, format_values = 0):
-    #     """takes sub array around pose, in 'offset_radius'
-    #     format values: returns sum '0', avarage '1', or all_values: '2'"""
-    #     if isinstance(pose, bool):
-    #         pose = self.pose
-    #     x,y,z = pose
-    #     n = offset_radius
-    #     v = array[x - n : x + n][y - n : y + n][z - n : z - n]
+    def get_array_density_in_box(self, array, box, nonzero = False):
+        d = get_array_density_from_zone_xxyyzz(array, self.pose, box, nonzero=True)
+        return d
 
-    #     if format_values == 0:
-    #         return np.sum(v)
-    #     elif format_values == 1:
-    #         return np.average(v)
-    #     elif format_values == 2:
-    #         return v
-    #     else: return v
+    def get_array_density_in_slice_shape(
+        self, array, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False
+    ):
+        """returns grid density
+        slice shape = [
+        x_radius = 1,
+        y_radius = 1,
+        z_radius = 0,
+        x_offset = 0,
+        y_offset = 0,
+        z_offset = 0
+        ]
+        *radius: amount of indices in both direction added. r = 1 at i = 0
+        returns array[-1:2]
+        """
+        # get the sum of the values in the slice
+        # print(array.shape)
+        values = self.get_array_slice_parametric(
+            array,
+            *slice_shape,
+            self.pose,
+            format_values=2,
+        )
+        sum_values = np.sum(values)
+        radiis = slice_shape[:3]
+        slice_volume = 1
+        for x in radiis:
+            slice_volume *= (x + 0.5) * 2
+        if not nonzero:
+            density = sum_values / slice_volume
+        else:
+            density = np.count_nonzero(values) / slice_volume
+        # if density > 0:
+        #     print(f'slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}')
+        return density
 
     def get_move_mask_6(self, grid: Grid):
         """return ground directions as bools
@@ -646,7 +705,7 @@ class Agent:
         """
         # get the sum of the values in the slice
         rx, ry, rz, ox, oy, oz = slice_shape
-        v = self.get_nb_slice_parametric(
+        v = self.get_array_slice_parametric(
             diffusive_grid.array, rx, ry, rz, ox, oy, oz, self.pose, format_values=0
         )
 
@@ -680,7 +739,7 @@ class Agent:
         z_offset = 0] = slice_shape
         """
         # get the sum of the values in the slice
-        sum_values = self.get_nb_slice_parametric(
+        sum_values = self.get_array_slice_parametric(
             diffusive_grid.array,
             *slice_shape,
             self.pose,
