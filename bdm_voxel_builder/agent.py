@@ -882,6 +882,23 @@ class Agent:
         for pose in nbs:
             grid.set_value_at_index(index=pose, value=value)
 
+    def set_grid_value_at_nbs_6(self, grid: Grid, value):
+        nbs = self.get_nb_indices_6(self.pose)
+        for pose in nbs:
+            grid.set_value_at_index(index=pose, value=value)
+    
+    def set_grid_value_cross_shape(self, grid: Grid, value):
+        dirs = [
+        np.asarray([0,0,0]),
+        np.asarray([-1, 0, 0]),
+        np.asarray([1, 0, 0]),
+        np.asarray([0, -1, 0]),
+        np.asarray([0, 1, 0])
+        ]
+        for dir in dirs:
+            pose = self.pose + dir
+            grid.set_value_at_index(index=pose, value=value)
+
     def erase_6(self, grid: Grid):
         self.set_grid_value_at_nbs_6(grid, 0)
 

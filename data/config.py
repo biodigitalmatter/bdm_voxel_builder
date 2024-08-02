@@ -5,7 +5,7 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # SHORT RUN test compasview
 grid_size = 20
-iterations = 40
+iterations = 2000
 agent_count = 1
 interval = iterations / 10
 name = f"slicer_test_i{iterations}a{agent_count}"
