@@ -66,8 +66,9 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
 
     # IMPORTED GEOMETRY ----- PLACEHOLDER
     add_simple_design = True
-    add_complex_design = True
+    add_complex_design = False
     box_template_1 = [8, 25, 6, 25, 1, 4]
+    box_template_2 = [20,35,6,10,4,8]
     ground_stair_1 = [0, 50, 20, 50, 0, 2]
     ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
@@ -168,11 +169,11 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         # imported design TEMP
         if self.add_simple_design:
             design.add_values_in_zone_xxyyzz(self.box_template_1, 1)
-        elif self.add_complex_design:
+        if self.add_complex_design:
             ground.add_values_in_zone_xxyyzz(self.ground_stair_1, 1)
             ground.add_values_in_zone_xxyyzz(self.ground_stair_2, 1)
-
             design.add_values_in_zone_xxyyzz(self.box_template_1, 1)
+            design.add_values_in_zone_xxyyzz(self.box_template_2, 1)
             design.add_values_in_zone_xxyyzz(self.ground_stair_1, 0)
             design.add_values_in_zone_xxyyzz(self.ground_stair_2, 0)
         print(f"design array at init{design.array.shape}")
@@ -446,7 +447,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             
             built = self.print_build(agent, state)
 
-            print(f'built: {built}')
+            # print(f'built: {built}')
             if (built is True) and self.reset_after_build:
                 self.reset_agent(agent)
 
