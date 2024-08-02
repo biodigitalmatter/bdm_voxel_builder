@@ -25,6 +25,7 @@ from .pointcloud import (
     ply_to_compas,
     ply_to_numpy,
     pointcloud_from_ndarray,
+    pointcloud_to_grid_array,
     save_pointcloud,
 )
 from .savepaths import get_savepath

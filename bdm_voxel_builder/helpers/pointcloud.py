@@ -8,7 +8,8 @@ from compas.data import json_dump
 from compas.files import PLY
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers import get_savepath, sort_pts_by_values
+from bdm_voxel_builder.helpers.numpy import sort_pts_by_values
+from bdm_voxel_builder.helpers.savepaths import get_savepath
 
 
 def ply_to_numpy(ply_path: os.PathLike, precision: str = None):
@@ -48,7 +49,9 @@ def pointcloud_to_grid_array(
     pts = np.array(pointcloud).round().astype(dtype=int)
 
     if pts.min() < 0:
-        raise ValueError("Pointcloud contains negative values, needs to be transformed to index grid.") # noqa: E501
+        raise ValueError(
+            "Pointcloud contains negative values, needs to be transformed to index grid."
+        )  # noqa: E501
 
     for i, j, k in pts:
         grid_array[i, j, k] = 1

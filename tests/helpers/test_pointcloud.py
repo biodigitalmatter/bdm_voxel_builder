@@ -2,8 +2,8 @@ import compas.geometry as cg
 import numpy as np
 import pytest
 
-from bdm_voxel_builder import (
-    get,
+from bdm_voxel_builder import get
+from bdm_voxel_builder.helpers.pointcloud import (
     ply_to_compas,
     ply_to_numpy,
     pointcloud_to_grid_array,
