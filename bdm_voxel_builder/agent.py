@@ -3,13 +3,13 @@ from math import trunc
 import numpy as np
 import numpy.typing as npt
 
-from bdm_voxel_builder.grid import Grid
-from bdm_voxel_builder.helpers.numpy import (
+from bdm_voxel_builder import (
     NB_INDEX_DICT,
     clip_indices_to_grid_size,
     get_sub_array,
     random_choice_index_from_best_n,
 )
+from bdm_voxel_builder.grid import Grid
 
 
 class Agent:

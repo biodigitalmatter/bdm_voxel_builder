@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers.savepaths import get_savepath
+from bdm_voxel_builder.helpers import get_savepath
 
 NB_INDEX_DICT = {
     "up": np.asarray([0, 0, 1]),

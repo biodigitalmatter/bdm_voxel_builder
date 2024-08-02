@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from bdm_voxel_builder.helpers.numpy import get_mask_zone_xxyyzz
+from bdm_voxel_builder import get_mask_zone_xxyyzz
 
 
 def test_get_mask_zone_xxyyzz():

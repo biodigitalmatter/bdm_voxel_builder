@@ -1,11 +1,11 @@
 import compas.geometry as cg
 import numpy as np
-import numpy.typing as npt
 import pyopenvdb as vdb
 import pytest
 
 from bdm_voxel_builder import get
 from bdm_voxel_builder.grid import Grid
+
 
 def test__activate_random_indices(activate_random_indices ,random_generator):
     array = np.zeros(shape=(10, 10, 10), dtype=np.float64)

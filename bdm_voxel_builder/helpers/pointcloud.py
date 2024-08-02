@@ -1,5 +1,5 @@
-from collections.abc import Sequence
 import os
+from collections.abc import Sequence
 
 import compas.geometry as cg
 import numpy as np
@@ -8,8 +8,7 @@ from compas.data import json_dump
 from compas.files import PLY
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers.numpy import sort_pts_by_values
-from bdm_voxel_builder.helpers.savepaths import get_savepath
+from bdm_voxel_builder.helpers import get_savepath, sort_pts_by_values
 
 
 def ply_to_numpy(ply_path: os.PathLike, precision: str = None):

@@ -15,10 +15,10 @@ from bdm_voxel_builder.helpers import (
     convert_array_to_pts,
     get_linear_xform_between_2_boxes,
     get_savepath,
+    pointcloud_to_grid_array,
     xform_to_compas,
     xform_to_vdb,
 )
-from bdm_voxel_builder.helpers.pointcloud import pointcloud_to_grid_array
 
 
 class Grid:
