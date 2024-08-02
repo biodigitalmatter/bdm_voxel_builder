@@ -836,7 +836,7 @@ class Agent:
 
     def build_on_grid(self, grid: Grid, value=1.0):
         try:
-            grid.set_value_at_index(index=self.pose, value=value)
+            grid.set_value_at_index(index=self.pose, value=value, wrapping=False, clipping = True)
             self.build_chance = 0
             return True
         except Exception as e:
@@ -859,7 +859,7 @@ class Agent:
             place = self.pose + vector
 
         try:
-            grid.set_value_at_index(index=place, value=0)
+            grid.set_value_at_index(index=place, value=0, wrapping=False, clipping = True)
             bool_ = True
             self.erase_chance = 0
         except Exception as e:
@@ -875,17 +875,12 @@ class Agent:
     def set_grid_value_at_nbs_26(self, grid: Grid, value):
         nbs = self.get_nb_indices_26(self.pose)
         for pose in nbs:
-            grid.set_value_at_index(index=pose, value=value)
+            grid.set_value_at_index(index=pose, value=value, wrapping=False, clipping = True)
 
     def set_grid_value_at_nbs_6(self, grid: Grid, value):
         nbs = self.get_nb_indices_6(self.pose)
         for pose in nbs:
-            grid.set_value_at_index(index=pose, value=value)
-
-    def set_grid_value_at_nbs_6(self, grid: Grid, value):
-        nbs = self.get_nb_indices_6(self.pose)
-        for pose in nbs:
-            grid.set_value_at_index(index=pose, value=value)
+            grid.set_value_at_index(index=pose, value=value, wrapping=False, clipping = True)
     
     def set_grid_value_cross_shape(self, grid: Grid, value):
         dirs = [
@@ -897,7 +892,7 @@ class Agent:
         ]
         for dir in dirs:
             pose = self.pose + dir
-            grid.set_value_at_index(index=pose, value=value)
+            grid.set_value_at_index(index=pose, value=value, wrapping=False, clipping = True)
 
     def erase_6(self, grid: Grid):
         self.set_grid_value_at_nbs_6(grid, 0)

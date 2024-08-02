@@ -65,8 +65,9 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
     print_cross_shape = True
 
     # IMPORTED GEOMETRY ----- PLACEHOLDER
-    add_box = True
-    box_template_1 = [6, 15, 6, 15, 1, 4]
+    add_simple_design = True
+    add_complex_design = True
+    box_template_1 = [8, 25, 6, 25, 1, 4]
     ground_stair_1 = [0, 50, 20, 50, 0, 2]
     ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
@@ -165,12 +166,15 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         )
 
         # imported design TEMP
-        # ground.add_values_in_zone_xxyyzz(self.ground_stair_1, 1)
-        # ground.add_values_in_zone_xxyyzz(self.ground_stair_2, 1)
+        if self.add_simple_design:
+            design.add_values_in_zone_xxyyzz(self.box_template_1, 1)
+        elif self.add_complex_design:
+            ground.add_values_in_zone_xxyyzz(self.ground_stair_1, 1)
+            ground.add_values_in_zone_xxyyzz(self.ground_stair_2, 1)
 
-        design.add_values_in_zone_xxyyzz(self.box_template_1, 1)
-        # design.add_values_in_zone_xxyyzz(self.ground_stair_1, 0)
-        # design.add_values_in_zone_xxyyzz(self.ground_stair_2, 0)
+            design.add_values_in_zone_xxyyzz(self.box_template_1, 1)
+            design.add_values_in_zone_xxyyzz(self.ground_stair_1, 0)
+            design.add_values_in_zone_xxyyzz(self.ground_stair_2, 0)
         print(f"design array at init{design.array.shape}")
         # WRAP ENVIRONMENT
         grids = {
@@ -185,7 +189,6 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         return grids
 
     def update_environment(self, state: Environment):
-        
         grids = state.grids
         emission_array_for_move_ph = grids["design"].array
         diffuse_diffusive_grid(
@@ -196,7 +199,6 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             grade=False,
             decay=True,
         )
-
         # grids["design"].decay()
         # grids["track"].decay()
 
@@ -243,7 +245,6 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
-        # print('agent reset functioned')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -263,7 +264,6 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             return False
 
         clay_density_filled = agent.get_grid_density(design, nonzero=True)
-        # print(f'clay_density in move:{clay_density_filled}')
         # move by pheromon_grid_move
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
@@ -274,7 +274,6 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
         ############################################################################
-        ############# randomize ##########
 
         if clay_density_filled < 0.1:
             """far from the clay, agents are aiming to get there"""

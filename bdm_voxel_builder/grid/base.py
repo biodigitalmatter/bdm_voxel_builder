@@ -91,9 +91,11 @@ class Grid:
 
         return path
 
-    def set_value_at_index(self, index=(0, 0, 0), value=1, wrapping: bool = True):
+    def set_value_at_index(self, index=(0, 0, 0), value=1, wrapping: bool = True, clipping: bool = False):
         if wrapping:
             index = np.mod(index, self.grid_size)
+        elif clipping: 
+            index = np.clip(index, [0,0,0], self.array.shape - np.asarray([1,1,1]))
         i, j, k = index
         self.array[i][j][k] = value
         return self.array
