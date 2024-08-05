@@ -183,7 +183,7 @@ class Grid:
 
 
     def array_from_ply(self, path: os.PathLike, unit_in_mm = 10, scale_to_fit = False):
-        pointcloud = pointcloud_from_ply(path)
+        pointcloud = ply_to_compas(path)
         array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
         self.array = array
         
