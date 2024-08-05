@@ -356,7 +356,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         # """)
 
 
-    def print_build(self, agent: Agent, state: Environment):
+    def print_build_3x3(self, agent: Agent, state: Environment):
         """add index the print_dot list, and fill 3x3 voxel in the printed_clay grid"""
         built = False
         printed_clay = state.grids["printed_clay"]
@@ -383,7 +383,11 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
 
 
     def print_build(self, agent: Agent, state: Environment):
-        """add index the print_dot list, and fill 3x3 voxel in the printed_clay grid"""
+        """add index the print_dot list, and fill either:
+        - one_voxel
+        - voxels in cross shape
+        - or voxels in 3x3 square 
+        of the printed_clay grid"""
         built = False
         printed_clay = state.grids["printed_clay"]
         print_dots = state.grids["print_dots"]
