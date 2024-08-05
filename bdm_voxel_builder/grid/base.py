@@ -181,6 +181,15 @@ class Grid:
             xform=xform_to_compas(grid.transform),
         )
 
+
+    def array_from_ply(self, path: os.PathLike, unit_in_mm = 10, scale_to_fit = False):
+        pointcloud = ply_to_compas(path)
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
+        self.array = array
+        
+        return array
+
+
     @classmethod
     def from_pointcloud(
         cls,
@@ -204,16 +213,15 @@ class Grid:
 
         return cls(grid_size=grid_size, name=name, xform=xform, array=array)
 
-    def array_from_ply(self, path: os.PathLike):
-        pointcloud = ply_to_compas(path)
-        grid_array = convert_pointcloud_to_grid_array(pointcloud, tolerance_mm=5)
-        return grid_array
 
-    def array_from_pointcloud(self, pointcloud, unit_in_mm=10):
-        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
+    def array_from_pointcloud(self, pointcloud, unit_in_mm=10, scale_to_fit = False):
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
         self.array = array
+        return array
 
-    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm=10):
+    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm=10, scale_to_fit = False):
         pointcloud = cg.Pointcloud.from_json(path)
-        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
         self.array = array
+
+        return array
