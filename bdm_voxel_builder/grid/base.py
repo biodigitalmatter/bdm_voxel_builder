@@ -3,17 +3,23 @@ import os
 from collections.abc import Sequence
 from typing import Self
 
+import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 import pyopenvdb as vdb
 from compas.colors import Color
-from compas.geometry import Box, Pointcloud, Transformation, transform_points_numpy
+from scipy.spatial import QhullError
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers.numpy import convert_array_to_pts, convert_pointcloud_to_grid_array
-from bdm_voxel_builder.helpers.savepaths import get_savepath
-from bdm_voxel_builder.helpers.vdb import xform_to_compas, xform_to_vdb
-from bdm_voxel_builder.helpers.compas import pointcloud_from_ply
+from bdm_voxel_builder.helpers import (
+    convert_array_to_pts,
+    convert_pointcloud_to_grid_array,
+    get_savepath,
+    get_xform_box2grid,
+    pointcloud_to_grid_array,
+    xform_to_compas,
+    xform_to_vdb,
+)
 
 
 class Grid:
@@ -23,7 +29,7 @@ class Grid:
         name: str = None,
         color: Color = None,
         array: npt.NDArray = None,
-        xform: Transformation = None,
+        xform: cg.Transformation = None,
     ):
         self.name = name
 
@@ -37,7 +43,7 @@ class Grid:
             self.array = array
 
         if not xform:
-            self.xform = Transformation()
+            self.xform = cg.Transformation()
         else:
             self.xform = xform
 
@@ -60,11 +66,12 @@ class Grid:
 
         self._grid_size = value.tolist()
 
-    def get_local_bbox(self) -> Box:
+    def get_local_bbox(self) -> cg.Box:
         """Returns a bounding box containing the grid, 0, 0, 0 to ijk"""
-        return Box.from_diagonal(((0, 0, 0), self.grid_size))
+        xsize, ysize, zsize = self.grid_size
+        return cg.Box.from_diagonal(cg.Line((0, 0, 0), (xsize, ysize, zsize)))
 
-    def get_world_bbox(self) -> Box:
+    def get_world_bbox(self) -> cg.Box:
         return self.get_local_bbox().transformed(self.xform)
 
     def to_vdb_grid(self):
@@ -105,22 +112,30 @@ class Grid:
         i, j, k = index
         return self.array[i][j][k]
 
-    def get_active_voxels(self, array):
+    
+    def get_active_voxels(self):
         """returns indicies of nonzero values
         list of coordinates
             shape = [3,n]"""
         return np.nonzero(self.array)
 
+    def get_number_of_active_voxels(self):
+        """returns indicies of nonzero values
+        list of coordinates
+            shape = [3,n]"""
+        return len(self.array[self.get_active_voxels()])
+
+
     def get_index_pts(self) -> list[list[float]]:
         return convert_array_to_pts(self.array, get_data=False)
 
     def get_index_pointcloud(self):
-        return Pointcloud(self.get_index_pts())
+        return cg.Pointcloud(self.get_index_pts())
 
     def get_world_pts(self) -> list[list[float]]:
-        return transform_points_numpy(self.get_index_pts(), self.xform).tolist()
+        return cg.transform_points_numpy(self.get_index_pts(), self.xform).tolist()
 
-    def get_world_pointcloud(self) -> Pointcloud:
+    def get_world_pointcloud(self) -> cg.Pointcloud:
         return self.get_index_pointcloud().transformed(self.xform)
 
     def get_merged_array_with(self, grid: Self):
@@ -165,6 +180,29 @@ class Grid:
             xform=xform_to_compas(grid.transform),
         )
 
+    @classmethod
+    def from_pointcloud(
+        cls,
+        pointcloud: cg.Pointcloud,
+        grid_size: list[int, int, int] | int,
+        name: str = None,
+    ):
+        try:
+            bbox_pointcloud = pointcloud.obb
+        except QhullError:
+            bbox_pointcloud = pointcloud.aabb
+
+        if isinstance(grid_size, int):
+            grid_size = [grid_size] * 3
+
+        xform = get_xform_box2grid(bbox_pointcloud, grid_size=grid_size)
+
+        array = pointcloud_to_grid_array(
+            pointcloud=pointcloud.transformed(xform), grid_size=grid_size
+        )
+
+        return cls(grid_size=grid_size, name=name, xform=xform, array=array)
+
     def array_from_ply(self, path: os.PathLike):
         pointcloud = pointcloud_from_ply(path)
         grid_array = convert_pointcloud_to_grid_array(pointcloud, tolerance_mm = 5)
@@ -175,7 +213,7 @@ class Grid:
         self.array = array
 
     def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm = 10):
-        pointcloud = Pointcloud.from_json(path)
+        pointcloud = cg.Pointcloud.from_json(path)
         array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
         self.array = array
 

@@ -3,7 +3,7 @@ from invoke import task
 
 @task
 def format(c):
-    c.run("ruff check --fix .")
+    c.run("ruff check --fix .", warn=True)
     c.run("ruff format .")
 
 

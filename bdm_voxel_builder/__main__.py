@@ -6,8 +6,11 @@ import click
 from bdm_voxel_builder import DATA_DIR
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.helpers.compas import pointcloud_from_ndarray, save_pointcloud
-from bdm_voxel_builder.helpers.numpy import save_ndarray
+from bdm_voxel_builder.helpers import (
+    pointcloud_from_ndarray,
+    save_ndarray,
+    save_pointcloud,
+)
 from bdm_voxel_builder.visualizer.matplotlib import MPLVisualizer
 
 
