@@ -8,7 +8,6 @@ from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.helpers.numpy import get_array_density_from_zone_xxyyzz
 
 
 @dataclass
@@ -68,7 +67,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
     add_simple_design = True
     add_complex_design = False
     box_template_1 = [8, 25, 6, 25, 1, 4]
-    box_template_2 = [20,35,6,10,4,8]
+    box_template_2 = [20, 35, 6, 10, 4, 8]
     ground_stair_1 = [0, 50, 20, 50, 0, 2]
     ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
@@ -184,8 +183,8 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             "pheromon_move": pheromon_move,
             "design": design,
             "track": track_grid,
-            "print_dots" : print_dots,
-            "printed_clay" : printed_clay
+            "print_dots": print_dots,
+            "printed_clay": printed_clay,
         }
         return grids
 
@@ -195,7 +194,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         diffuse_diffusive_grid(
             grids["pheromon_move"],
             emmission_array=emission_array_for_move_ph,
-            blocking_grids=[grids["ground"], grids['printed_clay']],
+            blocking_grids=[grids["ground"], grids["printed_clay"]],
             gravity_shift_bool=False,
             grade=False,
             decay=True,
@@ -257,10 +256,12 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         pheromon_grid_move = state.grids["pheromon_move"]
         ground = state.grids["ground"]
         design = state.grids["design"]
-        printed_clay = state.grids['printed_clay']
+        printed_clay = state.grids["printed_clay"]
 
         # check solid volume inclusion
-        gv = agent.get_grid_value_at_pose(ground, )
+        gv = agent.get_grid_value_at_pose(
+            ground,
+        )
         if gv != 0:
             return False
 
@@ -269,7 +270,9 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube = agent.direction_preference_26_pheromones_v2(0.0001, 0.5, 0.7)
+        directional_bias_cube = agent.direction_preference_26_pheromones_v2(
+            0.0001, 0.5, 0.7
+        )
         random_cube = np.random.random(26)
 
         ############################################################################
@@ -315,8 +318,8 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
 
     def check_print_chance(self, agent: Agent, state: Environment):
         design = state.grids["design"]
-        printed_clay = state.grids['printed_clay']
-        ground = state.grids['ground']
+        printed_clay = state.grids["printed_clay"]
+        ground = state.grids["ground"]
 
         # reset build chance
         agent.build_chance = 0
@@ -333,18 +336,17 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         # print(f'design around: {v} \ndesign_below:{v} \nprint_below:{v}')
 
         print_density_below = sum(v) / len(v)
-        if design_density >= self.print_goal_density: # agent in design
+        if design_density >= self.print_goal_density:  # agent in design
             # check overhang
-            if design_density_below >= self.print_goal_density: # no overhang
-                if print_density_below >= self.print_goal_density: # no undercut
+            if design_density_below >= self.print_goal_density:  # no overhang
+                if print_density_below >= self.print_goal_density:  # no undercut
                     agent.build_chance = 1
             else:
                 # overhang check
                 if self.overhang_limit <= 30:
                     if print_density_below >= 0.33:
                         agent.build_chance = 1
-                elif self.overhang_limit <= 45:
-                    if print_density_below >= 0.5:
+                elif self.overhang_limit <= 45 and print_density_below >= 0.5:
                         agent.build_chance = 1
                 # elif self.overhang_limit <= 60:
                 #     if print_density_below >= 0.5 and print_density_below_2 >= 0.5:
@@ -357,20 +359,21 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
 
 
     def print_build_3x3(self, agent: Agent, state: Environment):
+
         """add index the print_dot list, and fill 3x3 voxel in the printed_clay grid"""
         built = False
         printed_clay = state.grids["printed_clay"]
         print_dots = state.grids["print_dots"]
-        
+
         # build
         if agent.build_chance >= self.reach_to_build:
             # get pose
-            x,y,z = agent.pose
+            x, y, z = agent.pose
 
             # update print dot array
-            print_dots.array[x,y,z] = 1
-            self.print_dot_list.append([x,y,z])
-            self.print_dot_dict[self.print_dot_counter] = [x,y,z]
+            print_dots.array[x, y, z] = 1
+            self.print_dot_list.append([x, y, z])
+            self.print_dot_dict[self.print_dot_counter] = [x, y, z]
             self.print_dot_counter += 1
 
             # update printed_clay_volume_array
@@ -381,7 +384,6 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             built = False
         return built
 
-
     def print_build(self, agent: Agent, state: Environment):
         """add index the print_dot list, and fill either:
         - one_voxel
@@ -391,16 +393,16 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         built = False
         printed_clay = state.grids["printed_clay"]
         print_dots = state.grids["print_dots"]
-        
+
         # build
         if agent.build_chance >= self.reach_to_build:
             # get pose
-            x,y,z = agent.pose
+            x, y, z = agent.pose
 
             # update print dot array
-            print_dots.array[x,y,z] = 1
-            self.print_dot_list.append([x,y,z])
-            self.print_dot_dict[self.print_dot_counter] = [x,y,z]
+            print_dots.array[x, y, z] = 1
+            self.print_dot_list.append([x, y, z])
+            self.print_dot_dict[self.print_dot_counter] = [x, y, z]
             self.print_dot_counter += 1
 
             # update printed_clay_volume_array
@@ -411,12 +413,11 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             elif self.print_3x3:
                 zone = [x - 1, x + 1, y - 1, y + 1, z, z]
                 printed_clay.add_values_in_zone_xxyyzz(zone, 1)
-            
+
             built = True
         else:
             built = False
         return built
-
 
     # CHECK END STATEs
     def check_end_state_agent(self, agent: Agent, state: Environment):
@@ -427,16 +428,10 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             self.reset_agent(agent)
         else:
             pass
-    
+
     def check_end_state_simulation(self, agent: Agent, state: Environment):
         """TODO"""
-        its_over = False
-
-        if its_over:
-            state.end_state == True
-            return True
-        else:
-            return False
+        return state.end_state
 
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
@@ -448,7 +443,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         # BUILD
         if moved:
             self.check_print_chance(agent, state)
-            
+
             built = self.print_build(agent, state)
 
             # print(f'built: {built}')
@@ -459,7 +454,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         if not moved:
             self.reset_agent(agent)
             # print('reset in move, couldnt move')
-        
+
         # check end states:
         self.check_end_state_agent(agent, state)
         self.check_end_state_simulation(agent, state)
