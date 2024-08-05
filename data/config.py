@@ -1,19 +1,20 @@
 # ruff: noqa: F401
 from bdm_voxel_builder.agent_algorithms.algo_10_a_slicer_agents import Algo10a_VoxelSlicer
+from bdm_voxel_builder.agent_algorithms.algo_11_test_scan_import import Algo11a_TestScanImport
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # SHORT RUN test compasview
 grid_size = 30
-iterations = 4000
+iterations = 2
 agent_count = 1
 interval = iterations / 10
-name = f"slicer_test_simple_i{iterations}a{agent_count}"
+name = f"test_import_ply{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo10a_VoxelSlicer(
+    algo=Algo11a_TestScanImport(
         agent_count=agent_count,
         grid_size=grid_size,
         name=name,

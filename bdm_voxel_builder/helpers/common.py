@@ -1,7 +1,7 @@
 import os
 
 
-def get_nth_newest_file_in_folder(folder_path, n):
+def get_nth_newest_file_in_folder(folder_path, n = 0):
     try:
         # Get a list of files in the folder
         files = [
