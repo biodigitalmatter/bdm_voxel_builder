@@ -10,7 +10,7 @@ from compas.colors import Color
 from compas.geometry import Box, Pointcloud, Transformation, transform_points_numpy
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers.numpy import convert_pointcloud_to_grid_array
+from bdm_voxel_builder.helpers.numpy import convert_array_to_pts, convert_pointcloud_to_grid_array
 from bdm_voxel_builder.helpers.savepaths import get_savepath
 from bdm_voxel_builder.helpers.vdb import xform_to_compas, xform_to_vdb
 from bdm_voxel_builder.helpers.compas import pointcloud_from_ply
@@ -169,4 +169,14 @@ class Grid:
         pointcloud = pointcloud_from_ply(path)
         grid_array = convert_pointcloud_to_grid_array(pointcloud, tolerance_mm = 5)
         return grid_array
+    
+    def array_from_pointcloud(self, pointcloud, unit_in_mm = 10):
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
+        self.array = array
+
+    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm = 10):
+        pointcloud = Pointcloud.from_json(path)
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
+        self.array = array
+
 

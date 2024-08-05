@@ -31,3 +31,9 @@ def pointcloud_from_ply(
 ):
     pointcloud = Pointcloud.from_ply(path)
     return pointcloud
+
+def pointcloud_from_json(
+    path: os.PathLike
+):
+    pointcloud = Pointcloud.from_json(path)
+    return pointcloud
