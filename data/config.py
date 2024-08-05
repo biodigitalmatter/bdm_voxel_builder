@@ -1,5 +1,7 @@
 # ruff: noqa: F401
-from bdm_voxel_builder.agent_algorithms.algo_10_a_slicer_agents import Algo10a_VoxelSlicer
+from bdm_voxel_builder.agent_algorithms.algo_10_a_slicer_agents import (
+    Algo10a_VoxelSlicer,
+)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 

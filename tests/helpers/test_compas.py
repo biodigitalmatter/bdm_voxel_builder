@@ -1,7 +1,7 @@
 import math
-import numpy as np
 
 import compas.geometry as cg
+import numpy as np
 
 from bdm_voxel_builder.helpers import (
     box_from_corner_frame,
@@ -120,7 +120,7 @@ class TestGetXformBox2Grid:
         pts = cg.transform_points(box.points, xform)
 
         assert pts[0] == [0, 0, 0]
-        np.testing.assert_allclose(pts[6],[grid_size - 1] * 3)
+        np.testing.assert_allclose(pts[6], [grid_size - 1] * 3)
 
     def test_different_orientations(self):
         grid_size = 2
@@ -139,8 +139,8 @@ class TestGetXformBox2Grid:
         # transform not implemented on box
         pts = cg.transform_points(box.points, xform)
 
-        np.testing.assert_allclose(pts[0],[0, 0, 0], atol=1e-15)
-        np.testing.assert_allclose(pts[6],[grid_size - 1] * 3)
+        np.testing.assert_allclose(pts[0], [0, 0, 0], atol=1e-15)
+        np.testing.assert_allclose(pts[6], [grid_size - 1] * 3)
 
     def test_different_positions_and_orientations(self):
         grid_size = 6
@@ -154,12 +154,14 @@ class TestGetXformBox2Grid:
 
         frame.transform(R)
 
-        box = box_from_corner_frame(frame=frame, xsize=grid_size, ysize=grid_size, zsize=grid_size)
+        box = box_from_corner_frame(
+            frame=frame, xsize=grid_size, ysize=grid_size, zsize=grid_size
+        )
 
         xform = get_xform_box2grid(box, grid_size=[grid_size] * 3)
 
         # transform not implemented on box
         pts = cg.transform_points(box.points, xform)
 
-        np.testing.assert_allclose(pts[0],[0, 0, 0], atol=1e-15)
-        np.testing.assert_allclose(pts[6],[grid_size - 1] * 3)
+        np.testing.assert_allclose(pts[0], [0, 0, 0], atol=1e-15)
+        np.testing.assert_allclose(pts[6], [grid_size - 1] * 3)

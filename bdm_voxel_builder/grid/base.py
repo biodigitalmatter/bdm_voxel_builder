@@ -16,6 +16,7 @@ from bdm_voxel_builder.helpers import (
     convert_pointcloud_to_grid_array,
     get_savepath,
     get_xform_box2grid,
+    ply_to_compas,
     pointcloud_to_grid_array,
     xform_to_compas,
     xform_to_vdb,
@@ -99,11 +100,13 @@ class Grid:
 
         return path
 
-    def set_value_at_index(self, index=(0, 0, 0), value=1, wrapping: bool = True, clipping: bool = False):
+    def set_value_at_index(
+        self, index=(0, 0, 0), value=1, wrapping: bool = True, clipping: bool = False
+    ):
         if wrapping:
             index = np.mod(index, self.grid_size)
-        elif clipping: 
-            index = np.clip(index, [0,0,0], self.array.shape - np.asarray([1,1,1]))
+        elif clipping:
+            index = np.clip(index, [0, 0, 0], self.array.shape - np.asarray([1, 1, 1]))
         i, j, k = index
         self.array[i][j][k] = value
         return self.array
@@ -112,7 +115,6 @@ class Grid:
         i, j, k = index
         return self.array[i][j][k]
 
-    
     def get_active_voxels(self):
         """returns indicies of nonzero values
         list of coordinates
@@ -124,7 +126,6 @@ class Grid:
         list of coordinates
             shape = [3,n]"""
         return len(self.array[self.get_active_voxels()])
-
 
     def get_index_pts(self) -> list[list[float]]:
         return convert_array_to_pts(self.array, get_data=False)
@@ -204,17 +205,15 @@ class Grid:
         return cls(grid_size=grid_size, name=name, xform=xform, array=array)
 
     def array_from_ply(self, path: os.PathLike):
-        pointcloud = pointcloud_from_ply(path)
-        grid_array = convert_pointcloud_to_grid_array(pointcloud, tolerance_mm = 5)
+        pointcloud = ply_to_compas(path)
+        grid_array = convert_pointcloud_to_grid_array(pointcloud, tolerance_mm=5)
         return grid_array
-    
-    def array_from_pointcloud(self, pointcloud, unit_in_mm = 10):
+
+    def array_from_pointcloud(self, pointcloud, unit_in_mm=10):
         array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
         self.array = array
 
-    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm = 10):
+    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm=10):
         pointcloud = cg.Pointcloud.from_json(path)
         array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
         self.array = array
-
-

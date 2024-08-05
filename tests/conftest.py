@@ -16,7 +16,7 @@ def random_int_array(random_generator):
 
 def _random_pts(n_pts: int, random_generator: np.random.Generator):
     shape = (n_pts, 3)
-    return 100 * random_generator.random(shape) - 100/2
+    return 100 * random_generator.random(shape) - 100 / 2
 
 
 @pytest.fixture

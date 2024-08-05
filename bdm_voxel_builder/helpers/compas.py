@@ -32,6 +32,7 @@ def get_xform_box2grid(
 
     return Tr * S * R
 
+
 def pointcloud_from_ndarray(arr: npt.NDArray, return_values=False):
     pts, values = sort_pts_by_values(arr)
 
