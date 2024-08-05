@@ -37,6 +37,33 @@ def convert_array_to_pts(
 
     return np.vstack(coordinates).transpose()
 
+def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm = 10):
+    pts = pointcloud.points
+    coordinate_array = np.asarray(pts) # array = [[x,y,z][x,y,z][x,y,z]]
+    index_array = np.floor_divide(coordinate_array, unit_in_mm)
+    index_array = np.int64(index_array)
+    # print(f'index array, floor divide:\n {index_array}')
+
+    maximums = np.amax(index_array, axis = 0)
+    minimums = np.amin(index_array, axis = 0)
+    # print(f'max:{maximums}, mins:{minimums}')
+
+    move_to_origin_vector = 0 - minimums
+    index_array += move_to_origin_vector
+    # print(f'index array, translated:\n {index_array}')
+
+    bounds = np.int64(maximums - minimums)
+    bounds += 1
+    # print(f'grid_size {bounds}')
+
+    grid_from_pointcloud = np.zeros(bounds)
+    for point in index_array:
+        x,y,z = point
+        # print(f'coord: {x,y,z}')
+        grid_from_pointcloud[x][y][z] = 1
+
+    # print(f'grid_from_pointcloud=\n{grid_from_pointcloud}')
+    return grid_from_pointcloud
 
 def save_ndarray(arr: npt.NDArray, note: str = None):
     np.save(get_savepath(TEMP_DIR, ".npy", note=note), arr)

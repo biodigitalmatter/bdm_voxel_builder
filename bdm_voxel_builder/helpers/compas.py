@@ -1,6 +1,7 @@
 import numpy.typing as npt
 from compas.data import json_dump
 from compas.geometry import Pointcloud
+import os
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers.numpy import sort_pts_by_values
@@ -24,3 +25,9 @@ def save_pointcloud(
     dict_ = {"pointcloud": pointcloud, "values": values}
 
     json_dump(dict_, get_savepath(TEMP_DIR, ".json", note=note))
+
+def pointcloud_from_ply(
+    path: os.PathLike
+):
+    pointcloud = Pointcloud.from_ply(path)
+    return pointcloud
