@@ -8,15 +8,12 @@ import numpy as np
 import numpy.typing as npt
 import pyopenvdb as vdb
 from compas.colors import Color
-from scipy.spatial import QhullError
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers import (
     convert_array_to_pts,
-    convert_pointcloud_to_grid_array,
     get_savepath,
     get_xform_box2grid,
-    ply_to_compas,
     pointcloud_to_grid_array,
     xform_to_compas,
     xform_to_vdb,
@@ -181,47 +178,46 @@ class Grid:
             xform=xform_to_compas(grid.transform),
         )
 
-
-    def array_from_ply(self, path: os.PathLike, unit_in_mm = 10, scale_to_fit = False):
-        pointcloud = ply_to_compas(path)
-        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
-        self.array = array
-        
-        return array
-
-
     @classmethod
     def from_pointcloud(
         cls,
-        pointcloud: cg.Pointcloud,
-        grid_size: list[int, int, int] | int,
+        pointcloud: cg.Pointcloud | os.PathLike,
+        grid_size: list[int, int, int] | int = None,
+        voxel_edge_length: int = None,
         name: str = None,
     ):
-        try:
-            bbox_pointcloud = pointcloud.obb
-        except QhullError:
-            bbox_pointcloud = pointcloud.aabb
+        if grid_size is None and voxel_edge_length is None:
+            raise ValueError("Either grid_size or unit_in_mm must be provided")
 
         if isinstance(grid_size, int):
             grid_size = [grid_size] * 3
 
-        xform = get_xform_box2grid(bbox_pointcloud, grid_size=grid_size)
+        if isinstance(pointcloud, os.PathLike):
+            pointcloud = cg.Pointcloud.from_json(pointcloud)
 
-        array = pointcloud_to_grid_array(
-            pointcloud=pointcloud.transformed(xform), grid_size=grid_size
+        if not grid_size:
+            grid_size = max(pointcloud.aabb.dimensions) // voxel_edge_length + 1
+
+        T = get_xform_box2grid(pointcloud.aabb, grid_size=grid_size)
+
+        
+
+        array = pointcloud_to_grid_array(pointcloud.transformed(T), grid_size)
+
+        return cls(grid_size=grid_size, name=name, xform=T, array=array)
+
+    @classmethod
+    def from_ply(
+        cls,
+        ply_path: os.PathLike,
+        grid_size: list[int, int, int] | int = None,
+        voxel_edge_length: int = None,
+        name: str = None,
+    ):
+        pointcloud = cg.Pointcloud.from_ply(ply_path)
+        return cls.from_pointcloud(
+            pointcloud,
+            grid_size=grid_size,
+            voxel_edge_length=voxel_edge_length,
+            name=name,
         )
-
-        return cls(grid_size=grid_size, name=name, xform=xform, array=array)
-
-
-    def array_from_pointcloud(self, pointcloud, unit_in_mm=10, scale_to_fit = False):
-        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
-        self.array = array
-        return array
-
-    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm=10, scale_to_fit = False):
-        pointcloud = cg.Pointcloud.from_json(path)
-        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
-        self.array = array
-
-        return array

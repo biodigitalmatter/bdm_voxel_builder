@@ -1,9 +1,6 @@
 import numpy as np
 import numpy.typing as npt
 
-from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers.savepaths import get_savepath
-
 NB_INDEX_DICT = {
     "up": np.asarray([0, 0, 1]),
     "left": np.asarray([-1, 0, 0]),
@@ -12,70 +9,6 @@ NB_INDEX_DICT = {
     "front": np.asarray([0, -1, 0]),
     "back": np.asarray([0, 1, 0]),
 }
-
-
-def _convert_array_to_pts_wo_data(arr: npt.NDArray) -> list[list[float]]:
-    pts = []
-    for i, j, k in zip(*np.nonzero(arr), strict=False):
-        pts.append([i, j, k])
-    return pts
-
-
-def convert_array_to_pts(
-    arr: npt.NDArray, get_data=True
-) -> list[list[float] | npt.NDArray]:
-    if not get_data:
-        return _convert_array_to_pts_wo_data(arr)
-
-    indicies = np.indices(arr.shape)
-    pt_location = np.logical_not(arr == 0)
-
-    coordinates = []
-    for i in range(3):
-        c = indicies[i][pt_location]
-        coordinates.append(c)
-
-    return np.vstack(coordinates).transpose()
-
-
-def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm=10, grid_size = 100, scale_to_fit = False):
-    pts = pointcloud.points
-    coordinate_array = np.asarray(pts)  # array = [[x,y,z][x,y,z][x,y,z]]
-    if scale_to_fit:
-        bbx_edgelengths = (np.amax(coordinate_array, axis = 0) - np.amin(coordinate_array, axis = 0))
-        cube_edge = np.amax(bbx_edgelengths)
-        scale = grid_size / cube_edge * unit_in_mm
-        # print(f"scale:{scale}, cube_edge{cube_edge}")
-        coordinate_array *= scale
-
-    index_array = np.floor_divide(coordinate_array, unit_in_mm)
-    index_array = np.int64(index_array)
-    # print(f'index array, floor divide:\n {index_array}')
-
-    maximums = np.amax(index_array, axis=0)
-    minimums = np.amin(index_array, axis=0)
-    # print(f'max:{maximums}, mins:{minimums}')
-
-    move_to_origin_vector = 0 - minimums
-    index_array += move_to_origin_vector
-    # print(f'index array, translated:\n {index_array}')
-
-    bounds = np.int64(maximums - minimums)
-    bounds += 1
-    # print(f'grid_size {bounds}')
-    a,b,c = grid_size
-    grid_from_pointcloud = np.zeros(grid_size)
-    for point in index_array:
-        x, y, z = point
-        if x < a and y < b and z < c:
-            grid_from_pointcloud[x][y][z] = 1
-
-    # print(f'grid_from_pointcloud=\n{grid_from_pointcloud}')
-    return grid_from_pointcloud
-
-
-def save_ndarray(arr: npt.NDArray, note: str = None):
-    np.save(get_savepath(TEMP_DIR, ".npy", note=note), arr)
 
 
 def sort_pts_by_values(arr: npt.NDArray, multiply=1):

@@ -162,4 +162,4 @@ def test_from_pointcloud():
 def test_from_pointcloud_large(random_pts, random_generator):
     pointcloud = cg.Pointcloud(random_pts(1000, random_generator))
     grid = Grid.from_pointcloud(pointcloud, grid_size=25)
-    assert grid.get_number_of_active_voxels() == 966  # rounding loses us some points
+    assert grid.get_number_of_active_voxels() == 967  # rounding loses us some points
