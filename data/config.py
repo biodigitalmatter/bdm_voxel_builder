@@ -5,10 +5,10 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # SHORT RUN test compasview
-grid_size = 30
-iterations = 2
-agent_count = 1
-interval = iterations / 10
+grid_size = 100
+iterations = 15
+agent_count = 10
+interval = iterations / 4
 name = f"test_import_ply{iterations}a{agent_count}"
 
 config = Config(

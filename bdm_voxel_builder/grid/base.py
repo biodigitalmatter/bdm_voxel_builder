@@ -165,21 +165,21 @@ class Grid:
             xform=xform_to_compas(grid.transform),
         )
 
-    def array_from_ply(self, path: os.PathLike, unit_in_mm = 10):
+    def array_from_ply(self, path: os.PathLike, unit_in_mm = 10, scale_to_fit = False):
         pointcloud = pointcloud_from_ply(path)
-        grid_array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
-        self.array = grid_array
-        return grid_array
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
+        self.array = array
+        return array
     
-    def array_from_pointcloud(self, pointcloud, unit_in_mm = 10):
-        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
+    def array_from_pointcloud(self, pointcloud, unit_in_mm = 10, scale_to_fit = False):
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
         self.array = array
-        return grid_array
+        return array
 
-    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm = 10):
+    def array_from_pointcloud_json(self, path: os.PathLike, unit_in_mm = 10, scale_to_fit = False):
         pointcloud = Pointcloud.from_json(path)
-        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm)
+        array = convert_pointcloud_to_grid_array(pointcloud, unit_in_mm, self.grid_size, scale_to_fit)
         self.array = array
-        return grid_array
+        return array
 
 

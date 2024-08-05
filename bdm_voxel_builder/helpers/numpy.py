@@ -37,9 +37,16 @@ def convert_array_to_pts(
 
     return np.vstack(coordinates).transpose()
 
-def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm = 10):
+def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm = 10, grid_size = 100, scale_to_fit = False):
     pts = pointcloud.points
     coordinate_array = np.asarray(pts) # array = [[x,y,z][x,y,z][x,y,z]]
+    if scale_to_fit:
+        bbx_edgelengths = (np.amax(coordinate_array, axis = 0) - np.amin(coordinate_array, axis = 0))
+        cube_edge = np.amax(bbx_edgelengths)
+        scale = grid_size / cube_edge * unit_in_mm
+        print(f"scale:{scale}, cube_edge{cube_edge}")
+        coordinate_array *= scale
+
     index_array = np.floor_divide(coordinate_array, unit_in_mm)
     index_array = np.int64(index_array)
     # print(f'index array, floor divide:\n {index_array}')
@@ -55,12 +62,14 @@ def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm = 10):
     bounds = np.int64(maximums - minimums)
     bounds += 1
     # print(f'grid_size {bounds}')
-
-    grid_from_pointcloud = np.zeros(bounds)
+    a,b,c = grid_size
+    grid_from_pointcloud = np.zeros(grid_size)
     for point in index_array:
         x,y,z = point
-        # print(f'coord: {x,y,z}')
-        grid_from_pointcloud[x][y][z] = 1
+        if x < a and y < b and z < c:
+            
+            # print(f'coord: {x,y,z}')
+            grid_from_pointcloud[x][y][z] = 1
 
     # print(f'grid_from_pointcloud=\n{grid_from_pointcloud}')
     return grid_from_pointcloud

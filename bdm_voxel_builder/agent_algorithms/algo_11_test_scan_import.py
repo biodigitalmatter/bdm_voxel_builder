@@ -5,9 +5,11 @@ from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers.common import get_nth_newest_file_in_folder
+from bdm_voxel_builder.helpers.numpy import crop_array
 
 @dataclass
 class Algo11a_TestScanImport(AgentAlgorithm):
@@ -58,6 +60,7 @@ class Algo11a_TestScanImport(AgentAlgorithm):
     ground_level_Z = 0
 
     scan_ply_folder_path = "temp/ply"
+    file_index_to_load = 2
     unit_in_mm = 10
 
     def __post_init__(self):
@@ -83,20 +86,42 @@ class Algo11a_TestScanImport(AgentAlgorithm):
             name="ground",
             grid_size=self.grid_size,
         )
+        offset = DiffusiveGrid(
+            name='offset',
+            grid_size=self.grid_size,
+            color=Color.from_rgb255(25,100,55),
+            gradient_resolution=100,
+            decay_ratio=1/10
+        )
 
         imported_grid = Grid(self.grid_size)
-        file = get_nth_newest_file_in_folder(self.scan_ply_folder_path,1)
-        imported_grid.array_from_ply(file, self.unit_in_mm)
-        print('imported from ply')
+        file = get_nth_newest_file_in_folder(self.scan_ply_folder_path, self.file_index_to_load)
+        imported_array = imported_grid.array_from_ply(file, self.unit_in_mm, scale_to_fit = True)
         ground.array = imported_grid.array
+        # trim scan to gridsize
+        # trim_array = imported_array[0:self.grid_size][0:self.grid_size][0:self.grid_size]
+        # print(f'trim_array shape{trim_array.shape}')
+        # ground.array = trim_array
+        print('imported from ply')
+        
 
         grids = {
-            "ground": ground
+            "ground": ground,
+            "offset": offset
         }
-        print(f'ground.array:\n{ground.array}')
         return grids
 
     def update_environment(self, state: Environment):
+        ground = state.grids['ground']
+        offset = state.grids['offset']
+        diffuse_diffusive_grid(
+            offset,
+            emmission_array=ground.array,
+            decay_linear=True,
+            decay=False,
+            grade=True,
+            gravity_shift_bool=True
+        )
         pass
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
