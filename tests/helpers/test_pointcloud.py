@@ -64,6 +64,6 @@ def test_pointcloud_to_grid_messy(random_pts, random_generator):
 
     with pytest.raises(
         ValueError,
-        match="Pointcloud contains negative values, needs to be transformed to index grid", # noqa: E501
+        match="Pointcloud contains negative values, needs to be transformed to index grid",  # noqa: E501
     ):
         pointcloud_to_grid_array(pointcloud, grid_size)

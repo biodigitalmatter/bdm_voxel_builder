@@ -7,7 +7,7 @@ from bdm_voxel_builder import get
 from bdm_voxel_builder.grid import Grid
 
 
-def test__activate_random_indices(activate_random_indices ,random_generator):
+def test__activate_random_indices(activate_random_indices, random_generator):
     array = np.zeros(shape=(10, 10, 10), dtype=np.float64)
     array, activated = activate_random_indices(array, random_generator)
     assert activated == 499
@@ -87,7 +87,7 @@ def test_get_active_voxels():
     assert active_voxels[2][0] == 5
 
 
-def test_get_index_pts(activate_random_indices,random_generator):
+def test_get_index_pts(activate_random_indices, random_generator):
     grid = Grid(grid_size=(10, 10, 10))
 
     grid.array, activated = activate_random_indices(grid.array, random_generator)
@@ -158,7 +158,8 @@ def test_from_pointcloud():
     assert grid.array[1, 1, 1] == 1
     assert grid.array[2, 2, 2] == 1
 
+
 def test_from_pointcloud_large(random_pts, random_generator):
     pointcloud = cg.Pointcloud(random_pts(1000, random_generator))
     grid = Grid.from_pointcloud(pointcloud, grid_size=25)
-    assert grid.get_active_voxels() == 1000
+    assert grid.get_number_of_active_voxels() == 966  # rounding loses us some points
