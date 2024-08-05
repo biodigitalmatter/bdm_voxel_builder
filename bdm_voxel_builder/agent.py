@@ -3,14 +3,14 @@ from math import trunc
 import numpy as np
 import numpy.typing as npt
 
-from bdm_voxel_builder.grid import Grid
-from bdm_voxel_builder.helpers.numpy import (
+from bdm_voxel_builder import (
     NB_INDEX_DICT,
     clip_indices_to_grid_size,
+    get_array_density_from_zone_xxyyzz,
     get_sub_array,
     random_choice_index_from_best_n,
-    get_array_density_from_zone_xxyyzz
 )
+from bdm_voxel_builder.grid import Grid
 
 
 class Agent:
@@ -240,7 +240,9 @@ class Agent:
         value_list = []
         for nb_pose in cells_to_check:
             x, y, z = nb_pose
-            xc, yc, zc = np.clip(np.asarray(nb_pose), [0,0,0], np.asarray(array.shape) - 1)
+            xc, yc, zc = np.clip(
+                np.asarray(nb_pose), [0, 0, 0], np.asarray(array.shape) - 1
+            )
             if x == xc and y == yc and z == zc:
                 nb_value = array[xc][yc][zc]
                 value_list.append(nb_value)
@@ -249,7 +251,6 @@ class Agent:
             v.round()
         return v
 
-
     def get_nb_values_3x3_below_of_array(self, array, round_values=False):
         """return list of values"""
         nb_cells = self.get_nb_indices_26(self.pose)
@@ -257,7 +258,9 @@ class Agent:
         value_list = []
         for nb_pose in cells_to_check:
             x, y, z = nb_pose
-            xc, yc, zc = np.clip(np.asarray(nb_pose), [0,0,0], np.asarray(array.shape) - 1)
+            xc, yc, zc = np.clip(
+                np.asarray(nb_pose), [0, 0, 0], np.asarray(array.shape) - 1
+            )
             if x == xc and y == yc and z == zc:
                 nb_value = array[xc][yc][zc]
                 value_list.append(nb_value)
@@ -385,7 +388,7 @@ class Agent:
         radiis = slice_shape[:3]
         slice_volume = 1
         for x in radiis:
-            slice_volume *= (x + 0.5) * 2        
+            slice_volume *= (x + 0.5) * 2
         if not nonzero:
             density = sum_values / slice_volume
         else:
@@ -394,7 +397,7 @@ class Agent:
         #     print(f'slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}')
         return density
 
-    def get_array_density_in_box(self, array, box, nonzero = False):
+    def get_array_density_in_box(self, array, box, nonzero=False):
         d = get_array_density_from_zone_xxyyzz(array, self.pose, box, nonzero=True)
         return d
 
@@ -836,7 +839,9 @@ class Agent:
 
     def build_on_grid(self, grid: Grid, value=1.0):
         try:
-            grid.set_value_at_index(index=self.pose, value=value, wrapping=False, clipping = True)
+            grid.set_value_at_index(
+                index=self.pose, value=value, wrapping=False, clipping=True
+            )
             self.build_chance = 0
             return True
         except Exception as e:
@@ -859,7 +864,7 @@ class Agent:
             place = self.pose + vector
 
         try:
-            grid.set_value_at_index(index=place, value=0, wrapping=False, clipping = True)
+            grid.set_value_at_index(index=place, value=0, wrapping=False, clipping=True)
             bool_ = True
             self.erase_chance = 0
         except Exception as e:
@@ -875,24 +880,30 @@ class Agent:
     def set_grid_value_at_nbs_26(self, grid: Grid, value):
         nbs = self.get_nb_indices_26(self.pose)
         for pose in nbs:
-            grid.set_value_at_index(index=pose, value=value, wrapping=False, clipping = True)
+            grid.set_value_at_index(
+                index=pose, value=value, wrapping=False, clipping=True
+            )
 
     def set_grid_value_at_nbs_6(self, grid: Grid, value):
         nbs = self.get_nb_indices_6(self.pose)
         for pose in nbs:
-            grid.set_value_at_index(index=pose, value=value, wrapping=False, clipping = True)
-    
+            grid.set_value_at_index(
+                index=pose, value=value, wrapping=False, clipping=True
+            )
+
     def set_grid_value_cross_shape(self, grid: Grid, value):
         dirs = [
-        np.asarray([0,0,0]),
-        np.asarray([-1, 0, 0]),
-        np.asarray([1, 0, 0]),
-        np.asarray([0, -1, 0]),
-        np.asarray([0, 1, 0])
+            np.asarray([0, 0, 0]),
+            np.asarray([-1, 0, 0]),
+            np.asarray([1, 0, 0]),
+            np.asarray([0, -1, 0]),
+            np.asarray([0, 1, 0]),
         ]
         for dir in dirs:
             pose = self.pose + dir
-            grid.set_value_at_index(index=pose, value=value, wrapping=False, clipping = True)
+            grid.set_value_at_index(
+                index=pose, value=value, wrapping=False, clipping=True
+            )
 
     def erase_6(self, grid: Grid):
         self.set_grid_value_at_nbs_6(grid, 0)

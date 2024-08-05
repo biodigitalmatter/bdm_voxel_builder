@@ -37,22 +37,23 @@ def convert_array_to_pts(
 
     return np.vstack(coordinates).transpose()
 
-def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm = 10, grid_size = 100, scale_to_fit = False):
+
+def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm=10, grid_size = 100, scale_to_fit = False):
     pts = pointcloud.points
-    coordinate_array = np.asarray(pts) # array = [[x,y,z][x,y,z][x,y,z]]
+    coordinate_array = np.asarray(pts)  # array = [[x,y,z][x,y,z][x,y,z]]
     if scale_to_fit:
         bbx_edgelengths = (np.amax(coordinate_array, axis = 0) - np.amin(coordinate_array, axis = 0))
         cube_edge = np.amax(bbx_edgelengths)
         scale = grid_size / cube_edge * unit_in_mm
-        print(f"scale:{scale}, cube_edge{cube_edge}")
+        # print(f"scale:{scale}, cube_edge{cube_edge}")
         coordinate_array *= scale
 
     index_array = np.floor_divide(coordinate_array, unit_in_mm)
     index_array = np.int64(index_array)
     # print(f'index array, floor divide:\n {index_array}')
 
-    maximums = np.amax(index_array, axis = 0)
-    minimums = np.amin(index_array, axis = 0)
+    maximums = np.amax(index_array, axis=0)
+    minimums = np.amin(index_array, axis=0)
     # print(f'max:{maximums}, mins:{minimums}')
 
     move_to_origin_vector = 0 - minimums
@@ -65,14 +66,13 @@ def convert_pointcloud_to_grid_array(pointcloud, unit_in_mm = 10, grid_size = 10
     a,b,c = grid_size
     grid_from_pointcloud = np.zeros(grid_size)
     for point in index_array:
-        x,y,z = point
+        x, y, z = point
         if x < a and y < b and z < c:
-            
-            # print(f'coord: {x,y,z}')
             grid_from_pointcloud[x][y][z] = 1
 
     # print(f'grid_from_pointcloud=\n{grid_from_pointcloud}')
     return grid_from_pointcloud
+
 
 def save_ndarray(arr: npt.NDArray, note: str = None):
     np.save(get_savepath(TEMP_DIR, ".npy", note=note), arr)
@@ -219,6 +219,7 @@ def get_mask_zone_xxyyzz(
         return mask.astype(np.bool_)
     return mask
 
+
 def get_array_density_from_zone_xxyyzz(
     array,
     pose,
@@ -236,14 +237,14 @@ def get_array_density_from_zone_xxyyzz(
     shape = array.shape
     grid_vol = array.size
     # print(f'shape {shape}, grid vol: {grid_vol}')
-    x,y,z = pose
+    x, y, z = pose
     x_min, x_max, y_min, y_max, z_min, z_max = relative_zone_xxyyzz
     zone_xxyyzz = [x_min + x, x_max + x, y_min + y, y_max + y, z_min + z, z_max + z]
     zone_xxyyzz = clip_indices_to_grid_size(zone_xxyyzz, shape)
 
     x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz
-    vol = ((abs(x_min - x_max) + 1) * (abs(y_min - y_max) + 1) * (abs(z_min - z_max) + 1))
-    print('vol', vol)
+    vol = (abs(x_min - x_max) + 1) * (abs(y_min - y_max) + 1) * (abs(z_min - z_max) + 1)
+    print("vol", vol)
     mask = np.zeros(shape, dtype=np.int8)
     mask[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = 1
     v = np.where(mask == 1, array, 0)
@@ -255,7 +256,7 @@ def get_array_density_from_zone_xxyyzz(
         print(f"n = {n}")
         m = grid_vol - n
         d = m / vol
-    print(f'density:{d}')
+    print(f"density:{d}")
     return d
 
 
@@ -266,7 +267,7 @@ def crop_array(arr, start=0, end=1):
 
 
 def random_choice_index_from_best_n_old(list_array, n, print_=False):
-    """double random choice to to avoid only finding the index of the selected 
+    """double random choice to to avoid only finding the index of the selected
     if equals"""
     array = list_array
     a = np.sort(array)

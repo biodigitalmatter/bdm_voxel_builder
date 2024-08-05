@@ -3,8 +3,7 @@ from compas.geometry import Point, Pointcloud
 from compas_viewer import Viewer
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers.numpy import convert_array_to_pts
-from bdm_voxel_builder.helpers.savepaths import get_savepath
+from bdm_voxel_builder.helpers import convert_array_to_pts, get_savepath
 from bdm_voxel_builder.visualizer.base import Visualizer
 
 

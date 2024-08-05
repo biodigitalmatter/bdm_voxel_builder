@@ -6,11 +6,11 @@ from compas.colors import Color
 from compas.geometry import Box
 
 from bdm_voxel_builder.grid import Grid
-from bdm_voxel_builder.helpers.math import remap
-from bdm_voxel_builder.helpers.numpy import (
+from bdm_voxel_builder.helpers import (
     create_random_array,
     crop_array,
     get_mask_zone_xxyyzz,
+    remap,
 )
 
 
