@@ -1,10 +1,11 @@
 import math
+import numpy as np
 
 import compas.geometry as cg
 
 from bdm_voxel_builder.helpers import (
     box_from_corner_frame,
-    get_linear_xform_between_2_boxes,
+    get_xform_box2grid,
 )
 
 
@@ -84,106 +85,81 @@ def test_box_from_corner_frame_custom_frame():
     assert box.zsize == expected_box.zsize
     assert box.frame == expected_box.frame
 
-class TestGetLinearTransformationBetweenTwoBoxes:
+
+class TestGetXformBox2Grid:
     def test_identical(self):
-        from_box = cg.Box(1, 1, 1, frame=cg.Frame.worldXY())
-        to_box = from_box.copy()
+        box = box_from_corner_frame(cg.Frame.worldXY(), 1, 1, 1)
 
         expected_transformation = cg.Transformation()
 
-        assert (
-            get_linear_xform_between_2_boxes(from_box, to_box)
-            == expected_transformation
-        )
+        assert get_xform_box2grid(box, [2, 2, 2]) == expected_transformation
 
     def test_different_dimensions(self):
         from_size = (2, 3, 4)
-        to_size = (1, 2, 3)
-        from_box = box_from_corner_frame(cg.Frame.worldXY(), *from_size)
-        to_box = box_from_corner_frame(cg.Frame.worldXY(), *to_size)
+        grid_size = 3
+        box = box_from_corner_frame(cg.Frame.worldXY(), *from_size)
 
-        xform = get_linear_xform_between_2_boxes(from_box, to_box)
+        xform = get_xform_box2grid(box, grid_size=[grid_size] * 3)
 
-        assert set([tuple(pt) for pt in cg.transform_points(from_box.points, xform)]) == set([tuple(pt) for pt in to_box.points])
-        moved_box = from_box.transformed(xform)
+        # transform not implemented on box
+        pts = cg.transform_points(box.points, xform)
 
-        assert moved_box.xsize == to_box.xsize
-        assert moved_box.ysize == to_box.ysize
-        assert moved_box.zsize == to_box.zsize
-        assert moved_box.frame.normal == to_box.frame.normal
-        # assert moved_box.frame == to_box.frame
+        assert pts[0] == [0, 0, 0]
+        assert pts[6] == [n / 2 for n in from_size]
 
     def test_different_positions(self):
-        xsize = ysize = zsize = 5
-        from_frame = cg.Frame.worldXY()
+        grid_size = 5
+        box_frame = cg.Frame([1, 2, 3])
 
-        Tr = cg.Translation.from_vector(cg.Vector(1, 2, 3))
-
-        to_frame = from_frame.transformed(Tr)
-
-        from_box = box_from_corner_frame(
-            frame=from_frame, xsize=xsize, ysize=ysize, zsize=zsize
+        box = box_from_corner_frame(
+            frame=box_frame, xsize=grid_size, ysize=grid_size, zsize=grid_size
         )
-        to_box = box_from_corner_frame(
-            frame=to_frame, xsize=xsize, ysize=ysize, zsize=zsize
-        )
+        xform = get_xform_box2grid(box, [grid_size] * 3)
 
-        xform = get_linear_xform_between_2_boxes(from_box, to_box)
+        # transform not implemented on box
+        pts = cg.transform_points(box.points, xform)
 
-        moved_box = from_box.transformed(xform)
-
-        assert moved_box.points == to_box.points
-        assert moved_box.xsize == to_box.xsize
-        assert moved_box.ysize == to_box.ysize
-        assert moved_box.zsize == to_box.zsize
+        assert pts[0] == [0, 0, 0]
+        np.testing.assert_allclose(pts[6],[grid_size - 1] * 3)
 
     def test_different_orientations(self):
-        xsize = ysize = zsize = 2
-        from_frame = cg.Frame.worldXY()
+        grid_size = 2
+        frame = cg.Frame.worldXY()
 
-        # R = cg.Rotation.from_axis_and_angle(
-        #     axis=cg.Vector.Zaxis(), angle=0.5 * math.pi, point=from_frame.point
-        # )
         R = cg.Rotation.from_frame_to_frame(cg.Frame.worldXY(), cg.Frame.worldZX())
 
-        to_frame = from_frame.transformed(R)
+        frame.transform(R)
 
-        from_box = box_from_corner_frame(
-            frame=from_frame, xsize=xsize, ysize=ysize, zsize=zsize
-        )
-        to_box = box_from_corner_frame(
-            frame=to_frame, xsize=xsize, ysize=ysize, zsize=zsize
+        box = box_from_corner_frame(
+            frame=frame, xsize=grid_size, ysize=grid_size, zsize=grid_size
         )
 
-        xform = get_linear_xform_between_2_boxes(from_box, to_box)
+        xform = get_xform_box2grid(box, [grid_size] * 3)
 
-        moved_box = from_box.transformed(xform)
+        # transform not implemented on box
+        pts = cg.transform_points(box.points, xform)
 
-        assert moved_box.front == to_box.front
-        assert moved_box.xsize == to_box.xsize
-        assert moved_box.ysize == to_box.ysize
-        assert moved_box.zsize == to_box.zsize
+        np.testing.assert_allclose(pts[0],[0, 0, 0], atol=1e-15)
+        np.testing.assert_allclose(pts[6],[grid_size - 1] * 3)
 
     def test_different_positions_and_orientations(self):
-        from_frame = cg.Frame.worldXY()
-        to_frame = from_frame.copy()
+        grid_size = 6
+        frame = cg.Frame.worldXY()
 
-        to_frame.point += cg.Vector(1, 2, 3)
+        frame.point += cg.Vector(1, 2, 3)
 
         R = cg.Rotation.from_axis_and_angle(
-            axis=cg.Vector.Zaxis(), angle=0.5 * math.pi, point=to_frame.point
+            axis=cg.Vector.Zaxis(), angle=0.5 * math.pi, point=frame.point
         )
 
-        to_frame.transform(R)
+        frame.transform(R)
 
-        from_box = box_from_corner_frame(frame=from_frame, xsize=1, ysize=1, zsize=1)
-        to_box = box_from_corner_frame(frame=to_frame, xsize=1, ysize=1, zsize=1)
+        box = box_from_corner_frame(frame=frame, xsize=grid_size, ysize=grid_size, zsize=grid_size)
 
-        xform = get_linear_xform_between_2_boxes(from_box, to_box)
+        xform = get_xform_box2grid(box, grid_size=[grid_size] * 3)
 
-        moved_box = from_box.transformed(xform)
+        # transform not implemented on box
+        pts = cg.transform_points(box.points, xform)
 
-        assert moved_box.front == to_box.front
-        assert moved_box.xsize == to_box.xsize
-        assert moved_box.ysize == to_box.ysize
-        assert moved_box.zsize == to_box.zsize
+        np.testing.assert_allclose(pts[0],[0, 0, 0], atol=1e-15)
+        np.testing.assert_allclose(pts[6],[grid_size - 1] * 3)

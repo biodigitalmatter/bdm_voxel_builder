@@ -12,9 +12,10 @@ from scipy.spatial import QhullError
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers import (
+    box_from_corner_frame,
     convert_array_to_pts,
-    get_linear_xform_between_2_boxes,
     get_savepath,
+    get_xform_box2grid,
     pointcloud_to_grid_array,
     xform_to_compas,
     xform_to_vdb,
@@ -109,11 +110,19 @@ class Grid:
         i, j, k = index
         return self.array[i][j][k]
 
+    
     def get_active_voxels(self):
         """returns indicies of nonzero values
         list of coordinates
             shape = [3,n]"""
         return np.nonzero(self.array)
+
+    def get_number_of_active_voxels(self):
+        """returns indicies of nonzero values
+        list of coordinates
+            shape = [3,n]"""
+        return len(self.array[self.get_active_voxels()])
+
 
     def get_index_pts(self) -> list[list[float]]:
         return convert_array_to_pts(self.array, get_data=False)
@@ -181,19 +190,10 @@ class Grid:
         except QhullError:
             bbox_pointcloud = pointcloud.aabb
 
-        
-
-        # -1 because the grid is 0 indexed
         if isinstance(grid_size, int):
-            isize = jsize = ksize = grid_size - 1
-        else:
-            isize, jsize, ksize = (n - 1 for n in grid_size)
+            grid_size = [grid_size] * 3
 
-        bbox_grid_frame = cg.Frame(point=(isize / 2, jsize / 2, ksize / 2))
-
-        bbox_grid = cg.Box(xsize=isize, ysize=jsize, zsize=ksize, frame=bbox_grid_frame)
-
-        xform = get_linear_xform_between_2_boxes(bbox_pointcloud, bbox_grid)
+        xform = get_xform_box2grid(bbox_pointcloud, grid_size=grid_size)
 
         array = pointcloud_to_grid_array(
             pointcloud=pointcloud.transformed(xform), grid_size=grid_size

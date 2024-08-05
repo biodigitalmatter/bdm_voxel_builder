@@ -1,7 +1,7 @@
 # ruff: noqa: F401, F403
 
 from .common import get_nth_newest_file_in_folder
-from .compas import box_from_corner_frame, get_linear_xform_between_2_boxes
+from .compas import box_from_corner_frame, get_xform_box2grid
 from .math import calculate_chance, remap, remap_trim
 from .numpy import (
     NB_INDEX_DICT,

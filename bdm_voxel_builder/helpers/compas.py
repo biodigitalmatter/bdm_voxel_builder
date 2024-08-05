@@ -12,18 +12,18 @@ def box_from_corner_frame(frame: cg.Frame, xsize: float, ysize: float, zsize: fl
     return cg.Box(xsize=xsize, ysize=ysize, zsize=zsize, frame=center_frame)
 
 
-def get_linear_xform_between_2_boxes(from_box: cg.Box, to_box: cg.Box) -> cg.Transformation:
-    """Get the linear transformation between two bounding boxes."""
-    v = to_box.corner(0) - from_box.corner(0)
+def get_xform_box2grid(
+    box: cg.Box, grid_size: tuple[int, int, int]
+) -> cg.Transformation:
+    """Get the linear transformation between two bounding boxes with uniform scaling."""
+    v = cg.Vector(box.xmin, box.ymin, box.zmin)
 
-    Tr = cg.Translation.from_vector(v)
+    Tr = cg.Translation.from_vector(v.inverted())
 
-    R = cg.Rotation.from_change_of_basis(
-        frame_from=from_box.frame, frame_to=to_box.frame
-    )
+    R = cg.Rotation.from_frame_to_frame(box.frame, cg.Frame.worldXY())
 
-    factors = np.divide(to_box.dimensions, from_box.dimensions).tolist()
+    factor = float(max(grid_size) - 1) / max(box.dimensions)
 
-    S = cg.Scale.from_factors(factors, frame=from_box.frame)
+    S = cg.Scale.from_factors([factor] * 3, frame=box.frame)
 
-    return Tr * R * S
+    return Tr * S * R
