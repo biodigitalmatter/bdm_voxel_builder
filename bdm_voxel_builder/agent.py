@@ -43,6 +43,7 @@ class Agent:
         self._climb_style = ""
         self._build_chance = 0
         self._erase_chance = 0
+        self._die_chance = 0
         self._build_limit = 1
         self._erase_limit = 1
 
@@ -86,6 +87,16 @@ class Agent:
         if not isinstance(value, float | int):
             raise ValueError("Chance must be a number")
         self._erase_chance = value
+
+    @property
+    def die_chance(self):
+        return self._die_chance
+
+    @die_chance.setter
+    def die_chance(self, value):
+        if not isinstance(value, (float | int)):
+            raise ValueError("Chance must be a number")
+        self._die_chance = value
 
     NB_INDEX_DICT = {
         "up": np.asarray([0, 0, 1]),
@@ -817,7 +828,9 @@ class Agent:
     def match_vertical_move_history(
         self, last_moves_pattern = ['up', 'up', 'side']
     ):
-        "chance is returned based on the direction values and chance_weight"
+        """checks if last steps match the given pattern
+        pattern: list: 'up' | 'side' | 'down'
+        chronological order"""
         n = len(last_moves_pattern)
         if len(self.move_history) < n:
             return False
@@ -826,6 +839,7 @@ class Agent:
             for i in range(n):
                 x, y, z = self.move_history[-i - 1]
                 pattern = last_moves_pattern[-i - 1]
+                # print(f'pattern: {pattern}, move: {x, y, z}')
                 if pattern == 'up' and z > 0:
                     flag += 1
                 elif pattern == 'side' and z == 0:
