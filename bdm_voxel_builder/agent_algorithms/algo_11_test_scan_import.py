@@ -2,12 +2,13 @@ from dataclasses import dataclass
 
 from compas.colors import Color
 
+from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
-from bdm_voxel_builder.helpers.common import get_nth_newest_file_in_folder
+from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
 
 
 @dataclass
@@ -58,8 +59,8 @@ class Algo11a_TestScanImport(AgentAlgorithm):
     seed_iterations = 0
     ground_level_Z = 0
 
-    scan_ply_folder_path = "temp/ply"
-    file_index_to_load = 2
+    scan_ply_folder_path = REPO_DIR / "docs/algo_11 load ply test/ply"
+    file_index_to_load = 1
     unit_in_mm = 10
 
     def __post_init__(self):

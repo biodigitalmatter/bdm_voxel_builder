@@ -19,7 +19,6 @@ def box_from_corner_frame(frame: cg.Frame, xsize: float, ysize: float, zsize: fl
     return cg.Box(xsize=xsize, ysize=ysize, zsize=zsize, frame=center_frame)
 
 
-
 def _convert_array_to_pts_wo_data(arr: npt.NDArray) -> list[list[float]]:
     pts = []
     for i, j, k in zip(*np.nonzero(arr), strict=False):
@@ -42,6 +41,7 @@ def convert_array_to_pts(
         coordinates.append(c)
 
     return np.vstack(coordinates).transpose()
+
 
 def get_xform_box2grid(
     box: cg.Box, grid_size: tuple[int, int, int]
@@ -87,7 +87,7 @@ def pointcloud_from_ndarray(arr: npt.NDArray, return_values=False):
 
 
 def pointcloud_to_grid_array(
-    pointcloud: cg.Pointcloud, grid_size: tuple[int, int, int]
+    pointcloud: cg.Pointcloud, grid_size: tuple[int, int, int], dtype=np.int, value=1
 ):
     """Convert a pointcloud to a grid."""
     if not isinstance(grid_size, Sequence):
@@ -95,7 +95,7 @@ def pointcloud_to_grid_array(
 
     grid_array = np.zeros(grid_size)
 
-    pts = np.array(pointcloud).round().astype(dtype=int)
+    pts = np.array(pointcloud).floor().astype(dtype=dtype)
 
     if pts.min() < 0:
         raise ValueError(
@@ -103,5 +103,9 @@ def pointcloud_to_grid_array(
         )  # noqa: E501
 
     for i, j, k in pts:
-        grid_array[i, j, k] = 1
+        if (i, j, k) > grid_size:
+            raise ValueError(
+                "Pointcloud contains values that are larger than grid size."
+            )
+        grid_array[i, j, k] = value
     return grid_array

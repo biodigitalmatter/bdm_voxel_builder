@@ -6,6 +6,7 @@ from .array import (
     conditional_fill,
     create_random_array,
     crop_array,
+    get_array_density_from_zone_xxyyzz,
     get_cube_array_indices,
     get_mask_zone_xxyyzz,
     get_sub_array,
@@ -30,5 +31,5 @@ from .geometry import (
     pointcloud_from_ndarray,
     pointcloud_to_grid_array,
 )
-from .math import calculate_chance, remap, remap_trim
+from .math import remap, remap_trim
 from .vdb import xform_to_compas, xform_to_vdb

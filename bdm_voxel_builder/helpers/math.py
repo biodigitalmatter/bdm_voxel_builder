@@ -1,20 +1,3 @@
-def calculate_chance(
-    x, output_y_domain, non_flat_x_segment=None, input_x_domain=(0, 1)
-):
-    """remaps x (from input_domain) to y on output_domain
-    optionally flattens segments outside the flat_domain
-    return y"""
-    i, j = input_x_domain
-    a, b = output_y_domain
-
-    if non_flat_x_segment is not None:
-        u, v = non_flat_x_segment
-        y = (b - a) / (v - u) * x
-    else:
-        y = (b - a) / (j - i) * x
-
-    y = max(a, (min(b, y)))
-
 
 def remap_trim(
     x,
@@ -40,7 +23,7 @@ def remap(x, output_domain, input_domain=(0, 1)):
     a, b = output_domain
 
     if i == j or a == b:
-        raise ZeroDivisionError("Input or output domain is invalid.")
+        raise ValueError("Input or output domain is invalid.")
 
     y = (b - a) / (j - i) * x
     return y

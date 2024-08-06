@@ -200,9 +200,9 @@ class Grid:
 
         T = get_xform_box2grid(pointcloud.aabb, grid_size=grid_size)
 
-        
+        pointcloud_transformed_for_grid = pointcloud.transformed(T) 
 
-        array = pointcloud_to_grid_array(pointcloud.transformed(T), grid_size)
+        array = pointcloud_to_grid_array(pointcloud_transformed_for_grid, grid_size)
 
         return cls(grid_size=grid_size, name=name, xform=T, array=array)
 
