@@ -27,9 +27,9 @@ class Agent:
         save_move_history: bool = True,
     ):
         if pose is None:
-            self.pose = np.asarray([0, 0, 0], dtype=np.int8)
+            self._pose = np.asarray([0, 0, 0], dtype=np.int8)
         else:
-            self.pose = np.asarray(pose)  # [i,j,k]
+            self._pose = np.asarray(pose, dtype=np.int8)  # [i,j,k]
         self.compass_array = compass_array
         # self.limited_to_ground = limited_to_ground
         self.leave_trace: bool = leave_trace
@@ -47,15 +47,14 @@ class Agent:
         self._erase_limit = 1
 
     @property
-    def climb_style(self):
-        self._climb_style = self.get_move_pattern_string()
-        return self._climb_style
-
-    @climb_style.setter
-    def climb_style(self, value):
-        if not isinstance(value, str):
-            raise ValueError("Name must be a string")
-        self._climb_style = value
+    def pose(self):
+        return np.asarray(self._pose, dtype=np.int8)
+    
+    @pose.setter
+    def pose(self, v):
+        if not isinstance(v, (list, np.ndarray)):
+            raise ValueError("pose must be a list or an array")
+        self._pose = np.asarray(v, dtype=np.int8)  # [i,j,k]
 
     @property
     def cube_array(self):
@@ -65,7 +64,7 @@ class Agent:
     @cube_array.setter
     def cube_array(self, value):
         if not isinstance(value, (list)):
-            raise ValueError("Chance must be a list of np arrays. Yes, indeed")
+            raise ValueError("cube must be a list of np arrays.")
         self._cube_array = value
 
     @property
@@ -638,6 +637,10 @@ class Agent:
         # best option
         new_pose = direction_cube[i]
 
+        if self.save_move_history:
+            v = new_pose - self.pose
+            self.move_history.append(v)
+
         # update space grid before move
         if self.leave_trace:
             self.track_grid.set_value_at_index(index=self.pose, value=1)
@@ -803,25 +806,37 @@ class Agent:
         else:
             return 0
     
-    def match_vertical_move_history_string(
-        self, last_moves_pattern = ['up', 'up', 'side'], value = 1
+    def get_last_move_match_reward(
+            self, last_moves_pattern = ['up', 'up', 'side'], value = 1.0
     ):
-        "chance is returned based on the direction values and chance_weight"
-        n = len(last_moves_pattern)
-        for i in range(n):
-            x, y, z = self.move_history[-i]
-            pattern = last_moves_pattern[-i]
-            if pattern == 'up' and z > 0:
-                flag = True
-            elif pattern == 'side' and z == 0:
-                flag = True
-            elif pattern == 'down' and z < 0:
-                flag = True
-            else: flag = False
-        if flag:
+        if self.match_vertical_move_history(last_moves_pattern):
             return value
         else: 
             return 0
+
+    def match_vertical_move_history(
+        self, last_moves_pattern = ['up', 'up', 'side']
+    ):
+        "chance is returned based on the direction values and chance_weight"
+        n = len(last_moves_pattern)
+        if len(self.move_history) < n:
+            return False
+        else:
+            flag = 0
+            for i in range(n):
+                x, y, z = self.move_history[-i - 1]
+                pattern = last_moves_pattern[-i - 1]
+                if pattern == 'up' and z > 0:
+                    flag += 1
+                elif pattern == 'side' and z == 0:
+                    flag += 1
+                elif pattern == 'down' and z < 0:
+                    flag += 1
+                else: flag = 0
+            if flag == n:
+                return True
+            else:
+                return False
 
     #  BUILD/ERASE FUNCTIONS
 

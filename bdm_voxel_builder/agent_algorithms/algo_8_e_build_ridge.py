@@ -59,8 +59,8 @@ class Algo8eRidge(AgentAlgorithm):
 
     # EXISTING GEOMETRY
     add_box = True
-    box_template = [30, 35, 25, 30, 1, 4]
-    wall = [0, 10, 0, 25, 1, 10]
+    box_template = [10, 45, 25, 27, 1, 4]
+    wall = [0, 10, 0, 25, 0, 1]
     ground_level_Z = 0
 
     reach_to_build: int = 1
@@ -74,8 +74,7 @@ class Algo8eRidge(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 5
-    deployment_zone__b = -1
+    deployment_zone_xxyy = [0, 40, 10, 20]
 
     check_collision = True
     keep_in_bounds = True
@@ -197,20 +196,23 @@ class Algo8eRidge(AgentAlgorithm):
             self.reset_agent(agent)
             agents.append(agent)
         return agents
-
+    
     def reset_agent(self, agent: Agent):
+        self._reset_agent_on_Z_plane(agent)
+
+
+    def _reset_agent_on_Z_plane(self, agent: Agent):
         # TODO: make work with non square grids
         # centered setup
         grid_size = agent.space_grid.grid_size
-        a, b = [
-            self.deployment_zone__a,
-            grid_size[0] + self.deployment_zone__b,
-        ]
+        x1, x2, y1, y2 = self.deployment_zone_xxyy
 
-        a = max(a, 0)
-        b = min(b, grid_size[0] - 1)
-        x = np.random.randint(a, b)
-        y = np.random.randint(a, b)
+        x1 = max(x1, 0)
+        x2 = min(x2, grid_size[0] - 1)
+        y1 = max(y1, 0)
+        y2 = min(y2, grid_size[0] - 1)
+        x = np.random.randint(x1, x2)
+        y = np.random.randint(y1, y2)
         z = self.ground_level_Z + 1
 
         agent.space_grid.set_value_at_index(agent.pose, 0)
@@ -254,7 +256,7 @@ class Algo8eRidge(AgentAlgorithm):
 
         if clay_density_filled < 0.1:
             """far from the clay, agents are aiming to get there"""
-            move_pheromon_cube *= 1
+            move_pheromon_cube *= 10000
             directional_bias_cube_side *= 1
             direction_cube = move_pheromon_cube + directional_bias_cube_side
             random_mod = 3
@@ -264,7 +266,7 @@ class Algo8eRidge(AgentAlgorithm):
             move_pheromon_cube *= 0
             directional_bias_cube_up *= 1
             direction_cube = move_pheromon_cube + directional_bias_cube_up
-            random_mod = 1
+            random_mod = 3
 
         ############################################################################
 
@@ -295,7 +297,7 @@ class Algo8eRidge(AgentAlgorithm):
 
         returns build_chance, erase_chance
         """
-        grid = state.grids["clay"]
+        clay_grid = state.grids["clay"]
         build_chance = 0
         erase_chance = 0
 
@@ -312,16 +314,16 @@ class Algo8eRidge(AgentAlgorithm):
         high_density__erase_reward = 1.5
 
         step_on_ridge_reward = 1.5
-        step_on_ridge_moves_pattern = ['side', 'up', 'up']
+        step_on_ridge_moves_pattern = ['up', 'up', 'side']
 
         ##########################################################################
 
 
 
         # get clay density
-        clay_density = agent.get_grid_density(grid)
+        clay_density = agent.get_grid_density(clay_grid)
         dense_mod = clay_density + 0.2
-        clay_density_filled = agent.get_grid_density(grid, nonzero=True)
+        clay_density_filled = agent.get_grid_density(clay_grid, nonzero=True)
         
         # set chances based on clay density
         if 1 / 26 <= clay_density_filled < 3 / 26:
@@ -335,8 +337,9 @@ class Algo8eRidge(AgentAlgorithm):
             erase_chance += high_density__erase_reward
         
         # set chances based on movement pattern __
-        movement_pattern_gain = agent.match_vertical_move_history_string(step_on_ridge_moves_pattern, step_on_ridge_reward)
-        if 1/26 <= clay_density_filled:
+        below = clay_grid.get_value_at_index(agent.pose + [0, 0, -1])
+        if below > 0 and 1/26 <= clay_density_filled:
+            movement_pattern_gain = agent.get_last_move_match_reward(step_on_ridge_moves_pattern, step_on_ridge_reward)
             build_chance += movement_pattern_gain
 
         # update probabilities
