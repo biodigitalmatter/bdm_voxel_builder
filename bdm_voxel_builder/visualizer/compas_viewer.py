@@ -3,7 +3,7 @@ from compas.geometry import Point, Pointcloud
 from compas_viewer import Viewer
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers import convert_array_to_pts, get_savepath
+from bdm_voxel_builder.helpers import convert_grid_array_to_pts, get_savepath
 from bdm_voxel_builder.visualizer.base import Visualizer
 
 
@@ -46,7 +46,7 @@ class CompasViewerVisualizer(Visualizer):
                 continue
             parent = self.scene.get_node_by_name(grid.name)
 
-            pts = convert_array_to_pts(grid.array, get_data=False)
+            pts = convert_grid_array_to_pts(grid.array)
 
             iteration = iteration_count or len(parent.children)
             name = f"{grid.name}_{iteration}"

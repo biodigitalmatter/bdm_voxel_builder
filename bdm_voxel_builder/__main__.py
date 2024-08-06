@@ -7,7 +7,7 @@ from bdm_voxel_builder import DATA_DIR
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.helpers import (
-    pointcloud_from_ndarray,
+    pointcloud_from_grid_array,
     save_ndarray,
     save_pointcloud,
 )
@@ -45,7 +45,7 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
 
         save_ndarray(a1, note=note)
 
-        pointcloud, values = pointcloud_from_ndarray(a1, return_values=True)
+        pointcloud, values = pointcloud_from_grid_array(a1, return_values=True)
         save_pointcloud(pointcloud, values=values, note=note)
 
         sim_state.grids[algo.grid_to_dump].save_vdb()

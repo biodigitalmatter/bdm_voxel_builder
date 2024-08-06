@@ -23,7 +23,7 @@ class TestRemap:
         x = 0.5
         output_domain = (5, 5)
         input_domain = (0, 1)
-        
+
         with pytest.raises(ValueError):
             remap(x, output_domain, input_domain)
 
@@ -32,5 +32,5 @@ class TestRemap:
         output_domain = (0, 10)
         input_domain = (0, 0)
 
-        with pytest.raises(ZeroDivisionError):
+        with pytest.raises(ValueError):
             remap(x, output_domain, input_domain)

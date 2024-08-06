@@ -1,4 +1,3 @@
-
 def remap_trim(
     x,
     output_domain,

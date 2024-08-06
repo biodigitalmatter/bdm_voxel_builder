@@ -347,7 +347,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
                     if print_density_below >= 0.33:
                         agent.build_chance = 1
                 elif self.overhang_limit <= 45 and print_density_below >= 0.5:
-                        agent.build_chance = 1
+                    agent.build_chance = 1
                 # elif self.overhang_limit <= 60:
                 #     if print_density_below >= 0.5 and print_density_below_2 >= 0.5:
                 #         self.build_chance = 1
@@ -357,9 +357,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         #     build chance: {agent.build_chance}.
         # """)
 
-
     def print_build_3x3(self, agent: Agent, state: Environment):
-
         """add index the print_dot list, and fill 3x3 voxel in the printed_clay grid"""
         built = False
         printed_clay = state.grids["printed_clay"]
@@ -388,7 +386,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         """add index the print_dot list, and fill either:
         - one_voxel
         - voxels in cross shape
-        - or voxels in 3x3 square 
+        - or voxels in 3x3 square
         of the printed_clay grid"""
         built = False
         printed_clay = state.grids["printed_clay"]

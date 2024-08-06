@@ -25,10 +25,10 @@ from .file import (
 )
 from .geometry import (
     box_from_corner_frame,
-    convert_array_to_pts,
+    convert_grid_array_to_pts,
     get_xform_box2grid,
     ply_to_compas,
-    pointcloud_from_ndarray,
+    pointcloud_from_grid_array,
     pointcloud_to_grid_array,
 )
 from .math import remap, remap_trim
