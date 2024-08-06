@@ -56,7 +56,7 @@ class Grid:
 
     @grid_size.setter
     def grid_size(self, value):
-        value = np.array(value, dtype=np.intp)
+        value = np.array(value, dtype=np.int8)
         if value.min() < 1:
             raise ValueError("grid_size must be nonzero and positive")
         if np.unique(value).size != 1:

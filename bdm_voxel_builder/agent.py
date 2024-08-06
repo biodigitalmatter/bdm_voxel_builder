@@ -18,8 +18,8 @@ class Agent:
 
     def __init__(
         self,
-        pose: npt.NDArray[np.int_] = None,
-        compass_array: dict[str, npt.NDArray[np.int_]] = NB_INDEX_DICT,
+        pose: npt.NDArray[np.int8] = None,
+        compass_array: dict[str, npt.NDArray[np.int8]] = NB_INDEX_DICT,
         ground_grid: Grid = None,
         space_grid: Grid = None,
         track_grid: Grid = None,
@@ -27,7 +27,7 @@ class Agent:
         save_move_history: bool = True,
     ):
         if pose is None:
-            self.pose = np.asarray([0, 0, 0], dtype=np.int_)
+            self.pose = np.asarray([0, 0, 0], dtype=np.int8)
         else:
             self.pose = np.asarray(pose)  # [i,j,k]
         self.compass_array = compass_array
