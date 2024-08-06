@@ -48,7 +48,7 @@ class Agent:
 
     @property
     def climb_style(self):
-        self._climb_style = self.analyze_move_history()
+        self._climb_style = self.get_move_pattern_string()
         return self._climb_style
 
     @climb_style.setter
@@ -113,6 +113,7 @@ class Agent:
 
         self.relative_booleans_bottom_up = [below, aside, above]
         return below, aside, above
+
 
     def direction_preference_6_pheromones(self, x=0.5, up=True):
         """up = 1
@@ -578,6 +579,10 @@ class Agent:
         # print('choice:', choice)
         new_pose = cube[choice]
         # print('new_pose:', new_pose)
+        
+        if self.save_move_history:
+            v = new_pose - self.pose
+            self.move_history.append(v)
 
         # update track grid
         if self.leave_trace:
@@ -797,31 +802,26 @@ class Agent:
                 return v * strength
         else:
             return 0
-
-    def get_chance_by_climb_style(
-        self, climb=0.5, top=2, walk=0.1, descend=-0.05, chance_weight=1
+    
+    def match_vertical_move_history_string(
+        self, last_moves_pattern = ['up', 'up', 'side'], value = 1
     ):
         "chance is returned based on the direction values and chance_weight"
-
-        last_moves = self.move_history[-3:]
-        if last_moves == ["up", "up", "up"]:
-            # climb_style = 'climb'
-            build_chance = climb
-        elif last_moves == ["up", "up", "side"]:
-            # climb_style = 'top'
-            build_chance = top
-        elif last_moves == ["side", "side", "side"]:
-            # climb_style = 'walk'
-            build_chance = walk
-        elif last_moves == ["down", "down", "down"]:
-            # climb_style = 'descend'
-            build_chance = descend
-        else:
-            build_chance = 0
-
-        build_chance *= chance_weight
-
-        return build_chance
+        n = len(last_moves_pattern)
+        for i in range(n):
+            x, y, z = self.move_history[-i]
+            pattern = last_moves_pattern[-i]
+            if pattern == 'up' and z > 0:
+                flag = True
+            elif pattern == 'side' and z == 0:
+                flag = True
+            elif pattern == 'down' and z < 0:
+                flag = True
+            else: flag = False
+        if flag:
+            return value
+        else: 
+            return 0
 
     #  BUILD/ERASE FUNCTIONS
 
