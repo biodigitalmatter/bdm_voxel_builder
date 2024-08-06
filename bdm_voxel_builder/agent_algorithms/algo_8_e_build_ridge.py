@@ -250,8 +250,12 @@ class Algo8eRidge(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube_up = agent.direction_preference_26_pheromones_v2(1, 0.5, 0.1)
-        directional_bias_cube_side = agent.direction_preference_26_pheromones_v2(0.1, 1, 0.5)
+        directional_bias_cube_up = agent.direction_preference_26_pheromones_v2(
+            1, 0.5, 0.1
+        )
+        directional_bias_cube_side = agent.direction_preference_26_pheromones_v2(
+            0.1, 1, 0.5
+        )
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
@@ -341,7 +345,7 @@ class Algo8eRidge(AgentAlgorithm):
             d_below = np.count_nonzero(v) / len(v)
             v = agent.get_nb_values_3x3_around_of_array(clay_grid.array)
             d_in_level = np.count_nonzero(v) / len(v)
-            if d_below > 5/9 and d_in_level <= 1/8:
+            if d_below > 5 / 9 and d_in_level <= 1 / 8:
                 build_chance += gain_reward_if_on_top_floor
 
 

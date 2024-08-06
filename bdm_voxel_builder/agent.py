@@ -124,7 +124,6 @@ class Agent:
         self.relative_booleans_bottom_up = [below, aside, above]
         return below, aside, above
 
-
     def direction_preference_6_pheromones(self, x=0.5, up=True):
         """up = 1
         side = x
@@ -589,7 +588,7 @@ class Agent:
         # print('choice:', choice)
         new_pose = cube[choice]
         # print('new_pose:', new_pose)
-        
+
         if self.save_move_history:
             v = new_pose - self.pose
             self.move_history.append(v)
@@ -817,40 +816,26 @@ class Agent:
         else:
             return 0
     
-    def get_last_move_match_reward(
-            self, last_moves_pattern = ['up', 'up', 'side'], value = 1.0
-    ):
-        if self.match_vertical_move_history(last_moves_pattern):
-            return value
-        else: 
-            return 0
-
-    def match_vertical_move_history(
+    def match_vertical_move_history_string(
         self, last_moves_pattern = ['up', 'up', 'side']
     ):
-        """checks if last steps match the given pattern
-        pattern: list: 'up' | 'side' | 'down'
-        chronological order"""
+        "chance is returned based on the direction values and chance_weight"
         n = len(last_moves_pattern)
-        if len(self.move_history) < n:
-            return False
-        else:
-            flag = 0
-            for i in range(n):
-                x, y, z = self.move_history[-i - 1]
-                pattern = last_moves_pattern[-i - 1]
-                # print(f'pattern: {pattern}, move: {x, y, z}')
-                if pattern == 'up' and z > 0:
-                    flag += 1
-                elif pattern == 'side' and z == 0:
-                    flag += 1
-                elif pattern == 'down' and z < 0:
-                    flag += 1
-                else: flag = 0
-            if flag == n:
-                return True
+        for i in range(n):
+            x, y, z = self.move_history[-i - 1]
+            pattern = last_moves_pattern[-i - 1]
+            if (
+                pattern == 'up' 
+                and z > 0 
+                or pattern == 'side' 
+                and z == 0 
+                or pattern == 'down' 
+                and z < 0
+            ):
+                flag = True
             else:
-                return False
+                flag = False
+        return flag
 
     #  BUILD/ERASE FUNCTIONS
 

@@ -8,6 +8,9 @@ from bdm_voxel_builder import get
 from bdm_voxel_builder.helpers.geometry import (
     box_from_corner_frame,
     convert_grid_array_to_pts,
+    get_rotation_box2grid,
+    get_scaling_box2grid,
+    get_translation_box2grid,
     get_xform_box2grid,
     ply_to_array,
     ply_to_compas,
@@ -280,3 +283,68 @@ class TestPointcloudFromGridArray:
         assert isinstance(pointcloud, cg.Pointcloud)
         assert len(pointcloud.points) == 13
         assert values == expected_values
+
+
+class TestGetTranslationBox2Grid:
+    def test_noop(self):
+        grid_size = (5, 5, 5)
+
+        box = box_from_corner_frame(cg.Frame.worldXY(), 1, 2, 3)
+
+        expected_Tr = cg.Translation()
+
+        Tr = get_translation_box2grid(box, grid_size)
+
+        assert Tr == expected_Tr
+
+    def test_non_origo(self):
+        grid_size = (5, 5, 5)
+        frame = cg.Frame([1, 2, 3])
+        box = box_from_corner_frame(frame, 4, 5, 6)
+
+        Tr = get_translation_box2grid(box, grid_size)
+
+        assert Tr.translation_vector == cg.Vector(*frame.point).inverted()
+
+
+class TestGetRotationBox2Grid:
+    def test_worldxy(self):
+        box = cg.Box(xsize=1.0, ysize=2.0, zsize=3.0, frame=cg.Frame.worldXY())
+        expected_rotation = cg.Rotation()
+
+        rotation = get_rotation_box2grid(box)
+
+        assert rotation == expected_rotation
+
+    def test_custom(self):
+        frame = cg.Frame(
+            point=cg.Point(1.0, 2.0, 3.0),
+            xaxis=cg.Vector(1.0, 0.0, 0.0),
+            yaxis=cg.Vector(0.0, 1.0, 0.0),
+        )
+        box = cg.Box(xsize=2.0, ysize=3.0, zsize=4.0, frame=frame)
+        expected_rotation = cg.Rotation.from_frame_to_frame(frame, cg.Frame.worldXY())
+
+        rotation = get_rotation_box2grid(box)
+
+        assert rotation == expected_rotation
+
+
+class TestGetScalingBox2Grid:
+    def test_1(self):
+        box = box_from_corner_frame(cg.Frame.worldXY(), 1, 2, 3)
+        grid_size = (5, 5, 5)
+        expected_scaling = cg.Scale.from_factors([4.0 / 3.0] * 3)
+
+        scaling = get_scaling_box2grid(box, grid_size)
+
+        assert scaling == expected_scaling
+
+    def test_2(self):
+        box = cg.Box(xsize=2.0, ysize=3.0, zsize=4.0, frame=cg.Frame.worldXY())
+        grid_size = (10, 10, 10)
+        expected_scaling = cg.Scale.from_factors([9.0 / 4.0] * 3)
+
+        scaling = get_scaling_box2grid(box, grid_size)
+
+        assert scaling == expected_scaling

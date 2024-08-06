@@ -61,7 +61,6 @@ def _get_xform_box2grid(
     return Sc, R, Tl
 
 
-
 def get_translation_box2grid(
     box: cg.Box, grid_size: tuple[int, int, int]
 ) -> cg.Translation:
