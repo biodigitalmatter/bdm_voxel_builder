@@ -95,7 +95,8 @@ def pointcloud_to_grid_array(
 
     grid_array = np.zeros(grid_size)
 
-    pts = np.array(pointcloud).floor().astype(dtype=dtype)
+    pts = np.floor(np.array(pointcloud).astype(dtype=np.float64))
+    pts = np.array(pts, dtype=dtype)
 
     if pts.min() < 0:
         raise ValueError(
@@ -103,7 +104,7 @@ def pointcloud_to_grid_array(
         )  # noqa: E501
 
     for i, j, k in pts:
-        if (i, j, k) > grid_size:
+        if [i, j, k] > grid_size:
             raise ValueError(
                 "Pointcloud contains values that are larger than grid size."
             )
