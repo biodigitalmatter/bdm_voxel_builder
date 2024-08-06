@@ -816,7 +816,7 @@ class Agent:
         else:
             return 0
     
-    def match_vertical_move_history_string(
+    def match_vertical_move_history(
         self, last_moves_pattern = ['up', 'up', 'side']
     ):
         "chance is returned based on the direction values and chance_weight"
