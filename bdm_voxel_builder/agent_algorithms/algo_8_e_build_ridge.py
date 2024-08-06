@@ -244,8 +244,12 @@ class Algo8eRidge(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube_up = agent.direction_preference_26_pheromones_v2(1, 0.5, 0.1)
-        directional_bias_cube_side = agent.direction_preference_26_pheromones_v2(0.1, 1, 0.5)
+        directional_bias_cube_up = agent.direction_preference_26_pheromones_v2(
+            1, 0.5, 0.1
+        )
+        directional_bias_cube_side = agent.direction_preference_26_pheromones_v2(
+            0.1, 1, 0.5
+        )
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
@@ -302,27 +306,25 @@ class Algo8eRidge(AgentAlgorithm):
         ##########################################################################
         # build probability settings #############################################
         ##########################################################################
-        low_density__build_reward = 0 #0.1
+        low_density__build_reward = 0  # 0.1
         low_density__erase_reward = 0
 
-        normal_density__build_reward = 0 #0.3
+        normal_density__build_reward = 0  # 0.3
         normal_density__erase_reward = 0
 
         high_density__build_reward = 0
         high_density__erase_reward = 1.5
 
         step_on_ridge_reward = 1.5
-        step_on_ridge_moves_pattern = ['side', 'up', 'up']
+        step_on_ridge_moves_pattern = ["side", "up", "up"]
 
         ##########################################################################
-
-
 
         # get clay density
         clay_density = agent.get_grid_density(grid)
         dense_mod = clay_density + 0.2
         clay_density_filled = agent.get_grid_density(grid, nonzero=True)
-        
+
         # set chances based on clay density
         if 1 / 26 <= clay_density_filled < 3 / 26:
             build_chance += low_density__build_reward * dense_mod
@@ -333,10 +335,12 @@ class Algo8eRidge(AgentAlgorithm):
         elif clay_density_filled >= 4 / 5:
             build_chance += high_density__build_reward * dense_mod
             erase_chance += high_density__erase_reward
-        
+
         # set chances based on movement pattern __
-        movement_pattern_gain = agent.match_vertical_move_history_string(step_on_ridge_moves_pattern, step_on_ridge_reward)
-        if 1/26 <= clay_density_filled:
+        movement_pattern_gain = agent.match_vertical_move_history_string(
+            step_on_ridge_moves_pattern, step_on_ridge_reward
+        )
+        if clay_density_filled >= 1 / 26:
             build_chance += movement_pattern_gain
 
         # update probabilities

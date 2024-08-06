@@ -114,7 +114,6 @@ class Agent:
         self.relative_booleans_bottom_up = [below, aside, above]
         return below, aside, above
 
-
     def direction_preference_6_pheromones(self, x=0.5, up=True):
         """up = 1
         side = x
@@ -579,7 +578,7 @@ class Agent:
         # print('choice:', choice)
         new_pose = cube[choice]
         # print('new_pose:', new_pose)
-        
+
         if self.save_move_history:
             v = new_pose - self.pose
             self.move_history.append(v)
@@ -802,25 +801,29 @@ class Agent:
                 return v * strength
         else:
             return 0
-    
+
     def match_vertical_move_history_string(
-        self, last_moves_pattern = ['up', 'up', 'side'], value = 1
+        self, last_moves_pattern=("up", "up", "side"), value=1
     ):
         "chance is returned based on the direction values and chance_weight"
         n = len(last_moves_pattern)
         for i in range(n):
             x, y, z = self.move_history[-i]
             pattern = last_moves_pattern[-i]
-            if pattern == 'up' and z > 0:
+            if (
+                pattern == "up"
+                and z > 0
+                or pattern == "side"
+                and z == 0
+                or pattern == "down"
+                and z < 0
+            ):
                 flag = True
-            elif pattern == 'side' and z == 0:
-                flag = True
-            elif pattern == 'down' and z < 0:
-                flag = True
-            else: flag = False
+            else:
+                flag = False
         if flag:
             return value
-        else: 
+        else:
             return 0
 
     #  BUILD/ERASE FUNCTIONS
