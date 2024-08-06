@@ -821,7 +821,7 @@ class Agent:
     ):
         "chance is returned based on the direction values and chance_weight"
         n = len(last_moves_pattern)
-        if n < (len(self.move_history)):
+        if len(self.move_history) < n:
             return False
         else:
             for i in range(n):

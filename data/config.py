@@ -33,11 +33,11 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 
 # setup 2 test
-grid_size = 50
-iterations = 1000
-agent_count = 50
-interval = 100
-name = f"test_8_e_build_overhang_i{iterations}a{agent_count}"
+grid_size = 40
+iterations = 500
+agent_count = 10
+interval = 50
+name = f"test_8_e_build_ridge_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,

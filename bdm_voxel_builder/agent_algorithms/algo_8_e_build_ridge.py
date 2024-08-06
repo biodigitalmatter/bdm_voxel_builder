@@ -62,20 +62,27 @@ class Algo8eRidge(AgentAlgorithm):
     # box_template = [15, 35, 15, 35, 1, 5]
     box_template = [20, 30, 25, 30, 1, 5]
 
-    wall = [0, 10, 0, 25, 0, 1]
     ground_level_Z = 0
 
     reach_to_build: int = 1
     reach_to_erase: int = 1
     agent_age_limit: float = 100
 
-    decay_clay_bool: bool = False
+    decay_clay_bool: bool = True
     ####################################################
-    
     stacked_chances: bool = True
     reset_after_build: bool = True
     reset_after_erased: bool = False
 
+    build_overhang = False
+    
+    if not build_overhang:
+        move_pattern = ['up', 'side']
+        decay_clay_bool: bool = False
+    else:
+        move_pattern = ['up', 'up', 'up,']
+        decay_clay_bool: bool = True
+    
     # Agent deployment
     deployment_zone_xxyy = [10, 40, 8, 12]
 
@@ -150,7 +157,6 @@ class Algo8eRidge(AgentAlgorithm):
         )
 
         if self.add_box:
-            ground.add_values_in_zone_xxyyzz(self.wall, 1)
             clay_grid.add_values_in_zone_xxyyzz(self.box_template, 1)
 
         # WRAP ENVIRONMENT
@@ -309,8 +315,7 @@ class Algo8eRidge(AgentAlgorithm):
         # build probability settings #############################################
         ##########################################################################
         step_on_ridge_reward = 1.25
-        step_on_ridge_moves_pattern = ['up', 'side']
-        build_overhang = False
+        step_on_ridge_moves_pattern = self.move_pattern
 
         gain_reward_if_on_top_floor = 0.25
         lost_track_die_chance_gain = 0.2
@@ -322,31 +327,31 @@ class Algo8eRidge(AgentAlgorithm):
 
         # set chances based on movement pattern
         below = clay_grid.get_value_at_index(agent.pose + [0, 0, -1])
-        if build_overhang == False and below == 0:
+        if self.build_overhang == False and below == 0:
                 pass
         else:
             clay_density_filled = agent.get_grid_density(clay_grid, nonzero=True)
             if 1/26 <= clay_density_filled:
-                if build_overhang == False and below == 0:
+                if self.build_overhang == False and below == 0:
                     pass
                 else:
                     # print(f'below:{below}')
                     if agent.match_vertical_move_history(step_on_ridge_moves_pattern):
                         build_chance += step_on_ridge_reward
-                    # else:
-                    #     if agent.match_vertical_move_history(['side', "side"]):
-                    #          agent.die_chance += lost_track_die_chance_gain
-                    #     elif agent.match_vertical_move_history(['side', "down"]):
-                    #         agent.die_chance += lost_track_die_chance_gain
+                    else:
+                        if agent.match_vertical_move_history(['side', "side"]):
+                             agent.die_chance += lost_track_die_chance_gain
+                        elif agent.match_vertical_move_history(['side', "down"]):
+                            agent.die_chance += lost_track_die_chance_gain
 
 
-            # set chance if it walks on topfloor
-            v = agent.get_nb_values_3x3_below_of_array(clay_grid.array)
-            d_below = np.count_nonzero(v) / len(v)
-            v = agent.get_nb_values_3x3_around_of_array(clay_grid.array)
-            d_in_level = np.count_nonzero(v) / len(v)
-            if d_below > 5 / 9 and d_in_level <= 1 / 8:
-                build_chance += gain_reward_if_on_top_floor
+            # # set chance if it walks on topfloor
+            # v = agent.get_nb_values_3x3_below_of_array(clay_grid.array)
+            # d_below = np.count_nonzero(v) / len(v)
+            # v = agent.get_nb_values_3x3_around_of_array(clay_grid.array)
+            # d_in_level = np.count_nonzero(v) / len(v)
+            # if d_below > 5 / 9 and d_in_level <= 1 / 8:
+            #     build_chance += gain_reward_if_on_top_floor
 
 
         # update probabilities
