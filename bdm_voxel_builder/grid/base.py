@@ -11,12 +11,14 @@ from compas.colors import Color
 
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers import (
-    convert_array_to_pts,
+    convert_grid_array_to_pts,
     get_savepath,
-    get_xform_box2grid,
     pointcloud_to_grid_array,
     xform_to_compas,
     xform_to_vdb,
+)
+from bdm_voxel_builder.helpers.geometry import (
+    _get_xform_box2grid,
 )
 
 
@@ -125,7 +127,7 @@ class Grid:
         return len(self.array[self.get_active_voxels()])
 
     def get_index_pts(self) -> list[list[float]]:
-        return convert_array_to_pts(self.array, get_data=False)
+        return convert_grid_array_to_pts(self.array)
 
     def get_index_pointcloud(self):
         return cg.Pointcloud(self.get_index_pts())
@@ -198,13 +200,18 @@ class Grid:
         if not grid_size:
             grid_size = max(pointcloud.aabb.dimensions) // voxel_edge_length + 1
 
-        T = get_xform_box2grid(pointcloud.aabb, grid_size=grid_size)
+        # TODO: Replace with multiplied version
+        Sc, R, Tl = _get_xform_box2grid(pointcloud.aabb, grid_size=grid_size)
 
-        pointcloud_transformed_for_grid = pointcloud.transformed(T) 
+        pointcloud_transformed = pointcloud.copy()
 
-        array = pointcloud_to_grid_array(pointcloud_transformed_for_grid, grid_size)
+        pointcloud_transformed.transform(Tl)
+        pointcloud_transformed.transform(R)
+        pointcloud_transformed.transform(Sc)
 
-        return cls(grid_size=grid_size, name=name, xform=T, array=array)
+        array = pointcloud_to_grid_array(pointcloud_transformed, grid_size)
+
+        return cls(grid_size=grid_size, name=name, xform=Tl * R * Sc, array=array)
 
     @classmethod
     def from_ply(

@@ -25,11 +25,11 @@ def get_savepath(dir: Path, suffix: str, note: str = None):
     return Path(dir) / filename
 
 
-def get_nth_newest_file_in_folder(folder_path: os.PathLike, n = 0):
+def get_nth_newest_file_in_folder(folder_path: os.PathLike, n=0):
     folder_path = Path(folder_path)
 
     # Get a list of files in the folder
-    files = list(folder_path.glob('*'))
+    files = list(folder_path.glob("*"))
 
     # Sort the files by change time (modification time) in descending order
     files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
@@ -43,7 +43,6 @@ def save_pointcloud(
     dict_ = {"pointcloud": pointcloud, "values": values}
 
     json_dump(dict_, get_savepath(TEMP_DIR, ".json", note=note))
-
 
 
 def save_ndarray(arr: npt.NDArray, note: str = None):
