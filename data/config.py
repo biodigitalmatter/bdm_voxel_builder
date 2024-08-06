@@ -37,7 +37,7 @@ grid_size = 50
 iterations = 1000
 agent_count = 50
 interval = 100
-name = f"test_8_e_build_ridge_i{iterations}a{agent_count}"
+name = f"test_8_e_build_overhang_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,

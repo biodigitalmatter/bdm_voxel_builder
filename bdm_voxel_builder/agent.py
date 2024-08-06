@@ -821,21 +821,24 @@ class Agent:
     ):
         "chance is returned based on the direction values and chance_weight"
         n = len(last_moves_pattern)
-        for i in range(n):
-            x, y, z = self.move_history[-i - 1]
-            pattern = last_moves_pattern[-i - 1]
-            if (
-                pattern == 'up' 
-                and z > 0 
-                or pattern == 'side' 
-                and z == 0 
-                or pattern == 'down' 
-                and z < 0
-            ):
-                flag = True
-            else:
-                flag = False
-        return flag
+        if n < (len(self.move_history)):
+            return False
+        else:
+            for i in range(n):
+                x, y, z = self.move_history[-i - 1]
+                pattern = last_moves_pattern[-i - 1]
+                if (
+                    pattern == 'up' 
+                    and z > 0 
+                    or pattern == 'side' 
+                    and z == 0 
+                    or pattern == 'down' 
+                    and z < 0
+                ):
+                    flag = True
+                else:
+                    flag = False
+            return flag
 
     #  BUILD/ERASE FUNCTIONS
 

@@ -11,7 +11,7 @@ from bdm_voxel_builder.grid import DiffusiveGrid
 
 
 @dataclass
-class Algo8eRidge(AgentAlgorithm):
+class Algo8f(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo_8_d_build_fresh:
 
@@ -59,8 +59,8 @@ class Algo8eRidge(AgentAlgorithm):
 
     # EXISTING GEOMETRY
     add_box = True
-    # box_template = [15, 35, 15, 35, 1, 5]
-    box_template = [20, 30, 25, 30, 1, 5]
+    box_template = [15, 35, 15, 35, 1, 5]
+    # box_template = [20, 30, 25, 30, 1, 5]
 
     wall = [0, 10, 0, 25, 0, 1]
     ground_level_Z = 0
@@ -75,7 +75,7 @@ class Algo8eRidge(AgentAlgorithm):
     stacked_chances: bool = True
     reset_after_build: bool = True
     reset_after_erased: bool = False
-    build_overhang = False
+
 
     # Agent deployment
     deployment_zone_xxyy = [10, 40, 8, 12]
@@ -267,14 +267,14 @@ class Algo8eRidge(AgentAlgorithm):
             move_pheromon_cube *= 10000
             directional_bias_cube_side *= 1
             direction_cube = move_pheromon_cube + directional_bias_cube_side
-            random_mod = 3
+            random_mod = 2
 
         elif clay_density_filled >= 0.1:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube *= 0.01
             directional_bias_cube_up *= 1
             direction_cube = move_pheromon_cube + directional_bias_cube_up
-            random_mod = 4
+            random_mod = 2
 
         ############################################################################
 
@@ -311,6 +311,7 @@ class Algo8eRidge(AgentAlgorithm):
         ##########################################################################
         step_on_ridge_reward = 1.25
         step_on_ridge_moves_pattern = ['up', 'side']
+        build_overhang = False
 
         gain_reward_if_on_top_floor = 0.25
         lost_track_die_chance_gain = 0.2
@@ -322,22 +323,22 @@ class Algo8eRidge(AgentAlgorithm):
 
         # set chances based on movement pattern
         below = clay_grid.get_value_at_index(agent.pose + [0, 0, -1])
-        if self.build_overhang == False and below == 0:
+        if build_overhang == False and below == 0:
                 pass
         else:
             clay_density_filled = agent.get_grid_density(clay_grid, nonzero=True)
             if 1/26 <= clay_density_filled:
-                if self.build_overhang == False and below == 0:
+                if build_overhang == False and below == 0:
                     pass
                 else:
                     # print(f'below:{below}')
                     if agent.match_vertical_move_history(step_on_ridge_moves_pattern):
                         build_chance += step_on_ridge_reward
-                    else:
-                        if agent.match_vertical_move_history(['side', "side"]):
-                             agent.die_chance += lost_track_die_chance_gain
-                        elif agent.match_vertical_move_history(['side', "down"]):
-                            agent.die_chance += lost_track_die_chance_gain
+                    # else:
+                    #     if agent.match_vertical_move_history(['side', "side"]):
+                    #          agent.die_chance += lost_track_die_chance_gain
+                    #     elif agent.match_vertical_move_history(['side', "down"]):
+                    #         agent.die_chance += lost_track_die_chance_gain
 
 
             # set chance if it walks on topfloor
