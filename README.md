@@ -31,3 +31,9 @@ inv check
 ```bash
 inv format
 ```
+
+## Run pathplanning
+
+```bash
+inv start_ppl
+```
