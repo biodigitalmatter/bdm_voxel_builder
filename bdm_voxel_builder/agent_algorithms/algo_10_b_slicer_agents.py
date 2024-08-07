@@ -316,7 +316,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             )
             directional_bias_cube *= 1
             random_cube *= 0.1
-            move_pheromon_cube_build *= 3
+            move_pheromon_cube_build *= 2
             move_pheromon_cube *= 0.1
             design_value_nbs *= 0.8
             direction_cube = directional_bias_cube + random_cube + move_pheromon_cube_build + design_value_nbs
