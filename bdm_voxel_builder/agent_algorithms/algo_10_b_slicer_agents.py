@@ -64,7 +64,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     print_cross_shape = False
     print_3x3 = False
 
-    track_length = 15
+    track_length = 20
     track_flag = None
 
 
@@ -75,7 +75,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     add_complex_design = True
     box_add_1 = [10, 25, 10, 25, 1, 5]
     # box_template_2 = [20, 35, 6, 10, 4, 8]
-    box_subtract_1 = [15,20, 15, 18, 0, 8]
+    box_subtract_1 = [15,20, 15, 18, 7, 8]
     # ground_stair_1 = [0, 50, 20, 50, 0, 2]
     # ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
@@ -92,7 +92,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
     # Agent deployment
     deployment_zone__a = 10
-    deployment_zone__b = 5
+    deployment_zone__b = 15
 
     check_collision = True
     keep_in_bounds = True
@@ -147,6 +147,15 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             decay_ratio=1 / 10000000000,
             gradient_resolution=0,
         )
+        pheromon_build_flags = DiffusiveGrid(
+            name="pheromon_move",
+            grid_size=self.grid_size,
+            color=Color.from_rgb255(232, 226, 211),
+            flip_colors=True,
+            diffusion_ratio=1 / 7,
+            decay_ratio=1 / 10000000000,
+            gradient_resolution=0,
+        )
         design = DiffusiveGrid(
             name="design",
             grid_size=self.grid_size,
@@ -192,6 +201,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             "agent": agent_space,
             "ground": ground,
             "pheromon_move": pheromon_move,
+            "pheromon_build_flags": pheromon_build_flags,
             "design": design,
             "track": track_grid,
             "print_dots": print_dots,
@@ -256,6 +266,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
+        agent.track_flag = None
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -268,7 +279,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         ground = state.grids["ground"]
         design = state.grids["design"]
         printed_clay = state.grids["printed_clay"]
-
+        pheromon_build_flags = state.grids['pheromon_build_flags']
         # check solid volume inclusion
         gv = agent.get_grid_value_at_pose(
             ground,
@@ -279,7 +290,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         clay_density_filled = agent.get_grid_density(design, nonzero=True)
         # move by pheromon_grid_move
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
-            pheromon_grid_move, 1
+        pheromon_grid_move, 1
         )
         directional_bias_cube = agent.direction_preference_26_pheromones_v2(
             0.000, 0.5, 0.4
@@ -300,11 +311,15 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
         elif clay_density_filled >= 0.1:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
+            move_pheromon_cube_build = agent.get_direction_cube_values_for_grid(
+                pheromon_build_flags, 1
+            )
             directional_bias_cube *= 1
             random_cube *= 0.1
-            move_pheromon_cube *= 1
-            design_value_nbs *= 1
-            direction_cube = directional_bias_cube + random_cube + move_pheromon_cube + design_value_nbs
+            move_pheromon_cube_build *= 3
+            move_pheromon_cube *= 0.1
+            design_value_nbs *= 0.8
+            direction_cube = directional_bias_cube + random_cube + move_pheromon_cube_build + design_value_nbs
             random_mod = 1
 
         ############################################################################
@@ -330,27 +345,17 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             print(f"not in bounds at{agent.pose}")
 
         return moved
-    
-    def update_track_flag(self, agent: Agent, state: Environment):
-        design = state.grids['design']
-        pheromon_move = state.grids['pheromon_move']
-        
-        v_in_design = agent.get_array_value_at_index(design.array, agent.pose)
-        if v_in_design == 0:
-            agent.move_history = []
-            agent.track_flag = None
-        else:
-            agent.track_flag = agent.move_history[0]
-            print(f'pheromon updated, flag: {agent.track_flag}')
-            x,y,z = agent.track_flag
-            for i in range(2):
-                # emission_intake
-                pheromon_move.array[x,y,z] = 2
-                pheromon_move.diffuse()
-                pheromon_move.decay()
-    
 
-    
+    def update_env__track_flag_emmision(self, agent: Agent, state: Environment, repeat = 2):
+        pheromon_build_flags = state.grids['pheromon_build_flags']
+        x,y,z = agent.track_flag
+        print(f'pheromon updated, flag: {agent.track_flag}')
+
+        for i in range(repeat):
+            # emission_intake
+            pheromon_build_flags.array[x,y,z] = 2
+            pheromon_build_flags.diffuse()
+            pheromon_build_flags.decay()
     
     def check_print_chance_one_voxel(self, agent: Agent, state: Environment):
         design = state.grids["design"]
@@ -481,23 +486,22 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         # MOVE
         moved = self.move_agent(agent, state)
 
-        # reset agent move history if in 
-        self.update_track_flag(agent, state)
-
         # BUILD
         if moved:
             # check print chance
             if self.print_cross_shape:
-                self.check_print_chance(agent, state)
+                self.check_print_chance_cross(agent, state)
             elif self.print_one_voxel:
                 self.check_print_chance_one_voxel(agent, state)
 
             # print
             built = self.print_build(agent, state)
-
-            # print(f'built: {built}')
-            if not built:
-                self.update_track_flag(agent, state)
+            if built and not isinstance(agent.track_flag, np.ndarray):
+                agent.track_flag = agent.pose
+                print(f"new flag:{agent.pose}")
+                
+        if isinstance(agent.track_flag, np.ndarray):
+            self.update_env__track_flag_emmision(agent, state)
 
         # RESET IF STUCK
         if not moved:
