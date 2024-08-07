@@ -55,7 +55,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     name: str = "algo_10_slicer"
     relevant_data_grids: str = "printed_dots"
 
-    seed_iterations: int = 100
+    seed_iterations: int = 50
 
     # PRINT SETTINGS
     overhang_limit = 45
@@ -64,8 +64,12 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     print_cross_shape = False
     print_3x3 = False
 
-    track_length = 25
+    track_length = 15
     track_flag = None
+
+
+
+
     # IMPORTED GEOMETRY ----- PLACEHOLDER
     add_simple_design = False
     add_complex_design = True
@@ -87,7 +91,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 0
+    deployment_zone__a = 10
     deployment_zone__b = 5
 
     check_collision = True
@@ -197,7 +201,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
     def update_environment(self, state: Environment):
         grids = state.grids
-        emission_array_for_move_ph = grids["design"].array * 0.0001 + grids["printed_clay"].array
+        emission_array_for_move_ph = grids["design"].array * 0.0001 + grids["printed_clay"].array * 0.33
         diffuse_diffusive_grid(
             grids["pheromon_move"],
             emmission_array=emission_array_for_move_ph,
@@ -278,9 +282,12 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             pheromon_grid_move, 1
         )
         directional_bias_cube = agent.direction_preference_26_pheromones_v2(
-            0.0001, 0.5, 0.7
+            0.000, 0.5, 0.4
         )
-        random_cube = np.random.random(26)
+        random_cube = np.random.random(26) + 0.5
+        random_cube[:9] = 0
+
+        design_value_nbs = agent.get_grid_nb_values_26(design, agent.pose)
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
@@ -293,10 +300,11 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
         elif clay_density_filled >= 0.1:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
-            directional_bias_cube *= 10
-            random_cube *= 0
+            directional_bias_cube *= 1
+            random_cube *= 0.1
             move_pheromon_cube *= 1
-            direction_cube = directional_bias_cube + random_cube + move_pheromon_cube
+            design_value_nbs *= 1
+            direction_cube = directional_bias_cube + random_cube + move_pheromon_cube + design_value_nbs
             random_mod = 1
 
         ############################################################################
@@ -331,12 +339,16 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         if v_in_design == 0:
             agent.move_history = []
             agent.track_flag = None
-        elif v_in_design > 0 and isinstance(agent.track_flag, np.ndarray):
-                agent.track_flag = agent.move_history[0]
-                pheromon_move.emission_intake(agent.track_flag, 2, False)
-                for i in range(2):
-                    pheromon_move.diffuse()
-        
+        else:
+            agent.track_flag = agent.move_history[0]
+            print(f'pheromon updated, flag: {agent.track_flag}')
+            x,y,z = agent.track_flag
+            for i in range(2):
+                # emission_intake
+                pheromon_move.array[x,y,z] = 2
+                pheromon_move.diffuse()
+                pheromon_move.decay()
+    
 
     
     
@@ -484,8 +496,8 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             built = self.print_build(agent, state)
 
             # print(f'built: {built}')
-            if (built is True) and self.reset_after_build:
-                self.reset_agent(agent)
+            if not built:
+                self.update_track_flag(agent, state)
 
         # RESET IF STUCK
         if not moved:
