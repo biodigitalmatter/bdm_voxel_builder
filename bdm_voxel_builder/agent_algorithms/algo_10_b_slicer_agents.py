@@ -293,7 +293,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         pheromon_grid_move, 1
         )
         directional_bias_cube = agent.direction_preference_26_pheromones_v2(
-            0.000, 0.5, 0.4
+            0.000, 0.5, 0.52
         )
         random_cube = np.random.random(26) + 0.5
         random_cube[:9] = 0
