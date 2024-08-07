@@ -24,6 +24,7 @@ def test(c, verbose=False):
 def install(c):
     c.run("pip install -e .")
 
+
 @task
 def start_ppl(c):
     image = "ghcr.io/biodigitalmatter/ros:main"

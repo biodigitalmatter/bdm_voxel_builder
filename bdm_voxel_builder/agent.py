@@ -50,7 +50,7 @@ class Agent:
     @property
     def pose(self):
         return np.asarray(self._pose, dtype=np.int8)
-    
+
     @pose.setter
     def pose(self, v):
         if not isinstance(v, (list, np.ndarray)):
@@ -815,10 +815,8 @@ class Agent:
                 return v * strength
         else:
             return 0
-    
-    def match_vertical_move_history(
-        self, last_moves_pattern = ['up', 'up', 'side']
-    ):
+
+    def match_vertical_move_history(self, last_moves_pattern=["up", "up", "side"]):
         "chance is returned based on the direction values and chance_weight"
         n = len(last_moves_pattern)
         if len(self.move_history) < n:
@@ -828,11 +826,11 @@ class Agent:
                 x, y, z = self.move_history[-i - 1]
                 pattern = last_moves_pattern[-i - 1]
                 if (
-                    pattern == 'up' 
-                    and z > 0 
-                    or pattern == 'side' 
-                    and z == 0 
-                    or pattern == 'down' 
+                    pattern == "up"
+                    and z > 0
+                    or pattern == "side"
+                    and z == 0
+                    or pattern == "down"
                     and z < 0
                 ):
                     flag = True

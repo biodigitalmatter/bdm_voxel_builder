@@ -75,14 +75,14 @@ class Algo8eRidge(AgentAlgorithm):
     reset_after_erased: bool = False
 
     build_overhang = False
-    
+
     if not build_overhang:
-        move_pattern = ['up', 'side']
+        move_pattern = ["up", "side"]
         decay_clay_bool: bool = False
     else:
-        move_pattern = ['up', 'up', 'up,']
+        move_pattern = ["up", "up", "up,"]
         decay_clay_bool: bool = True
-    
+
     # Agent deployment
     deployment_zone_xxyy = [10, 40, 8, 12]
 
@@ -205,10 +205,9 @@ class Algo8eRidge(AgentAlgorithm):
             self.reset_agent(agent)
             agents.append(agent)
         return agents
-    
+
     def reset_agent(self, agent: Agent):
         self._reset_agent_on_Z_plane(agent)
-
 
     def _reset_agent_on_Z_plane(self, agent: Agent):
         # TODO: make work with non square grids
@@ -328,10 +327,10 @@ class Algo8eRidge(AgentAlgorithm):
         # set chances based on movement pattern
         below = clay_grid.get_value_at_index(agent.pose + [0, 0, -1])
         if self.build_overhang == False and below == 0:
-                pass
+            pass
         else:
             clay_density_filled = agent.get_grid_density(clay_grid, nonzero=True)
-            if 1/26 <= clay_density_filled:
+            if clay_density_filled >= 1 / 26:
                 if self.build_overhang == False and below == 0:
                     pass
                 else:
@@ -339,11 +338,10 @@ class Algo8eRidge(AgentAlgorithm):
                     if agent.match_vertical_move_history(step_on_ridge_moves_pattern):
                         build_chance += step_on_ridge_reward
                     else:
-                        if agent.match_vertical_move_history(['side', "side"]):
-                             agent.die_chance += lost_track_die_chance_gain
-                        elif agent.match_vertical_move_history(['side', "down"]):
+                        if agent.match_vertical_move_history(
+                            ["side", "side"]
+                        ) or agent.match_vertical_move_history(["side", "down"]):
                             agent.die_chance += lost_track_die_chance_gain
-
 
             # # set chance if it walks on topfloor
             # v = agent.get_nb_values_3x3_below_of_array(clay_grid.array)
@@ -353,11 +351,9 @@ class Algo8eRidge(AgentAlgorithm):
             # if d_below > 5 / 9 and d_in_level <= 1 / 8:
             #     build_chance += gain_reward_if_on_top_floor
 
-
         # update probabilities
         agent.build_chance += build_chance
         agent.erase_chance += erase_chance
-
 
     def build_by_chance(self, agent: Agent, state: Environment):
         """agent builds on construction_grid, if pheromon value in cell hits limit
@@ -386,9 +382,7 @@ class Algo8eRidge(AgentAlgorithm):
 
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
-        """ BUILD .RESET MOVE .RESET"""
-
-
+        """BUILD .RESET MOVE .RESET"""
 
         # BUILD
         # if moved:
@@ -398,7 +392,7 @@ class Algo8eRidge(AgentAlgorithm):
         if (built is True or erased is True) and self.reset_after_build:
             self.reset_agent(agent)
             # print("reset in built")
-        
+
         if agent.die_chance >= self.agent_age_limit:
             self.reset_agent(agent)
         # MOVE
