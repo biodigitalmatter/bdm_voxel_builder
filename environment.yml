@@ -17,6 +17,7 @@ dependencies:
   - pypcd4
   - pytest
   - python>=3.11,<4
+  - requests
   - ruff
   - setuptools
   - pip
