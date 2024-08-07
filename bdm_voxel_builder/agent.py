@@ -39,6 +39,7 @@ class Agent:
         self.move_history = []
         self.save_move_history = save_move_history
         self.build_probability = 0
+        self.track_flag = None
         self._cube_array = []
         self._climb_style = ""
         self._build_chance = 0
