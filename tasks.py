@@ -26,7 +26,7 @@ def install(c):
 
 
 @task
-def start_ppl(c):
+def docker_ppl(c):
     image = "ghcr.io/biodigitalmatter/ros:main"
     port = 9090
     cmd = "roslaunch biodigitalmatter_ros planning.launch"

@@ -35,5 +35,5 @@ inv format
 ## Run pathplanning
 
 ```bash
-inv start_ppl
+inv docker-ppl
 ```
