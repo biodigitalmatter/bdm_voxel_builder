@@ -73,7 +73,9 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     # IMPORTED GEOMETRY ----- PLACEHOLDER
     add_simple_design = False
     add_complex_design = True
-    box_add_1 = [10, 25, 10, 25, 1, 5]
+    box_add_1 = [10, 25, 10, 25, 1, 4]
+    box_add_2 = [6, 15, 6, 15, 4, 8]
+
     # box_template_2 = [20, 35, 6, 10, 4, 8]
     box_subtract_1 = [15,20, 15, 18, 0, 8]
     # ground_stair_1 = [0, 50, 20, 50, 0, 2]
@@ -102,6 +104,9 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     print_dot_list = []
     print_dot_dict = {}
     print_dot_counter = 0
+    step_counter = 0
+    passive_counter = 0
+    passive_limit = 50
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -267,6 +272,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         agent.erase_chance = 0
         agent.move_history = []
         agent.track_flag = None
+        self.passive_counter = 0
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -304,12 +310,12 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         # CHANGE MOVE BEHAVIOUR ####################################################
         ############################################################################
 
-        if clay_density_filled < 0.1:
+        if clay_density_filled < 0.25:
             """far from the clay, agents are aiming to get there"""
             direction_cube = move_pheromon_cube
             random_mod = 2
 
-        elif clay_density_filled >= 0.1:
+        elif clay_density_filled >= 0.25:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
             move_pheromon_cube_build = agent.get_direction_cube_values_for_grid(
                 pheromon_build_flags, 1
@@ -349,8 +355,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     def update_env__track_flag_emmision(self, agent: Agent, state: Environment, repeat = 2):
         pheromon_build_flags = state.grids['pheromon_build_flags']
         x,y,z = agent.track_flag
-        print(f'pheromon updated, flag: {agent.track_flag}')
-
         for i in range(repeat):
             # emission_intake
             pheromon_build_flags.array[x,y,z] = 2
@@ -405,8 +409,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         v = agent.get_nb_values_3x3_below_of_array(design_and_ground)
         design_density_below = sum(v) / len(v)
         v = agent.get_nb_values_3x3_below_of_array(print_and_ground)
-
-        # print(f'design around: {v} \ndesign_below:{v} \nprint_below:{v}')
 
         print_density_below = sum(v) / len(v)
         if design_density >= self.print_goal_density:  # agent in design
@@ -485,6 +487,11 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
         # MOVE
         moved = self.move_agent(agent, state)
+        print(agent.pose)
+        # RESET IF STUCK
+        if not moved:
+            self.reset_agent(agent)
+            print('reset in move, couldnt move')
 
         # BUILD
         if moved:
@@ -493,24 +500,37 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
                 self.check_print_chance_cross(agent, state)
             elif self.print_one_voxel:
                 self.check_print_chance_one_voxel(agent, state)
-
-            # print
             built = self.print_build(agent, state)
+
+            # create new flag if there isnt any yet
             if built and not isinstance(agent.track_flag, np.ndarray):
                 agent.track_flag = agent.pose
+                agent.move_history = []
+                self.step_counter = 0
                 print(f"new flag:{agent.pose}")
-                
-        if isinstance(agent.track_flag, np.ndarray):
-            self.update_env__track_flag_emmision(agent, state)
+            
+            # update env if there is a flag
+            if isinstance(agent.track_flag, np.ndarray):
+                self.step_counter += 1
+                self.update_env__track_flag_emmision(agent, state)
+            
+            if not built:
+                self.passive_counter += 1
 
-        # RESET IF STUCK
-        if not moved:
-            self.reset_agent(agent)
-            # print('reset in move, couldnt move')
-
-        # check end states:
-        if len(agent.move_history) >= self.track_length:
-            self.reset_agent(agent)
+        # reset flag only if reached track_length
+        if self.step_counter > self.track_length:
+            # self.reset_agent(agent)
+            agent.move_history = []
+            agent.track_flag = None
         
+        if self.passive_counter > self.passive_limit:
+            self.reset_agent(agent)
+
+        # # reset agent if reached track_length
+        # if self.step_counter >= self.track_length:
+        #     # self.reset_agent(agent)
+        #     self.reset_agent(agent)
+        
+        # check end states:
         self.check_end_state_agent(agent, state)
         self.check_end_state_simulation(agent, state)
