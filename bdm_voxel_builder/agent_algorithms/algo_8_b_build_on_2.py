@@ -191,12 +191,12 @@ class Algo8b(AgentAlgorithm):
         # decay_linear_value=1/(self.agent_count * 3000 * 1000)
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.add_values_in_zone_xxyyzz(
+        ground.set_values_in_zone_xxyyzz(
             [0, self.grid_size, 0, self.grid_size, 0, self.ground_level_Z], 1
         )
-        ground.add_values_in_zone_xxyyzz(self.box_template, 1)
-        move_to_ph_grid.add_values_in_zone_xxyyzz(self.box_template, 1)
-        clay_grid.add_values_in_zone_xxyyzz(self.box_template, 1)
+        ground.set_values_in_zone_xxyyzz(self.box_template, 1)
+        move_to_ph_grid.set_values_in_zone_xxyyzz(self.box_template, 1)
+        clay_grid.set_values_in_zone_xxyyzz(self.box_template, 1)
         # move_to_ph_grid.array += clay_grid.array
 
         # WRAP ENVIRONMENT

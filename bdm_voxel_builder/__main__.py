@@ -41,7 +41,7 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
         or sim_state.iteration_count == config.iterations - 1
     ):
         a1 = sim_state.grids[algo.grid_to_dump].array.copy()
-        a1[:, :, : algo.ground_level_Z] = 0
+        # a1[:, :, : algo.ground_level_Z] = 0
 
         save_ndarray(a1, note=note)
 

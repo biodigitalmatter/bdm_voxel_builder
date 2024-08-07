@@ -42,7 +42,7 @@ def save_pointcloud(
 ):
     dict_ = {"pointcloud": pointcloud, "values": values}
 
-    json_dump(dict_, get_savepath(TEMP_DIR, ".json", note=note))
+    json_dump(dict_, get_savepath(TEMP_DIR, "_pointcloud.json", note=note))
 
 
 def save_ndarray(arr: npt.NDArray, note: str = None):

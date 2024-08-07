@@ -66,10 +66,11 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
     # IMPORTED GEOMETRY ----- PLACEHOLDER
     add_simple_design = True
     add_complex_design = False
-    box_template_1 = [8, 25, 6, 25, 1, 4]
-    box_template_2 = [20, 35, 6, 10, 4, 8]
-    ground_stair_1 = [0, 50, 20, 50, 0, 2]
-    ground_stair_2 = [20, 50, 0, 30, 0, 3]
+    box_add_1 = [10, 25, 10, 25, 1, 5]
+    # box_template_2 = [20, 35, 6, 10, 4, 8]
+    box_subtract_1 = [15,20, 15, 18, 0, 8]
+    # ground_stair_1 = [0, 50, 20, 50, 0, 2]
+    # ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
 
     reach_to_build: int = 1
@@ -161,20 +162,21 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         )
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.add_values_in_zone_xxyyzz(
+        ground.set_values_in_zone_xxyyzz(
             [0, ground.grid_size[0], 0, ground.grid_size[1], 0, self.ground_level_Z], 1
         )
 
         # imported design TEMP
         if self.add_simple_design:
-            design.add_values_in_zone_xxyyzz(self.box_template_1, 1)
+            design.set_values_in_zone_xxyyzz(self.box_add_1, 1)
         if self.add_complex_design:
-            ground.add_values_in_zone_xxyyzz(self.ground_stair_1, 1)
-            ground.add_values_in_zone_xxyyzz(self.ground_stair_2, 1)
-            design.add_values_in_zone_xxyyzz(self.box_template_1, 1)
-            design.add_values_in_zone_xxyyzz(self.box_template_2, 1)
-            design.add_values_in_zone_xxyyzz(self.ground_stair_1, 0)
-            design.add_values_in_zone_xxyyzz(self.ground_stair_2, 0)
+            # ground.set_values_in_zone_xxyyzz(self.ground_stair_1, 1)
+            # ground.set_values_in_zone_xxyyzz(self.ground_stair_2, 1)
+            design.set_values_in_zone_xxyyzz(self.box_add_1, 1)
+            # design.set_values_in_zone_xxyyzz(self.box_template_2, 1)
+            design.set_values_in_zone_xxyyzz(self.box_subtract_1, 0)
+            # design.set_values_in_zone_xxyyzz(self.ground_stair_1, 0)
+            # design.set_values_in_zone_xxyyzz(self.ground_stair_2, 0)
         print(f"design array at init{design.array.shape}")
         # WRAP ENVIRONMENT
         grids = {
@@ -199,8 +201,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
             grade=False,
             decay=True,
         )
-        # grids["design"].decay()
-        # grids["track"].decay()
+        grids["print_dots"].decay()
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
         agent_space = grids["agent"]
@@ -376,7 +377,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
 
             # update printed_clay_volume_array
             zone = [x - 1, x + 1, y - 1, y + 1, z, z]
-            printed_clay.add_values_in_zone_xxyyzz(zone, 1)
+            printed_clay.set_values_in_zone_xxyyzz(zone, 1)
             built = True
         else:
             built = False
@@ -410,7 +411,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
                 agent.set_grid_value_cross_shape(printed_clay, 1)
             elif self.print_3x3:
                 zone = [x - 1, x + 1, y - 1, y + 1, z, z]
-                printed_clay.add_values_in_zone_xxyyzz(zone, 1)
+                printed_clay.set_values_in_zone_xxyyzz(zone, 1)
 
             built = True
         else:

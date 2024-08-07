@@ -75,7 +75,7 @@ class Algo8eRidge(AgentAlgorithm):
     reset_after_erased: bool = False
 
     build_overhang = False
-    
+
     if not build_overhang:
         move_pattern = ['up', 'side']
         decay_clay_bool: bool = False
@@ -152,12 +152,12 @@ class Algo8eRidge(AgentAlgorithm):
         )
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.add_values_in_zone_xxyyzz(
+        ground.set_values_in_zone_xxyyzz(
             [0, ground.grid_size[0], 0, ground.grid_size[1], 0, self.ground_level_Z], 1
         )
 
         if self.add_box:
-            clay_grid.add_values_in_zone_xxyyzz(self.box_template, 1)
+            clay_grid.set_values_in_zone_xxyyzz(self.box_template, 1)
 
         # WRAP ENVIRONMENT
         grids = {

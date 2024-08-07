@@ -275,7 +275,7 @@ class DiffusiveGrid(Grid):
         # emission_out
         self.emmission_out_update()
 
-    def add_values_in_zone_xxyyzz(self, zone_xxyyzz, value=1, add_values=False):
+    def set_values_in_zone_xxyyzz(self, zone_xxyyzz, value=1, add_values=False):
         """add or replace values within zone (including both end)
         add_values == True: add values in self.array
         add_values == False: replace values in self.array *default
