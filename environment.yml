@@ -14,7 +14,7 @@ dependencies:
   - matplotlib
   - numpy
   - openvdb>=11.0.0
-  - poetry
+  - pypcd4
   - pytest
   - python>=3.11,<4
   - ruff

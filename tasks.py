@@ -23,3 +23,10 @@ def test(c, verbose=False):
 @task
 def install(c):
     c.run("pip install -e .")
+
+@task
+def start_ppl(c):
+    image = "ghcr.io/biodigitalmatter/ros:main"
+    port = 9090
+    cmd = "roslaunch biodigitalmatter_ros planning.launch"
+    c.run(f"docker run -p {port}:{port} {image} {cmd}")
