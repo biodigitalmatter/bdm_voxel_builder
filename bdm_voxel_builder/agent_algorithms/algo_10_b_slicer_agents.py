@@ -75,7 +75,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     add_complex_design = True
     box_add_1 = [10, 25, 10, 25, 1, 5]
     # box_template_2 = [20, 35, 6, 10, 4, 8]
-    box_subtract_1 = [15,20, 15, 18, 7, 8]
+    box_subtract_1 = [15,20, 15, 18, 0, 8]
     # ground_stair_1 = [0, 50, 20, 50, 0, 2]
     # ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
@@ -91,8 +91,8 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 10
-    deployment_zone__b = 15
+    deployment_zone__a = 2
+    deployment_zone__b = 25
 
     check_collision = True
     keep_in_bounds = True
