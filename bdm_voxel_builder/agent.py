@@ -445,6 +445,7 @@ class Agent:
         else:
             density = np.count_nonzero(values) / slice_volume
         # if density > 0:
+        #     print(f'shape of input array{np.shape(array)}')
         #     print(f'slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}')
         return density
 

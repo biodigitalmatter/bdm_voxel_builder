@@ -73,8 +73,8 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     # IMPORTED GEOMETRY ----- PLACEHOLDER
     add_simple_design = False
     add_complex_design = True
-    box_add_1 = [10, 25, 10, 25, 1, 4]
-    box_add_2 = [6, 15, 6, 15, 4, 8]
+    box_add_1 = [10, 20, 10, 20, 1, 4]
+    box_add_2 = [6, 25, 6, 25, 3, 8]
 
     # box_template_2 = [20, 35, 6, 10, 4, 8]
     box_subtract_1 = [15,20, 15, 18, 0, 8]
@@ -94,7 +94,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
     # Agent deployment
     deployment_zone__a = 2
-    deployment_zone__b = 25
+    deployment_zone__b = 5
 
     check_collision = True
     keep_in_bounds = True
@@ -196,6 +196,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             # ground.set_values_in_zone_xxyyzz(self.ground_stair_1, 1)
             # ground.set_values_in_zone_xxyyzz(self.ground_stair_2, 1)
             design.set_values_in_zone_xxyyzz(self.box_add_1, 1)
+            design.set_values_in_zone_xxyyzz(self.box_add_2, 1)
             # design.set_values_in_zone_xxyyzz(self.box_template_2, 1)
             design.set_values_in_zone_xxyyzz(self.box_subtract_1, 0)
             # design.set_values_in_zone_xxyyzz(self.ground_stair_1, 0)
@@ -374,7 +375,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         design_and_ground = np.clip((design.array + ground.array), 0, 1)
         
         v_in_design = agent.get_array_value_at_index(design.array, agent.pose)
-        v_design_below = agent.get_array_value_at_index(design_and_ground, agent.pose + [0, 0, -1])
         v_print_below = agent.get_array_value_at_index(print_and_ground, agent.pose + [0, 0, -1])
 
         # print(f'design around: {v} \ndesign_below:{v} \nprint_below:{v}')
@@ -384,8 +384,13 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             if v_print_below > 0:  # no overhang
                 agent.build_chance = 1
             else:
+                # print_density_below = agent.get_array_density_in_slice_shape(print_and_ground, [1,1,0,0,0,-1], nonzero=True)
+                v = agent.get_nb_values_3x3_below_of_array(print_and_ground)
+                # print(v)
+                print_density_below = np.count_nonzero(v) / 9
+                # print(f'OVERHANG: {print_density_below}')
                 # overhang check 45 degree
-                if v_design_below == 0:
+                if print_density_below >= 3/9:
                     agent.build_chance = 1
                     """
                     print overhangs only if the voxel below is outside the design
@@ -487,7 +492,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
         # MOVE
         moved = self.move_agent(agent, state)
-        print(agent.pose)
+        # print(agent.pose)
         # RESET IF STUCK
         if not moved:
             self.reset_agent(agent)
@@ -515,7 +520,10 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
                 self.update_env__track_flag_emmision(agent, state)
             
             if not built:
-                self.passive_counter += 1
+                if agent.get_array_value_at_index(state.grids['design'].array, agent.pose) > 0:
+                    self.passive_counter += 1
+                else:
+                    self.passive_counter += 0.2
 
         # reset flag only if reached track_length
         if self.step_counter > self.track_length:
@@ -525,6 +533,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         
         if self.passive_counter > self.passive_limit:
             self.reset_agent(agent)
+            print(f'passive reset{agent.pose}')
 
         # # reset agent if reached track_length
         # if self.step_counter >= self.track_length:
