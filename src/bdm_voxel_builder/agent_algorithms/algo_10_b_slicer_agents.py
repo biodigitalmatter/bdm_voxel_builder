@@ -61,7 +61,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     seed_iterations: int = 50
 
     # PRINT SETTINGS
-    overhang_limit = 45
+    overhang_limit = 3 / 9
     print_goal_density = 0.5
     print_one_voxel = True
     print_cross_shape = False
@@ -73,14 +73,16 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     # IMPORTED GEOMETRY ----- PLACEHOLDER
     add_simple_design = False
     add_complex_design = True
-    box_add_1 = [3, 10, 3, 10, 1, 5]
-    box_add_2 = [0, 12, 0, 10, 4, 8]
+    box_add_1 = [3, 8, 3, 10, 1, 5]
+    box_add_2 = [15, 20, 15, 18, 1, 40]
+    box_add_3 = [0, 12, 0, 10, 4, 25]
+    box_add_4 = [0, 18, 0, 15, 15, 40]
 
     # box_template_2 = [20, 35, 6, 10, 4, 8]
-    box_subtract_1 = [8, 20, 8, 18, 2, 8]
+    box_subtract_1 = [8, 15, 8, 16, 3, 20]
     # box_subtract_1 = [8, 20, 8, 18, 10, 10]
 
-    # ground_stair_1 = [0, 50, 20, 50, 0, 2]
+    ground_stair_1 = [0, 50, 20, 50, 0, 2]
     # ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
 
@@ -108,7 +110,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     print_dot_counter = 0
     step_counter = 0
     passive_counter = 0
-    passive_limit = 55
+    passive_limit = 15
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -195,17 +197,15 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         if self.add_simple_design:
             design.set_values_in_zone_xxyyzz(self.box_add_1, 1)
         if self.add_complex_design:
-            # ground.set_values_in_zone_xxyyzz(self.ground_stair_1, 1)
-            # ground.set_values_in_zone_xxyyzz(self.ground_stair_2, 1)
+            ground.set_values_in_zone_xxyyzz(self.ground_stair_1, 1)
             design.set_values_in_zone_xxyyzz(self.box_add_1, 1)
             design.set_values_in_zone_xxyyzz(self.box_add_2, 1)
-            # design.set_values_in_zone_xxyyzz(self.box_template_2, 1)
+            design.set_values_in_zone_xxyyzz(self.box_add_3, 1)
+            design.set_values_in_zone_xxyyzz(self.box_add_4, 1)
             design.set_values_in_zone_xxyyzz(self.box_subtract_1, 0)
-            # design.set_values_in_zone_xxyyzz(self.ground_stair_1, 0)
-            # design.set_values_in_zone_xxyyzz(self.ground_stair_2, 0)
-        # design.array -= ground.array
-        print(f"design array at init{design.array.shape}")
+            design.set_values_in_zone_xxyyzz(self.ground_stair_1, 0)
         # WRAP ENVIRONMENT
+
         grids = {
             "agent": agent_space,
             "ground": ground,
@@ -403,8 +403,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         )
         if gv != 0:
             return False
-
-        clay_density_filled = agent.get_grid_density(design, nonzero=True)
         # move by pheromon_grid_move
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
@@ -484,26 +482,18 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         pose_below = agent.pose + [0, 0, -1]
         v_print_below = agent.get_array_value_at_index(print_and_ground, pose_below)
 
-        if v_in_design > 0:  # agent in design
+        if v_in_design > 0:
+            # agent in design
             # check overhang
-            if v_print_below > 0:  # no overhang
+            if v_print_below > 0:
+                # no overhang
                 agent.build_chance = 1
             else:
-                # print_density_below = agent.get_array_density_in_slice_shape(
-                #     print_and_ground, [1, 1, 0, 0, 0, -1], nonzero=True
-                # )
                 v = agent.get_nb_values_3x3_below_of_array(print_and_ground)
-                # print(f"density values length {v}")
-                # print(v)
                 print_density_below = np.count_nonzero(v) / 9
-                # print(f"pose: {agent.pose} get_nb_density = {print_density_below}")
-                # overhang check 45 degree
-                if print_density_below >= 3 / 9:
+                if print_density_below >= self.overhang_limit:
                     # print(f"OVERHANG: {print_density_below}")
                     agent.build_chance = 1
-                    """
-                    print overhangs only if the voxel below is outside the design
-                    """
                 else:
                     agent.build_chance = 0
 
@@ -564,8 +554,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
             # update print dot array
             print_dots.array[x, y, z] = 1
-            self.print_dot_list.append([x, y, z])
-            self.print_dot_dict[self.print_dot_counter] = [x, y, z]
             self.print_dot_counter += 1
 
             # update printed_clay_volume_array
@@ -622,8 +610,8 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
                 self.update_env__track_flag_emmision(agent, state)
             if built:
                 print(f"built {agent.pose}")
-            # if not built:
-            self.passive_counter += 1
+            if not built:
+                self.passive_counter += 1
 
         # MOVE
         moved = self.move_agent(agent, state)
@@ -633,10 +621,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             self.reset_agent(agent)
             print("reset in move, couldnt move")
 
-        # reset flag only if reached track_length
-        # if self.step_counter == self.track_length / 2:
-        #     for _i in range(4):
-        #         self.move_agent_up(agent, state)
         elif self.step_counter == self.track_length:
             agent.move_history = []
             agent.track_flag = None
@@ -644,11 +628,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         if self.passive_counter > self.passive_limit:
             self.deploy_agent_airborne(agent, state)
             print(f"passive reset{agent.pose}")
-
-        # # reset agent if reached track_length
-        # if self.step_counter >= self.track_length:
-        #     # self.reset_agent(agent)
-        #     self.reset_agent(agent)
 
         # check end states:
         self.check_end_state_agent(agent, state)

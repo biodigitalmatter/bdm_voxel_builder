@@ -7,7 +7,7 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # test slice
-grid_size = 20
+grid_size = 22
 iterations = 3000
 agent_count = 1
 interval = 1000
