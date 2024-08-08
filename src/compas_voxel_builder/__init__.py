@@ -1,9 +1,12 @@
 import compas
 
+# TODO: This is a fix for a GH drawing issue
+# It can probably be removed after 
+# https://github.com/compas-dev/compas/pull/1382
 if compas.is_grasshopper():
     import compas_ghpython.drawing
-    original_func = compas_ghpython.drawing.draw_mesh.copy()
 
+    original_func = compas_ghpython.drawing.draw_mesh
 
     def draw_mesh(
         vertices, faces, color=None, vertex_normals=None, texture_coordinates=None
@@ -15,7 +18,6 @@ if compas.is_grasshopper():
             vertex_normals=vertex_normals,
             texture_coordinates=texture_coordinates,
         )
-
 
     draw_mesh.__doc__ = original_func.__doc__
 
