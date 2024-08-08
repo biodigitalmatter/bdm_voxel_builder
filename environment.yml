@@ -7,7 +7,7 @@ channels:
 
 dependencies:
   - click
-  # - compas=>2.3.0
+  - compas=>2.3.0
   - compas_fab
   - compas_viewer
   - invoke
@@ -20,6 +20,3 @@ dependencies:
   - requests
   - ruff
   - setuptools
-  - pip
-  - pip:
-      - git+https://github.com/tetov/compas.git@fix_expected_Array

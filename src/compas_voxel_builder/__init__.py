@@ -1,0 +1,28 @@
+import compas
+
+if compas.is_grasshopper():
+    import compas_ghpython.drawing
+    original_func = compas_ghpython.drawing.draw_mesh.copy()
+
+
+    def draw_mesh(
+        vertices, faces, color=None, vertex_normals=None, texture_coordinates=None
+    ):
+        return original_func(
+            vertices,
+            faces,
+            color=None,
+            vertex_normals=vertex_normals,
+            texture_coordinates=texture_coordinates,
+        )
+
+
+    draw_mesh.__doc__ = original_func.__doc__
+
+    compas_ghpython.drawing.draw_mesh = draw_mesh
+    compas_ghpython.draw_mesh = draw_mesh
+
+
+__all_plugins__ = [
+    "compas_voxel_builder.rhino_install",
+]

@@ -34,4 +34,5 @@ select = [
 ]
 
 [tool.setuptools]
-packages = ["bdm_voxel_builder"]
+# packages = ["bdm_voxel_builder", "compas_voxel_builder"]
+package-dir = {"" = "src"}
