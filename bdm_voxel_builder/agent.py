@@ -346,6 +346,14 @@ class Agent:
         pad_y = y_radius + abs(y_offset)
         pad_z = z_radius + abs(z_offset)
 
+        c = pad_values
+        padded_array = np.pad(
+            array,
+            ((pad_x, pad_x), (pad_y, pad_y), (pad_z, pad_z)),
+            "constant",
+            constant_values=((c, c), (c, c), (c, c)),
+        )
+
         a = int(x - x_radius) + pad_x
         b = int(x + x_radius + 1) + pad_x
         c = int(y - y_radius) + pad_y
@@ -353,14 +361,7 @@ class Agent:
         e = int(z - z_radius) + pad_z
         f = int(z + z_radius + 1) + pad_z
 
-        c = pad_values
-        np.pad(
-            array,
-            ((pad_x, pad_x), (pad_y, pad_y), (pad_z, pad_z)),
-            "constant",
-            constant_values=((c, c), (c, c), (c, c)),
-        )
-        v = array[a:b, c:d, e:f]
+        v = padded_array[a:b, c:d, e:f]
 
         if format_values == 0:
             return np.sum(v)
@@ -444,9 +445,11 @@ class Agent:
             density = sum_values / slice_volume
         else:
             density = np.count_nonzero(values) / slice_volume
-        # if density > 0:
-        #     print(f'shape of input array{np.shape(array)}')
-        #     print(f'slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}')
+        if density > 0:
+            print(f"shape of input array{np.shape(array)}")
+            print(
+                f"slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}"
+            )
         return density
 
     def get_move_mask_6(self, grid: Grid):
