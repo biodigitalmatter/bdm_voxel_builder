@@ -6,13 +6,11 @@ from bdm_voxel_builder.agent_algorithms.algo_10_b_slicer_agents import (
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
-
-
 # test slice
-grid_size = 30
-iterations = 6000
+grid_size = 20
+iterations = 3000
 agent_count = 1
-interval = iterations
+interval = 1000
 name = f"test_config_slice_b_i{iterations}a{agent_count}"
 
 config = Config(

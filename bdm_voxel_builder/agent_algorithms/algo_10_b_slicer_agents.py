@@ -5,7 +5,10 @@ from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
+from bdm_voxel_builder.agent_algorithms.common import (
+    diffuse_diffusive_grid,
+    get_lowest_free_voxel_above_array,
+)
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 
@@ -67,17 +70,16 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     track_length = 20
     track_flag = None
 
-
-
-
     # IMPORTED GEOMETRY ----- PLACEHOLDER
     add_simple_design = False
     add_complex_design = True
-    box_add_1 = [10, 20, 10, 20, 1, 4]
-    box_add_2 = [6, 25, 6, 25, 3, 8]
+    box_add_1 = [3, 10, 3, 10, 1, 5]
+    box_add_2 = [0, 12, 0, 10, 4, 8]
 
     # box_template_2 = [20, 35, 6, 10, 4, 8]
-    box_subtract_1 = [15,20, 15, 18, 0, 8]
+    box_subtract_1 = [8, 20, 8, 18, 2, 8]
+    # box_subtract_1 = [8, 20, 8, 18, 10, 10]
+
     # ground_stair_1 = [0, 50, 20, 50, 0, 2]
     # ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
@@ -93,8 +95,8 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 2
-    deployment_zone__b = 5
+    deployment_zone__a = 3
+    deployment_zone__b = 3
 
     check_collision = True
     keep_in_bounds = True
@@ -106,7 +108,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     print_dot_counter = 0
     step_counter = 0
     passive_counter = 0
-    passive_limit = 50
+    passive_limit = 55
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -126,7 +128,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
         returns: grids
         """
-        iterations = kwargs.get('iterations')
+        iterations = kwargs.get("iterations")
         ground = DiffusiveGrid(
             name="ground",
             grid_size=self.grid_size,
@@ -174,7 +176,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             color=Color.from_rgb255(252, 25, 0),
             flip_colors=True,
             decay_ratio=1 / 10000,
-            decay_linear_value=1 / (iterations * 10)
+            decay_linear_value=1 / (iterations * 10),
         )
         printed_clay = DiffusiveGrid(
             name="printed_clay",
@@ -201,6 +203,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             design.set_values_in_zone_xxyyzz(self.box_subtract_1, 0)
             # design.set_values_in_zone_xxyyzz(self.ground_stair_1, 0)
             # design.set_values_in_zone_xxyyzz(self.ground_stair_2, 0)
+        # design.array -= ground.array
         print(f"design array at init{design.array.shape}")
         # WRAP ENVIRONMENT
         grids = {
@@ -217,7 +220,9 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
     def update_environment(self, state: Environment):
         grids = state.grids
-        emission_array_for_move_ph = grids["design"].array * 0.0001 + grids["printed_clay"].array * 0.33
+        emission_array_for_move_ph = (
+            grids["design"].array * 0.0001 + grids["printed_clay"].array * 0.33
+        )
         diffuse_diffusive_grid(
             grids["pheromon_move"],
             emmission_array=emission_array_for_move_ph,
@@ -251,13 +256,35 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             agents.append(agent)
         return agents
 
+    def deploy_agent_airborne(self, agent: Agent, state: Environment):
+        printed_clay = state.grids["printed_clay"]
+        design = state.grids["design"]
+        place = get_lowest_free_voxel_above_array(printed_clay.array, design.array)
+        # print(f"airborne {place}")
+        if isinstance(place, np.ndarray | list):
+            self.reset_agent_at_pose(agent, place)
+        else:
+            self.reset_agent(agent)
+        return place
+
+    def reset_agent_at_pose(self, agent: Agent, pose):
+        agent.space_grid.set_value_at_index(agent.pose, 0)
+        x, y, z = pose
+        agent.pose = [x, y, z]
+
+        agent.build_chance = 0
+        agent.erase_chance = 0
+        agent.move_history = []
+        agent.track_flag = None
+        self.passive_counter = 0
+
     def reset_agent(self, agent: Agent):
         # TODO: make work with non square grids
         # centered setup
         grid_size = agent.space_grid.grid_size
         a, b = [
             self.deployment_zone__a,
-            grid_size[0] + self.deployment_zone__b,
+            grid_size[0] - self.deployment_zone__b,
         ]
 
         a = max(a, 0)
@@ -286,7 +313,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         ground = state.grids["ground"]
         design = state.grids["design"]
         printed_clay = state.grids["printed_clay"]
-        pheromon_build_flags = state.grids['pheromon_build_flags']
+        pheromon_build_flags = state.grids["pheromon_build_flags"]
         # check solid volume inclusion
         gv = agent.get_grid_value_at_pose(
             ground,
@@ -297,10 +324,10 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         clay_density_filled = agent.get_grid_density(design, nonzero=True)
         # move by pheromon_grid_move
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
-        pheromon_grid_move, 1
+            pheromon_grid_move, 1
         )
         directional_bias_cube = agent.direction_preference_26_pheromones_v2(
-            0.000, 0.5, 0.52
+            0.000, 0.5, 0.48
         )
         random_cube = np.random.random(26) + 0.5
         random_cube[:9] = 0
@@ -326,7 +353,12 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             move_pheromon_cube_build *= 2
             move_pheromon_cube *= 0.1
             design_value_nbs *= 0.8
-            direction_cube = directional_bias_cube + random_cube + move_pheromon_cube_build + design_value_nbs
+            direction_cube = (
+                directional_bias_cube
+                + random_cube
+                + move_pheromon_cube_build
+                + design_value_nbs
+            )
             random_mod = 1
 
         ############################################################################
@@ -353,15 +385,90 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
         return moved
 
-    def update_env__track_flag_emmision(self, agent: Agent, state: Environment, repeat = 2):
-        pheromon_build_flags = state.grids['pheromon_build_flags']
-        x,y,z = agent.track_flag
-        for i in range(repeat):
+    def move_agent_up(self, agent: Agent, state: Environment):
+        """moves agents in a calculated direction
+        calculate weigthed sum of slices of grids makes the direction_cube
+        check and excludes illegal moves by replace values to -1
+        move agent
+        return True if moved, False if not or in ground
+        """
+        pheromon_grid_move = state.grids["pheromon_move"]
+        ground = state.grids["ground"]
+        design = state.grids["design"]
+        printed_clay = state.grids["printed_clay"]
+        pheromon_build_flags = state.grids["pheromon_build_flags"]
+        # check solid volume inclusion
+        gv = agent.get_grid_value_at_pose(
+            ground,
+        )
+        if gv != 0:
+            return False
+
+        clay_density_filled = agent.get_grid_density(design, nonzero=True)
+        # move by pheromon_grid_move
+        move_pheromon_cube = agent.get_direction_cube_values_for_grid(
+            pheromon_grid_move, 1
+        )
+        directional_bias_cube = agent.direction_preference_26_pheromones_v2(
+            0.9, 0.5, 0.48
+        )
+        random_cube = np.random.random(26) + 0.5
+        random_cube[:9] = 0
+
+        design_value_nbs = agent.get_grid_nb_values_26(design, agent.pose)
+
+        ############################################################################
+        move_pheromon_cube_build = agent.get_direction_cube_values_for_grid(
+            pheromon_build_flags, 1
+        )
+        directional_bias_cube *= 6
+        random_cube *= 0.1
+        move_pheromon_cube_build *= 0.2
+        move_pheromon_cube *= 0.1
+        design_value_nbs *= 0.8
+        direction_cube = (
+            directional_bias_cube
+            + random_cube
+            + move_pheromon_cube_build
+            + design_value_nbs
+        )
+        random_mod = 3
+
+        ############################################################################
+
+        # move by pheromons, avoid collision
+        collision_array = printed_clay.array + ground.array
+
+        moved = agent.move_by_pheromons(
+            solid_array=collision_array,
+            pheromon_cube=direction_cube,
+            grid_size=self.grid_size,
+            fly=False,
+            only_bounds=self.keep_in_bounds,
+            check_self_collision=self.check_collision,
+            random_batch_size=random_mod,
+        )
+
+        # doublecheck if in bounds
+        if any(np.array(agent.pose) < 0) or any(
+            np.array(agent.pose) >= np.array(self.grid_size)
+        ):
+            moved = False
+            print(f"not in bounds at{agent.pose}")
+
+        return moved
+
+    def update_env__track_flag_emmision(
+        self, agent: Agent, state: Environment, repeat=2
+    ):
+        pheromon_build_flags = state.grids["pheromon_build_flags"]
+        x, y, z = agent.track_flag
+        for _i in range(repeat):
             # emission_intake
-            pheromon_build_flags.array[x,y,z] = 2
+            pheromon_build_flags.array[x, y, z] = 2
             pheromon_build_flags.diffuse()
             pheromon_build_flags.decay()
-    
+
     def check_print_chance_one_voxel(self, agent: Agent, state: Environment):
         design = state.grids["design"]
         printed_clay = state.grids["printed_clay"]
@@ -372,30 +479,33 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
         # merge ground with design and ground w printed
         print_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
-        design_and_ground = np.clip((design.array + ground.array), 0, 1)
-        
-        v_in_design = agent.get_array_value_at_index(design.array, agent.pose)
-        v_print_below = agent.get_array_value_at_index(print_and_ground, agent.pose + [0, 0, -1])
 
-        # print(f'design around: {v} \ndesign_below:{v} \nprint_below:{v}')
+        v_in_design = agent.get_array_value_at_index(design.array, agent.pose)
+        pose_below = agent.pose + [0, 0, -1]
+        v_print_below = agent.get_array_value_at_index(print_and_ground, pose_below)
 
         if v_in_design > 0:  # agent in design
             # check overhang
             if v_print_below > 0:  # no overhang
                 agent.build_chance = 1
             else:
-                # print_density_below = agent.get_array_density_in_slice_shape(print_and_ground, [1,1,0,0,0,-1], nonzero=True)
+                # print_density_below = agent.get_array_density_in_slice_shape(
+                #     print_and_ground, [1, 1, 0, 0, 0, -1], nonzero=True
+                # )
                 v = agent.get_nb_values_3x3_below_of_array(print_and_ground)
+                # print(f"density values length {v}")
                 # print(v)
                 print_density_below = np.count_nonzero(v) / 9
-                # print(f'OVERHANG: {print_density_below}')
+                # print(f"pose: {agent.pose} get_nb_density = {print_density_below}")
                 # overhang check 45 degree
-                if print_density_below >= 3/9:
+                if print_density_below >= 3 / 9:
+                    # print(f"OVERHANG: {print_density_below}")
                     agent.build_chance = 1
                     """
                     print overhangs only if the voxel below is outside the design
                     """
-
+                else:
+                    agent.build_chance = 0
 
     def check_print_chance_cross(self, agent: Agent, state: Environment):
         design = state.grids["design"]
@@ -489,15 +599,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
         """MOVE BUILD .RESET"""
-
-        # MOVE
-        moved = self.move_agent(agent, state)
-        # print(agent.pose)
-        # RESET IF STUCK
-        if not moved:
-            self.reset_agent(agent)
-            print('reset in move, couldnt move')
-
+        moved = True
         # BUILD
         if moved:
             # check print chance
@@ -513,33 +615,41 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
                 agent.move_history = []
                 self.step_counter = 0
                 print(f"new flag:{agent.pose}")
-            
+
             # update env if there is a flag
             if isinstance(agent.track_flag, np.ndarray):
                 self.step_counter += 1
                 self.update_env__track_flag_emmision(agent, state)
-            
-            if not built:
-                if agent.get_array_value_at_index(state.grids['design'].array, agent.pose) > 0:
-                    self.passive_counter += 1
-                else:
-                    self.passive_counter += 0.2
+            if built:
+                print(f"built {agent.pose}")
+            # if not built:
+            self.passive_counter += 1
+
+        # MOVE
+        moved = self.move_agent(agent, state)
+        # print(agent.pose)
+        # RESET IF STUCK
+        if not moved:
+            self.reset_agent(agent)
+            print("reset in move, couldnt move")
 
         # reset flag only if reached track_length
-        if self.step_counter > self.track_length:
-            # self.reset_agent(agent)
+        # if self.step_counter == self.track_length / 2:
+        #     for _i in range(4):
+        #         self.move_agent_up(agent, state)
+        elif self.step_counter == self.track_length:
             agent.move_history = []
             agent.track_flag = None
-        
+
         if self.passive_counter > self.passive_limit:
-            self.reset_agent(agent)
-            print(f'passive reset{agent.pose}')
+            self.deploy_agent_airborne(agent, state)
+            print(f"passive reset{agent.pose}")
 
         # # reset agent if reached track_length
         # if self.step_counter >= self.track_length:
         #     # self.reset_agent(agent)
         #     self.reset_agent(agent)
-        
+
         # check end states:
         self.check_end_state_agent(agent, state)
         self.check_end_state_simulation(agent, state)

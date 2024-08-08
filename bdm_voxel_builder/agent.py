@@ -54,7 +54,7 @@ class Agent:
 
     @pose.setter
     def pose(self, v):
-        if not isinstance(v, (list, np.ndarray)):
+        if not isinstance(v, list | np.ndarray):
             raise ValueError("pose must be a list or an array")
         self._pose = np.asarray(v, dtype=np.int8)  # [i,j,k]
 
@@ -346,13 +346,6 @@ class Agent:
         pad_y = y_radius + abs(y_offset)
         pad_z = z_radius + abs(z_offset)
 
-        a = int(x - x_radius) + pad_x
-        b = int(x + x_radius + 1) + pad_x
-        c = int(y - y_radius) + pad_y
-        d = int(y + y_radius + 1) + pad_y
-        e = int(z - z_radius) + pad_z
-        f = int(z + z_radius + 1) + pad_z
-
         c = pad_values
         np.pad(
             array,
@@ -360,6 +353,14 @@ class Agent:
             "constant",
             constant_values=((c, c), (c, c), (c, c)),
         )
+
+        a = int(x - x_radius) + pad_x
+        b = int(x + x_radius + 1) + pad_x
+        c = int(y - y_radius) + pad_y
+        d = int(y + y_radius + 1) + pad_y
+        e = int(z - z_radius) + pad_z
+        f = int(z + z_radius + 1) + pad_z
+
         v = array[a:b, c:d, e:f]
 
         if format_values == 0:
@@ -404,8 +405,10 @@ class Agent:
             density = sum_values / slice_volume
         else:
             density = np.count_nonzero(values) / slice_volume
-        # if density > 0:
-        #     print(f'slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}')
+        if density > 0:
+            print(
+                f"slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}"  # noqa: E501
+            )
         return density
 
     def get_array_density_in_box(self, array, box, nonzero=False):
@@ -444,9 +447,11 @@ class Agent:
             density = sum_values / slice_volume
         else:
             density = np.count_nonzero(values) / slice_volume
-        # if density > 0:
-        #     print(f'shape of input array{np.shape(array)}')
-        #     print(f'slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}')
+        if density > 0:
+            print(f"shape of input array{np.shape(array)}")
+            print(
+                f"slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}"  # noqa: E501
+            )
         return density
 
     def get_move_mask_6(self, grid: Grid):
@@ -818,7 +823,7 @@ class Agent:
         else:
             return 0
 
-    def match_vertical_move_history(self, last_moves_pattern=["up", "up", "side"]):
+    def match_vertical_move_history(self, last_moves_pattern):
         "chance is returned based on the direction values and chance_weight"
         n = len(last_moves_pattern)
         if len(self.move_history) < n:
