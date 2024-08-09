@@ -91,8 +91,8 @@ class Grid:
 
         return grid
 
-    def save_vdb(self):
-        path = get_savepath(TEMP_DIR, ".vdb", note=f"grid_{self.name}")
+    def save_vdb(self, dir: os.PathLike = TEMP_DIR):
+        path = get_savepath(dir, ".vdb", note=f"grid_{self.name}")
 
         grid = self.to_vdb_grid()
 

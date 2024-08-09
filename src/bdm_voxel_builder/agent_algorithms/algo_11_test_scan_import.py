@@ -29,6 +29,7 @@ class Algo11a_TestScanImport(AgentAlgorithm):
     seed_iterations = 0
 
     scan_ply_folder_path = REPO_DIR / "data/live/scan_ply"
+    dir_save_scan = REPO_DIR / "data/live/work/01_scanned"
     file_index_to_load = 0
     unit_in_mm = 10
 
@@ -70,6 +71,8 @@ class Algo11a_TestScanImport(AgentAlgorithm):
             file, self.grid_size, voxel_edge_length=self.unit_in_mm, name=file.name
         )
 
+        imported_grid.save_vdb(self.dir_save_scan)
+        print(f"saved to {self.dir_save_scan}")
         scan.array = imported_grid.array
         # trim scan to gridsize
         # trim_array = imported_array[0:self.grid_size][0:self.grid_size][0:self.grid_size]

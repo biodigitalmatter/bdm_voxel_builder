@@ -10,7 +10,7 @@ grid_size = 100
 iterations = 1
 agent_count = 1
 interval = 1
-name = f"test_import{iterations}a{agent_count}"
+name = f"_scan_import_res_{grid_size}"
 
 config = Config(
     iterations=iterations,
