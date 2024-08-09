@@ -1,9 +1,5 @@
 # ruff: noqa: F401
-from bdm_voxel_builder.agent_algorithms.algo_8_d_build_fresh import Algo8d
-from bdm_voxel_builder.agent_algorithms.algo_8_e_build_ridge import Algo8eRidge
-from bdm_voxel_builder.agent_algorithms.algo_10_a_slicer_agents import (
-    Algo10a_VoxelSlicer,
-)
+
 from bdm_voxel_builder.agent_algorithms.algo_11_test_scan_import import (
     Algo11a_TestScanImport,
 )

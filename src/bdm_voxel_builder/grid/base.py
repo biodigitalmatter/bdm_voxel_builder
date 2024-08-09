@@ -76,7 +76,8 @@ class Grid:
 
     def to_vdb_grid(self):
         grid = vdb.FloatGrid()
-        grid.copyFromArray(self.array)
+        f_array = np.float_(self.array)
+        grid.copyFromArray(f_array)
 
         name = self.name or "None"
         try:
