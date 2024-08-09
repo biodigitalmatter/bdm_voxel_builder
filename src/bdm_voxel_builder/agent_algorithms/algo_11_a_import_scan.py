@@ -11,7 +11,7 @@ from compas.colors import Color
 
 
 @dataclass
-class Algo11a_TestScanImport(AgentAlgorithm):
+class Algo11a_ImportScan(AgentAlgorithm):
     """
     imports ply scan from:
     //data/live/scan_ply

@@ -1,7 +1,7 @@
 # ruff: noqa: F401
 
-from bdm_voxel_builder.agent_algorithms.algo_11_test_scan_import import (
-    Algo11a_TestScanImport,
+from bdm_voxel_builder.agent_algorithms.algo_11_a_import_scan import (
+    Algo11a_ImportScan,
 )
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
@@ -15,7 +15,7 @@ name = f"_scan_import_res_{grid_size}"
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo11a_TestScanImport(
+    algo=Algo11a_ImportScan(
         agent_count=agent_count,
         grid_size=grid_size,
         name=name,
