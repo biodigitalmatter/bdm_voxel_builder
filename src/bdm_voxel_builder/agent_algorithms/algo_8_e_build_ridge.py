@@ -1,52 +1,30 @@
 from dataclasses import dataclass
 
 import numpy as np
-from compas.colors import Color
-
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
+from bdm_voxel_builder.agent_algorithms.common import (
+    diffuse_diffusive_grid,
+    get_random_index_in_zone_xxyy_on_ground,
+)
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
+from compas.colors import Color
 
 
 @dataclass
 class Algo8eRidge(AgentAlgorithm):
     """
-    # Voxel Builder Algorithm: Algo_8_d_build_fresh:
+    # Voxel Builder Algorithm: Algo_8_e_build_ridge:
 
-    ## Summary
+    >> vertical wall on slab edges
+    basic mechanism: if climbed out build
 
-    default voxel builder algorithm
-    agents build on and around an initial 'clay' volume on a 'ground' surface
-    inputs: solid_ground_volume, clay_volume
-    output:
+    >> horizontal slabs starting from slab edges
+    overhang build mechanism: climb up, build after matched pattern
 
-
-    ## Agent behaviour
-
-    1. find the built clay
-    2. climb <up> on it
-    3. build after a while of climbing
-    4. reset or not
-
-    ## Features
-
-    - move on solid array
-    - move direction is controlled with the mix of the pheromon environment and
-      a global direction preference
-    - move randomness controlled by setting the number of best directions for
-      the random choice
-    - build on existing volume
-    - build and erase is controlled by gaining rewards
-    - move and build both is regulated differently at different levels of
-      environment grid density
-
-    ## NEW in 8_d
-    agents aim more towards the freshly built volumes.
-    the clay array values slowly decay
-
-    ## Observations:
+    >> ?
+    overhang build mechanism: climb up, build after matched pattern, die if wrong way
 
     """
 
@@ -54,42 +32,39 @@ class Algo8eRidge(AgentAlgorithm):
     grid_size: int | tuple[int, int, int]
     name: str = "algo_8_e"
     relevant_data_grids: str = "clay"
-
+    grid_to_dump: str = "clay"
     seed_iterations: int = 100
 
-    # EXISTING GEOMETRY
+    # environment geometry #############################################
     add_box = True
-    # box_template = [15, 35, 15, 35, 1, 5]
-    box_template = [20, 30, 25, 30, 1, 5]
-
+    box_template = [20, 30, 25, 30, 1, 2]
     ground_level_Z = 0
 
+    # agent settings ###################################################
+    deployment_zone_xxyy = [20, 30, 15, 15]
+
+    # build settings ###################################################
+    build_overhang = False
+
+    #   overhang settings:
+    pattern_1 = ["up", "side"]
+    pattern_2 = ["up", "up", "up,"]  # this makes cool vertical slabs
+    overhang_move_pattern = pattern_1
+    step_on_ridge_reward = 1.25
+    wrong_way_gain = 0
+
+    # general settings #################################################
     reach_to_build: int = 1
     reach_to_erase: int = 1
-    agent_age_limit: float = 100
-
+    agent_age_limit: float = 1
     decay_clay_bool: bool = True
-    ####################################################
     stacked_chances: bool = True
     reset_after_build: bool = True
     reset_after_erased: bool = False
-
-    build_overhang = False
-
-    if not build_overhang:
-        move_pattern = ["up", "side"]
-        decay_clay_bool: bool = False
-    else:
-        move_pattern = ["up", "up", "up,"]
-        decay_clay_bool: bool = True
-
-    # Agent deployment
-    deployment_zone_xxyy = [10, 40, 8, 12]
-
-    check_collision = True
+    check_self_collision = True
     keep_in_bounds = True
 
-    grid_to_dump: str = "clay"
+    # Agent deployment
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -109,10 +84,6 @@ class Algo8eRidge(AgentAlgorithm):
 
         returns: grids
         """
-        number_of_iterations = kwargs.get("iterations")
-        # clay_decay_linear_value = max(
-        #     1 / (self.agent_count * number_of_iterations * 100), 0.00001
-        # )
         rgb_agents = (34, 116, 240)
         rgb_trace = (17, 60, 120)
         rgb_ground = (100, 100, 100)
@@ -131,7 +102,7 @@ class Algo8eRidge(AgentAlgorithm):
         track_grid = DiffusiveGrid(
             name="track",
             grid_size=self.grid_size,
-            color=Color.from_rgb255(*rgb_agents),
+            color=Color.from_rgb255(*rgb_trace),
             decay_ratio=1 / 10000,
         )
         pheromon_move = DiffusiveGrid(
@@ -207,29 +178,15 @@ class Algo8eRidge(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent):
-        self._reset_agent_on_Z_plane(agent)
-
-    def _reset_agent_on_Z_plane(self, agent: Agent):
-        # TODO: make work with non square grids
-        # centered setup
-        grid_size = agent.space_grid.grid_size
-        x1, x2, y1, y2 = self.deployment_zone_xxyy
-
-        x1 = max(x1, 0)
-        x2 = min(x2, grid_size[0] - 1)
-        y1 = max(y1, 0)
-        y2 = min(y2, grid_size[1] - 1)
-        x = np.random.randint(x1, x2)
-        y = np.random.randint(y1, y2)
-        z = self.ground_level_Z + 1
-
+        pose = get_random_index_in_zone_xxyy_on_ground(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
         agent.space_grid.set_value_at_index(agent.pose, 0)
-        agent.pose = [x, y, z]
-
+        agent.pose = pose
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
-        # print('agent reset functioned')
+        # print('agent reset')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -242,7 +199,7 @@ class Algo8eRidge(AgentAlgorithm):
         ground = state.grids["ground"]
         clay_grid = state.grids["clay"]
 
-        # check solid volume collision
+        # check solid volume inclusion
         gv = agent.get_grid_value_at_pose(ground)
         if gv != 0:
             # print("""agent in the ground""")
@@ -254,10 +211,8 @@ class Algo8eRidge(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube_up = agent.direction_preference_26_pheromones_v2(
-            1, 0.5, 0.1
-        )
-        directional_bias_cube_side = agent.direction_preference_26_pheromones_v2(
+        directional_bias_cube_up = agent.direction_preference_26_pheromones(1, 0.5, 0.1)
+        directional_bias_cube_side = agent.direction_preference_26_pheromones(
             0.1, 1, 0.5
         )
 
@@ -291,7 +246,7 @@ class Algo8eRidge(AgentAlgorithm):
             grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
-            check_self_collision=self.check_collision,
+            check_self_collision=self.check_self_collision,
             random_batch_size=random_mod,
         )
 
@@ -313,11 +268,7 @@ class Algo8eRidge(AgentAlgorithm):
         ##########################################################################
         # build probability settings #############################################
         ##########################################################################
-        step_on_ridge_reward = 1.25
-        step_on_ridge_moves_pattern = self.move_pattern
 
-        gain_reward_if_on_top_floor = 0.25
-        lost_track_die_chance_gain = 0.2
         ##########################################################################
 
         clay_grid = state.grids["clay"]
@@ -326,22 +277,25 @@ class Algo8eRidge(AgentAlgorithm):
 
         # set chances based on movement pattern
         below = clay_grid.get_value_at_index(agent.pose + [0, 0, -1])
-        if self.build_overhang == False and below == 0:
-            pass
-        else:
+        if self.build_overhang is False:
+            if below > 0:
+                build_chance += self.step_on_ridge_reward
+            else:
+                pass
+
+        if self.build_overhang is True:
             clay_density_filled = agent.get_grid_density(clay_grid, nonzero=True)
             if clay_density_filled >= 1 / 26:
-                if self.build_overhang == False and below == 0:
-                    pass
+                # clay is around
+                if agent.match_vertical_move_history(self.overhang_move_pattern):
+                    # matched move history >> build
+                    build_chance += self.step_on_ridge_reward
                 else:
-                    # print(f'below:{below}')
-                    if agent.match_vertical_move_history(step_on_ridge_moves_pattern):
-                        build_chance += step_on_ridge_reward
-                    else:
-                        if agent.match_vertical_move_history(
-                            ["side", "side"]
-                        ) or agent.match_vertical_move_history(["side", "down"]):
-                            agent.die_chance += lost_track_die_chance_gain
+                    # no match >> kill agent if side or down
+                    if agent.match_vertical_move_history(
+                        ["side", "side"]
+                    ) or agent.match_vertical_move_history(["side", "down"]):
+                        agent.die_chance += self.wrong_way_gain
 
             # # set chance if it walks on topfloor
             # v = agent.get_nb_values_3x3_below_of_array(clay_grid.array)

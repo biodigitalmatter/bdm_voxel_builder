@@ -52,37 +52,46 @@ class Algo8d(AgentAlgorithm):
 
     """
 
+    # TODO agent_count = 10
+    # TODO erase is wierd
     agent_count: int
     grid_size: int | tuple[int, int, int]
     name: str = "algo_8_d"
     relevant_data_grids: str = "clay"
-
+    grid_to_dump: str = "clay"
     seed_iterations: int = 100
 
-    # EXISTING GEOMETRY
-    add_box = True
-    box_template = [20, 22, 20, 22, 1, 4]
-    box_template_2 = [30, 32, 25, 27, 1, 4]
-    wall = [0, 50, 28, 60, 1, 20]
+    # Environment geometry
     ground_level_Z = 0
+    wall = [0, 50, 28, 60, 1, 10]
+    add_wall = True
 
-    reach_to_build: int = 1
-    reach_to_erase: int = 1
-
-    # decay_clay_bool: bool = True
-    ####################################################
-
-    stacked_chances: bool = True
-    reset_after_build: bool = True
-    reset_after_erased: bool = False
+    box_template_1 = [5, 12, 20, 22, 1, 4]
+    box_template_2 = [30, 32, 25, 27, 1, 4]
 
     # Agent deployment
-    deployment_zone_xxyy = [5, 50, 5, 50]
+    deployment_zone_xxyy = [10, 30, 10, 30]
 
-    check_collision = True
+    # move settings
+    direction_bias = [1, 0.8, 0.2]
+    direction_bias_mod = 0.01
+    move_ph_mod = 10
+
+    # Build settings
+
+    clay_decay_ratio = 1 / 100
+    reset_after_build: bool = False
+    reset_after_erased: bool = False
+    flat_reward = True
+    build_reward = 0.6
+    erase_reward = 0
+    high_density_limit = 7 / 9
+
+    # general settings
+    reach_to_build: int = 1
+    reach_to_erase: int = 1
+    check_self_collision = True
     keep_in_bounds = True
-
-    grid_to_dump: str = "clay"
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -136,17 +145,21 @@ class Algo8d(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(*rgb_existing),
             flip_colors=True,
-            decay_ratio=1 / 100,
+            decay_ratio=self.clay_decay_ratio,
         )
 
-        ### CREATE GROUND ARRAY *could be imported from scan
+        ### CREATE environment geometry
+        # TODO shhould be imported from scan
         ground.set_values_in_zone_xxyyzz(
             [0, ground.grid_size[0], 0, ground.grid_size[1], 0, self.ground_level_Z], 1
         )
 
-        if self.add_box:
+        clay_grid.set_values_in_zone_xxyyzz(self.box_template_1, 1)
+        clay_grid.set_values_in_zone_xxyyzz(self.box_template_2, 1)
+
+        if self.add_wall:
             ground.set_values_in_zone_xxyyzz(self.wall, 1)
-            clay_grid.set_values_in_zone_xxyyzz(self.box_template_2, 1)
+            clay_grid.set_values_in_zone_xxyyzz(self.wall, 0)
 
         # WRAP ENVIRONMENT
         grids = {
@@ -204,7 +217,7 @@ class Algo8d(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
-        # print('agent reset functioned')
+        # print('agent reset')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -213,12 +226,15 @@ class Algo8d(AgentAlgorithm):
         move agent
         return True if moved, False if not or in ground
         """
+        # direction_bias = [1, 0.8, 0.2]
+        # direction_bias_mod = 0.01
+        # move_ph_mod = 10
         pheromon_grid_move = state.grids["pheromon_move"]
         ground = state.grids["ground"]
         clay_grid = state.grids["clay"]
 
         # check solid volume collision
-        gv = agent.get_grid_value_at_pose(ground, print_=False)
+        gv = agent.get_grid_value_at_pose(ground)
         if gv != 0:
             # print("""agent in the ground""")
             return False
@@ -229,7 +245,9 @@ class Algo8d(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube = agent.direction_preference_26_pheromones_v2(1, 0.8, 0.2)
+        directional_bias_cube = agent.direction_preference_26_pheromones(
+            self.direction_bias
+        )
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
@@ -243,8 +261,8 @@ class Algo8d(AgentAlgorithm):
 
         elif clay_density_filled >= 0.1:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
-            move_pheromon_cube *= 10
-            directional_bias_cube *= 0.01
+            move_pheromon_cube *= self.move_ph_mod
+            directional_bias_cube *= self.direction_bias_mod
             direction_cube = move_pheromon_cube + directional_bias_cube
             random_mod = 5
 
@@ -259,7 +277,7 @@ class Algo8d(AgentAlgorithm):
             grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
-            check_self_collision=self.check_collision,
+            check_self_collision=self.check_self_collision,
             random_batch_size=random_mod,
         )
 
@@ -277,50 +295,39 @@ class Algo8d(AgentAlgorithm):
 
         returns build_chance, erase_chance
         """
-        grid = state.grids["clay"]
+        clay = state.grids["clay"]
+        ground = state.grids["ground"]
         build_chance = 0
         erase_chance = 0
 
         ##########################################################################
         # build probability settings #############################################
         ##########################################################################
-        low_density__build_reward = 0.1
-        low_density__erase_reward = 0
-
-        normal_density__build_reward = 0.3
-        normal_density__erase_reward = 0
-
-        high_density__build_reward = 0
-        high_density__erase_reward = 1.5
-
+        # flat_reward = True
+        # build_reward = 0.2
+        # erase_reward = 0
+        # high_density_limit = 4 / 5
         ##########################################################################
 
         # get clay density
-        clay_density = agent.get_grid_density(grid)
-        dense_mod = clay_density + 0.2
-        clay_density_filled = agent.get_grid_density(grid, nonzero=True)
+        clay_density = agent.get_grid_density(clay)
+        clay_density_filled = agent.get_grid_density(clay, nonzero=True)
+        erase_density = agent.get_array_density(clay.array + ground.array, nonzero=True)
         # set chances
         if 0 <= clay_density < 1 / 26:
             # extrem low density
             pass
-        elif 1 / 26 <= clay_density_filled < 3 / 26:
-            build_chance += low_density__build_reward * dense_mod
-            erase_chance += low_density__erase_reward
-        elif 3 / 26 <= clay_density_filled < 4 / 5:
-            build_chance += normal_density__build_reward * dense_mod
-            erase_chance += normal_density__erase_reward
-        elif clay_density_filled >= 4 / 5:
-            build_chance += high_density__build_reward * dense_mod
-            erase_chance += high_density__erase_reward
+        elif 1 / 26 <= clay_density_filled < self.high_density_limit:
+            if self.flat_reward:
+                build_chance += self.build_reward
+            else:
+                build_chance += clay_density * self.build_reward
+        elif erase_density >= self.high_density_limit:
+            erase_chance += self.erase_reward
 
         # update probabilities
-        if self.stacked_chances:
-            # print(erase_chance)
-            agent.build_chance += build_chance
-            agent.erase_chance += erase_chance
-        else:
-            agent.build_chance = build_chance
-            agent.erase_chance = erase_chance
+        agent.build_chance += build_chance
+        agent.erase_chance += erase_chance
 
     def build_by_chance(self, agent: Agent, state: Environment):
         """agent builds on construction_grid, if pheromon value in cell hits limit
@@ -351,18 +358,16 @@ class Algo8d(AgentAlgorithm):
     def agent_action(self, agent, state: Environment):
         """MOVE BUILD .RESET"""
 
+        # BUILD
+        self.calculate_build_chances(agent, state)
+        built, erased = self.build_by_chance(agent, state)
+        # print(f'built: {built}, erased: {erased}')
+        if (built is True or erased is True) and self.reset_after_build:
+            self.reset_agent(agent)
+            # print("reset in built")
+
         # MOVE
         moved = self.move_agent(agent, state)
-
-        # BUILD
-        if moved:
-            self.calculate_build_chances(agent, state)
-            built, erased = self.build_by_chance(agent, state)
-            # print(f'built: {built}, erased: {erased}')
-            if (built is True or erased is True) and self.reset_after_build:
-                self.reset_agent(agent)
-                # print("reset in built")
-
         # RESET IF STUCK
         if not moved:
             self.reset_agent(agent)

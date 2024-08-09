@@ -1,4 +1,4 @@
-from math import trunc
+from math import ceil, trunc
 
 import numpy as np
 import numpy.typing as npt
@@ -131,17 +131,7 @@ class Agent:
         down = 0.1"""
         return np.asarray([1, x, 0.1, x, x, x]) if up else np.ones(6)
 
-    def direction_preference_26_pheromones(self, x=0.5, up=True):
-        """up = 1
-        side = x
-        down = 0.1"""
-        u = [1] * 9
-        m = [x] * 8
-        b = [0.1] * 9
-
-        return np.asarray(u + m + b) if up else np.ones(26)
-
-    def direction_preference_26_pheromones_v2(self, up=1, side=0.5, down=0):
+    def direction_preference_26_pheromones(self, up=1, side=0.5, down=0):
         """up = 1
         side = x
         down = 0.1"""
@@ -153,39 +143,89 @@ class Agent:
         return np.asarray(u + m + b)
 
     # INTERACTION WITH GRIDS
+    def get_grid_value_at_pose(self, grid: Grid):
+        x, y, z = self.pose
+        v = grid.array[x, y, z]
+        return v
+
     def get_grid_value_at_index(
         self,
         grid: Grid,
         index=(0, 0, 0),
-        reintroduce=True,
+        reintroduce=False,
+        limit_in_bounds=True,
         round_=False,
+        ceil_=False,
         eliminate_dec=False,
     ):
-        i, j, k = np.mod(index, grid.grid_size) if reintroduce else index
-
+        array = grid.array
+        if reintroduce:
+            i, j, k = np.mod(index, array.shape)
+        elif limit_in_bounds:
+            a, b, c = array.shape
+            i, j, k = np.clip(index, [0, 0, 0], [a - 1, b - 1, c - 1])
+        else:
+            i, j, k = index
         try:
-            v = grid.array[i][j][k]
+            v = array[i][j][k]
         except Exception as e:
             print(e)
             v = 0
 
         if round_:
             v = round(v)
-        if eliminate_dec:
+        elif ceil_:
+            v = ceil(v)
+        elif eliminate_dec:
             v = trunc(v)
 
         return v
 
-    def get_grid_value_at_pose(self, grid: Grid):
-        pose = self.pose
-        x, y, z = pose
-        v = grid.array[x][y][z]
+    def get_array_value_at_index(
+        self,
+        array,
+        index=(0, 0, 0),
+        reintroduce=False,
+        limit_in_bounds=True,
+        round_=False,
+        ceil_=False,
+        eliminate_dec=False,
+    ):
+        if reintroduce:
+            i, j, k = np.mod(index, array.shape)
+        elif limit_in_bounds:
+            a, b, c = array.shape
+            i, j, k = np.clip(index, [0, 0, 0], [a - 1, b - 1, c - 1])
+        else:
+            i, j, k = index
+        try:
+            v = array[i][j][k]
+        except Exception as e:
+            print(e)
+            v = 0
+        if round_:
+            v = round(v)
+        elif ceil_:
+            v = ceil(v)
+        elif eliminate_dec:
+            v = trunc(v)
+
         return v
 
-    def get_array_value_at_index(self, array, index):
-        x, y, z = index
-        v = array[x][y][z]
-        return v
+    def set_array_value_at_index(
+        self, value, array, index=(0, 0, 0), reintroduce=False, limit_in_bounds=True
+    ):
+        if reintroduce:
+            i, j, k = np.mod(index, array.shape)
+        elif limit_in_bounds:
+            a, b, c = array.shape
+            i, j, k = np.clip(index, [0, 0, 0], [a - 1, b - 1, c - 1])
+        else:
+            i, j, k = index
+        try:
+            array[i][j][k] = value
+        except Exception as e:
+            print(e)
 
     def get_nb_indices_6(self, pose):
         """returns the list of nb cell indexes"""
@@ -316,6 +356,25 @@ class Agent:
         """return clay density"""
         values = self.get_grid_nb_values_26(grid, self.pose, False)
         density = sum(values) / 26 if not nonzero else np.count_nonzero(values) / 26
+        if print_:
+            print(f"grid values:\n{values}\n")
+            print(f"grid_density:{density} in pose:{self.pose}")
+        return density
+
+    def get_array_density(self, array: np.ndarray, print_=False, nonzero=False):
+        """return clay density"""
+        nb_indices = self.get_nb_indices_26(self.pose)
+        values = []
+        for pose in nb_indices:
+            a, b, c = array.shape
+            pose_2 = np.clip(pose, [0, 0, 0], [a - 1, b - 1, c - 1])
+            if np.sum(pose - pose_2) == 0:
+                values.append(array[*pose])
+        if nonzero:
+            density = np.count_nonzero(values) / len(values)
+        else:
+            density = sum(values) / len(values)
+
         if print_:
             print(f"grid values:\n{values}\n")
             print(f"grid_density:{density} in pose:{self.pose}")
@@ -807,7 +866,7 @@ class Agent:
     ):
         """gets pheromone v at pose.
         if in limits, returns strength or strength * value"""
-        v = self.get_grid_value_at_index(diffusive_grid, self.pose)
+        v = self.get_grid_value_at_pose(diffusive_grid)
         # build
         if limit1 is None:
             flag = v <= limit2
@@ -850,7 +909,9 @@ class Agent:
     def build(self):
         grid = self.ground_grid
         try:
-            grid.set_value_at_index(index=self.pose, value=1)
+            grid.set_value_at_index(
+                index=self.pose, value=1, wrapping=False, clipping=True
+            )
             bool_ = True
             self.build_chance = 0
         except Exception as e:
