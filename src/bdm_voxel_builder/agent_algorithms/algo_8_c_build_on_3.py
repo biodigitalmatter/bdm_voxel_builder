@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 
 import numpy as np
-from compas.colors import Color
-
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
+from bdm_voxel_builder.agent_algorithms.common import (
+    diffuse_diffusive_grid,
+    get_random_index_in_zone_xxyy_on_ground,
+)
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
+from compas.colors import Color
 
 
 @dataclass
@@ -78,8 +80,7 @@ class Algo8c(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 5
-    deployment_zone__b = -1
+    deployment_zone_xxyy = [5, 50, 5, 50]
 
     check_collision = True
     keep_in_bounds = True
@@ -126,7 +127,7 @@ class Algo8c(AgentAlgorithm):
         track_grid = DiffusiveGrid(
             name="track",
             grid_size=self.grid_size,
-            color=Color.from_rgb255(*rgb_agents),
+            color=Color.from_rgb255(*rgb_trace),
         )
         pheromon_move = DiffusiveGrid(
             name="pheromon_move",
@@ -205,23 +206,11 @@ class Algo8c(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent):
-        # TODO: make work with non square grids
-        # centered setup
-        grid_size = agent.space_grid.grid_size
-        a, b = [
-            self.deployment_zone__a,
-            grid_size[0] + self.deployment_zone__b,
-        ]
-
-        a = max(a, 0)
-        b = min(b, grid_size[0] - 1)
-        x = np.random.randint(a, b)
-        y = np.random.randint(a, b)
-        z = self.ground_level_Z + 1
-
+        pose = get_random_index_in_zone_xxyy_on_ground(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
         agent.space_grid.set_value_at_index(agent.pose, 0)
-        agent.pose = [x, y, z]
-
+        agent.pose = pose
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
@@ -244,20 +233,8 @@ class Algo8c(AgentAlgorithm):
             # print("""agent in the ground""")
             return False
 
-        # TODO clay collision cannot be checked, if we want to optionally
-        # allow non_reset behaviour
-
-        # if agent.check_clay_collision:
-        #     cv = agent.get_layer_value_at_pose(clay_layer, print_=False)
-        #     if cv != 0:
-        #         print("""agent in the clay""")
-        #         return False
-
         # print clay density for examination
         clay_density = agent.get_grid_density(clay_grid, print_=False)
-        # if clay_density > 0:
-        #     txt = 'move: clay_density = {}'
-        #     print(txt.format(clay_density))
 
         # move by pheromon_move
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(pheromon_move, 1)
@@ -331,10 +308,6 @@ class Algo8c(AgentAlgorithm):
 
         high_density__build_reward = 0
         high_density__erase_reward = 0.8
-
-        slice_shape_above = [1, 1, 0, 0, 0, 1]  # radius x,y,z , offset x,y,z
-        high_density__roof__build_reward = -1
-        high_density__roof__erase_reward = 20
         ##########################################################################
 
         # get clay density
@@ -353,15 +326,6 @@ class Algo8c(AgentAlgorithm):
         elif clay_density >= 4 / 5:
             build_chance += high_density__build_reward
             erase_chance += high_density__erase_reward
-
-        # # TODO check clay density only above
-        # clay_density_above = agent.get_layer_density_in_slice_shape(
-        #         clay_layer,
-        #         slice_shape_above
-        #     )
-        # if clay_density_above > 0.85:
-        #     build_chance += high_density__roof__build_reward
-        #     erase_chance += high_density__roof__erase_reward
 
         # update probabilities
         if self.stacked_chances:

@@ -1,16 +1,16 @@
 from dataclasses import dataclass
 
 import numpy as np
-from compas.colors import Color
-
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
     diffuse_diffusive_grid,
     get_lowest_free_voxel_above_array,
+    get_random_index_in_zone_xxyy_on_ground,
 )
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
+from compas.colors import Color
 
 
 @dataclass
@@ -97,8 +97,6 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 3
-    deployment_zone__b = 3
 
     check_collision = True
     keep_in_bounds = True
@@ -259,41 +257,19 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     def deploy_agent_airborne(self, agent: Agent, state: Environment):
         printed_clay = state.grids["printed_clay"]
         design = state.grids["design"]
-        place = get_lowest_free_voxel_above_array(printed_clay.array, design.array)
-        # print(f"airborne {place}")
-        if isinstance(place, np.ndarray | list):
-            self.reset_agent_at_pose(agent, place)
-        else:
-            self.reset_agent(agent)
-        return place
+        pose = get_lowest_free_voxel_above_array(printed_clay.array, design.array)
+
+        if not isinstance(pose, np.ndarray | list):
+            pose = get_random_index_in_zone_xxyy_on_ground(
+                [0, 50, 0, 50], design.grid_size, self.ground_level_Z
+            )
+
+        self.reset_agent_at_pose(agent, pose)
+        return pose
 
     def reset_agent_at_pose(self, agent: Agent, pose):
         agent.space_grid.set_value_at_index(agent.pose, 0)
         x, y, z = pose
-        agent.pose = [x, y, z]
-
-        agent.build_chance = 0
-        agent.erase_chance = 0
-        agent.move_history = []
-        agent.track_flag = None
-        self.passive_counter = 0
-
-    def reset_agent(self, agent: Agent):
-        # TODO: make work with non square grids
-        # centered setup
-        grid_size = agent.space_grid.grid_size
-        a, b = [
-            self.deployment_zone__a,
-            grid_size[0] - self.deployment_zone__b,
-        ]
-
-        a = max(a, 0)
-        b = min(b, grid_size[0] - 1)
-        x = np.random.randint(a, b)
-        y = np.random.randint(a, b)
-        z = self.ground_level_Z + 1
-
-        agent.space_grid.set_value_at_index(agent.pose, 0)
         agent.pose = [x, y, z]
 
         agent.build_chance = 0

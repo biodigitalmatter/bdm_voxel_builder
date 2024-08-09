@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 
 import numpy as np
-from compas.colors import Color
-
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
+from bdm_voxel_builder.agent_algorithms.common import (
+    diffuse_diffusive_grid,
+    get_random_index_in_zone_xxyy_on_ground,
+)
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
+from compas.colors import Color
 
 
 @dataclass
@@ -17,36 +19,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
 
     ## Summary
 
-    default voxel builder algorithm
-    agents build on and around an initial 'clay' volume on a 'ground' surface
-    inputs: solid_ground_volume, clay_volume
-    output:
-
-
-    ## Agent behaviour
-
-    1. find the built clay
-    2. climb <up> on it
-    3. build after a while of climbing
-    4. reset or not
-
-    ## Features
-
-    - move on solid array
-    - move direction is controlled with the mix of the pheromon environment and
-      a global direction preference
-    - move randomness controlled by setting the number of best directions for
-      the random choice
-    - build on existing volume
-    - build and erase is controlled by gaining rewards
-    - move and build both is regulated differently at different levels of
-      environment grid density
-
-    ## NEW in 8_d
-    agents aim more towards the freshly built volumes.
-    the clay array values slowly decay
-
-    ## Observations:
+    simple slicer
 
     """
 
@@ -68,7 +41,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
     add_complex_design = False
     box_add_1 = [10, 25, 10, 25, 1, 5]
     # box_template_2 = [20, 35, 6, 10, 4, 8]
-    box_subtract_1 = [15,20, 15, 18, 0, 8]
+    box_subtract_1 = [15, 20, 15, 18, 0, 8]
     # ground_stair_1 = [0, 50, 20, 50, 0, 2]
     # ground_stair_2 = [20, 50, 0, 30, 0, 3]
     ground_level_Z = 0
@@ -84,8 +57,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 0
-    deployment_zone__b = 5
+    deployment_zone_xxyy = [0, 40, 0, 40]
 
     check_collision = True
     keep_in_bounds = True
@@ -226,26 +198,15 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent):
-        # TODO: make work with non square grids
-        # centered setup
-        grid_size = agent.space_grid.grid_size
-        a, b = [
-            self.deployment_zone__a,
-            grid_size[0] + self.deployment_zone__b,
-        ]
-
-        a = max(a, 0)
-        b = min(b, grid_size[0] - 1)
-        x = np.random.randint(a, b)
-        y = np.random.randint(a, b)
-        z = self.ground_level_Z + 1
-
+        pose = get_random_index_in_zone_xxyy_on_ground(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
         agent.space_grid.set_value_at_index(agent.pose, 0)
-        agent.pose = [x, y, z]
-
+        agent.pose = pose
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
+        # print('agent reset functioned')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction

@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 
 import numpy as np
-from compas.colors import Color
-
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
+from bdm_voxel_builder.agent_algorithms.common import (
+    diffuse_diffusive_grid,
+    get_random_index_in_zone_xxyy_on_ground,
+)
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
+from compas.colors import Color
 
 """
 Algorithm structure overview:
@@ -134,8 +136,7 @@ class Algo8b(AgentAlgorithm):
     reset_after_erased: bool = True
 
     # Agent deployment
-    deployment_zone__a = 5
-    deployment_zone__b = -5
+    deployment_zone_xxyy = [0, 60, 0, 60]
 
     check_collision = True
     keep_in_bounds = True
@@ -249,20 +250,15 @@ class Algo8b(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent):
-        # centered setup
-        a, b = [self.deployment_zone__a, self.grid_size + self.deployment_zone__b]
-        a = max(a, 0)
-        b = min(b, self.grid_size - 1)
-        x = np.random.randint(a, b)
-        y = np.random.randint(a, b)
-        z = self.ground_level_Z + 1
-
+        pose = get_random_index_in_zone_xxyy_on_ground(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
         agent.space_grid.set_value_at_index(agent.pose, 0)
-        agent.pose = [x, y, z]
-
+        agent.pose = pose
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
+        # print('agent reset functioned')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -316,7 +312,6 @@ class Algo8b(AgentAlgorithm):
 
         returns build_chance, erase_chance
         """
-        move_to_ph_grid = state.grids["move_to_ph_grid"]
         clay_grid = state.grids["clay_grid"]
         build_chance = agent.build_chance
         erase_chance = agent.erase_chance

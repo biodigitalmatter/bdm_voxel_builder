@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 
 import numpy as np
-from compas.colors import Color
-
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
+from bdm_voxel_builder.agent_algorithms.common import (
+    diffuse_diffusive_grid,
+    get_random_index_in_zone_xxyy_on_ground,
+)
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
+from compas.colors import Color
 
 
 @dataclass
@@ -76,8 +78,7 @@ class Algo9a(AgentAlgorithm):
     reset_after_erased: bool = False
 
     # Agent deployment
-    deployment_zone__a = 5
-    deployment_zone__b = -1
+    deployment_zone_xxyy = (5, 50, 5, 50)
 
     check_collision = True
     keep_in_bounds = True
@@ -102,12 +103,7 @@ class Algo9a(AgentAlgorithm):
 
         returns: grids
         """
-        number_of_iterations = kwargs.get("iterations")
-        # clay_decay_linear_value = max(
-        #     1 / (self.agent_count * number_of_iterations * 100), 0.00001
-        # )
         rgb_agents = (34, 116, 240)
-        rgb_trace = (17, 60, 120)
         rgb_ground = (100, 100, 100)
         rgb_queen = (232, 226, 211)
         rgb_existing = (207, 179, 171)
@@ -202,23 +198,11 @@ class Algo9a(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent):
-        # TODO: make work with non square grids
-        # centered setup
-        grid_size = agent.space_grid.grid_size
-        a, b = [
-            self.deployment_zone__a,
-            grid_size[0] + self.deployment_zone__b,
-        ]
-
-        a = max(a, 0)
-        b = min(b, grid_size[0] - 1)
-        x = np.random.randint(a, b)
-        y = np.random.randint(a, b)
-        z = self.ground_level_Z + 1
-
+        pose = get_random_index_in_zone_xxyy_on_ground(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
         agent.space_grid.set_value_at_index(agent.pose, 0)
-        agent.pose = [x, y, z]
-
+        agent.pose = pose
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
