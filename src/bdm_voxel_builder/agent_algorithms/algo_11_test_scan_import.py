@@ -71,7 +71,7 @@ class Algo11a_TestScanImport(AgentAlgorithm):
             file, self.grid_size, voxel_edge_length=self.unit_in_mm, name=file.name
         )
 
-        scan.array = np.float_(imported_grid.array)
+        scan.array = imported_grid.array
         # trim scan to gridsize
         # trim_array = imported_array[0:self.grid_size][0:self.grid_size][0:self.grid_size]
         # print(f'trim_array shape{trim_array.shape}')

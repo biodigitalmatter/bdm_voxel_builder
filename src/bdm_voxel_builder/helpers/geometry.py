@@ -106,7 +106,10 @@ def pointcloud_from_grid_array(arr: npt.NDArray, return_values=False):
 
 
 def pointcloud_to_grid_array(
-    pointcloud: cg.Pointcloud, grid_size: tuple[int, int, int], dtype=np.int8, value=1
+    pointcloud: cg.Pointcloud,
+    grid_size: tuple[int, int, int],
+    dtype=np.float64,
+    value=1,
 ):
     """Convert a pointcloud to a grid."""
     if not isinstance(grid_size, Sequence):
