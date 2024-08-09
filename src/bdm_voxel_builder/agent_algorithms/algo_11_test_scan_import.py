@@ -8,7 +8,6 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
 from compas.colors import Color
-import numpy as np
 
 
 @dataclass

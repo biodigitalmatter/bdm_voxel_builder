@@ -6,7 +6,7 @@ from bdm_voxel_builder.agent_algorithms.algo_11_test_scan_import import (
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
-grid_size = 40
+grid_size = 100
 iterations = 1
 agent_count = 1
 interval = 1
