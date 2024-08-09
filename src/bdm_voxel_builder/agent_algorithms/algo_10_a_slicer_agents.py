@@ -25,10 +25,10 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
 
     agent_count: int
     grid_size: int | tuple[int, int, int]
-    name: str = "algo_8_d"
-    relevant_data_grids: str = "design"
+    name: str = "algo_10_a"
+    relevant_data_grids: str = "printed_clay"
 
-    seed_iterations: int = 100
+    seed_iterations: int = 50
 
     # PRINT SETTINGS
     overhang_limit = 45
@@ -206,7 +206,7 @@ class Algo10a_VoxelSlicer(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
-        # print('agent reset functioned')
+        # print('agent reset')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction

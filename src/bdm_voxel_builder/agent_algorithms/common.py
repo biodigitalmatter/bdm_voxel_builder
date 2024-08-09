@@ -111,8 +111,10 @@ def get_random_index_in_zone_xxyy_on_ground(
         a, b, _ = grid_size
     x1 = max(x1, 0)
     x2 = min(x2, a - 1)
+    x2 = max(x1 + 1, x2)
     y1 = max(y1, 0)
     y2 = min(y2, b - 1)
+    y2 = max(y1 + 1, y2)
     x = np.random.randint(x1, x2)
     y = np.random.randint(y1, y2)
     z = ground_level + 1

@@ -214,7 +214,7 @@ class Algo8c(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
-        # print('agent reset functioned')
+        # print('agent reset')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -228,13 +228,13 @@ class Algo8c(AgentAlgorithm):
         clay_grid = state.grids["clay"]
 
         # check solid volume collision
-        gv = agent.get_grid_value_at_pose(ground, print_=False)
+        gv = agent.get_grid_value_at_pose(ground)
         if gv != 0:
             # print("""agent in the ground""")
             return False
 
         # print clay density for examination
-        clay_density = agent.get_grid_density(clay_grid, print_=False)
+        clay_density = agent.get_grid_density(clay_grid)
 
         # move by pheromon_move
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(pheromon_move, 1)

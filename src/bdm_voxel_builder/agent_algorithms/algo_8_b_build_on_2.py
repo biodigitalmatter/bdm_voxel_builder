@@ -258,7 +258,7 @@ class Algo8b(AgentAlgorithm):
         agent.build_chance = 0
         agent.erase_chance = 0
         agent.move_history = []
-        # print('agent reset functioned')
+        # print('agent reset')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -270,7 +270,7 @@ class Algo8b(AgentAlgorithm):
         move_to_ph_grid = state.grids["move_to_ph_grid"]
         ground = state.grids["ground"]
 
-        gv = agent.get_grid_value_at_pose(ground, print_=False)
+        gv = agent.get_grid_value_at_pose(ground)
         # print('ground value before move:', gv, agent.pose)
         if gv != 0:
             return False
