@@ -3,6 +3,9 @@
 from bdm_voxel_builder.agent_algorithms.algo_11_a_import_scan import (
     Algo11a_ImportScan,
 )
+from bdm_voxel_builder.agent_algorithms.algo_11_b_close_volume import (
+    Algo11b_CloseVolume,
+)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
@@ -11,6 +14,8 @@ iterations = 1
 agent_count = 1
 interval = 1
 name = f"_scan_import_res_{grid_size}"
+name = f"_scan_make_solid_res_{grid_size}"
+
 
 config = Config(
     iterations=iterations,

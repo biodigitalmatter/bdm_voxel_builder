@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+import os
+
+import numpy as np
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
@@ -7,12 +10,11 @@ from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
-from bdm_voxel_builder.helpers.file import save_ndarray
 from compas.colors import Color
 
 
 @dataclass
-class Algo11a_ImportScan(AgentAlgorithm):
+class Algo11b_CloseVolume(AgentAlgorithm):
     """
     imports ply scan from:
     //data/live/scan_ply
@@ -24,7 +26,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
 
     agent_count: int
     grid_size: int | tuple[int, int, int]
-    name: str = "algo_11_a_import_scan"
+    name: str = "algo_8_d"
     relevant_data_grids: str = "scan"
     grid_to_dump = "scan"
     seed_iterations = 0
@@ -55,7 +57,21 @@ class Algo11a_ImportScan(AgentAlgorithm):
         returns: grids
         """
         print("algorithm 11 started")
-        print(self.grid_size)
+
+        # filename = "2024-08-09_16_15_12_grid_20240731_stone_scan_5mm__01.vdb"
+        # file_path = os.path.join(self.dir_save_scan, filename)
+
+        # load vdb
+        file_path = get_nth_newest_file_in_folder(self.dir_save_scan)
+        loaded_grid = Grid.from_vdb(grid=file_path)
+        shape = loaded_grid.pad_array(
+            pad_width=5, values=0
+        )  # TODO not sure is a good idea...
+        self.grid_size = shape
+        # load npy
+        # file_path = get_nth_newest_file_in_folder(self.dir_save_scan_npy)
+        # loaded_grid = loaded_grid.from_npy(file_path)
+
         scan = DiffusiveGrid(
             name="scan",
             grid_size=self.grid_size,
@@ -68,20 +84,9 @@ class Algo11a_ImportScan(AgentAlgorithm):
             decay_ratio=1 / 10,
         )
 
-        file = get_nth_newest_file_in_folder(
-            self.scan_ply_folder_path, self.file_index_to_load
-        )
-        imported_grid = Grid.from_ply(
-            file, self.grid_size, voxel_edge_length=self.unit_in_mm, name=file.name
-        )
-        save_ndarray(imported_grid.array, note="", folder_path=self.dir_save_scan_npy)
-        imported_grid.save_vdb(self.dir_save_scan)
-        print(f"saved to {self.dir_save_scan}")
-        scan.array = imported_grid.array
-
-        print("imported from ply")
-
-        grids = {"scan": scan, "offset": offset, "imported_grid": imported_grid}
+        scan.array = loaded_grid.array
+        offset.array = np.zeros_like(scan.array)
+        grids = {"scan": scan, "offset": offset}
         return grids
 
     def update_environment(self, state: Environment):

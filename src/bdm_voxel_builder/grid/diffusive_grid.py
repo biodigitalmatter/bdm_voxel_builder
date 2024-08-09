@@ -7,11 +7,10 @@ from compas.geometry import Box
 
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
-    create_random_array,
     crop_array,
     get_mask_zone_xxyyzz,
-    remap,
 )
+from bdm_voxel_builder.helpers.math import remap
 
 
 class GravityDir(enum.Enum):
@@ -42,6 +41,9 @@ class DiffusiveGrid(Grid):
         gravity_ratio: float = 0.0,
         voxel_crop_range=(0, 1),
     ):
+        if isinstance(grid_size, int):
+            grid_size = [grid_size] * 3
+
         super().__init__(
             grid_size,
             name=name,
@@ -72,6 +74,7 @@ class DiffusiveGrid(Grid):
             colors = 1 - colors
 
         newshape = self.grid_size + [1]
+        # TODO check if  gridsize is a tuple...
 
         reds = np.reshape(colors * (r), newshape=newshape)
         greens = np.reshape(colors * (g), newshape=newshape)
@@ -122,14 +125,18 @@ class DiffusiveGrid(Grid):
         # order: left, right, front
         # diffuse per six face_neighbors
         total_diffusions = np.zeros_like(self.array)
+
+        if isinstance(self.grid_size, int):
+            gridsize = [self.grid_size, self.grid_size, self.grid_size]
+        else:
+            gridsize = self.grid_size
+
         for i in range(6):
             # y: shift neighbor
             y = np.copy(self.array)
             y = np.roll(y, shifts[i % 2], axis=axes[i])
-            if not reintroduce_on_the_other_end:
-                # TODO: make work with non square grid
-                e = self.grid_size[0] - 1
-
+            if not reintroduce_on_the_other_end:  # TODO do it with np.pad
+                e = gridsize[axes[i]] - 1
                 # removing the values from the other end after rolling
                 if i == 0:
                     y[:][:][e] = 0
@@ -249,14 +256,7 @@ class DiffusiveGrid(Grid):
             grid.array = np.where(self.array == 1, 0 * grid.array, 1 * grid.array)
 
     def decay(self):
-        if self.decay_random_factor == 0:
-            self.array -= self.array * self.decay_ratio
-        else:
-            randomized_decay = self.decay_ratio * (
-                1 - create_random_array(self.grid_size) * self.decay_random_factor
-            )
-            randomized_decay = abs(randomized_decay) * -1
-            self.array += self.array * randomized_decay
+        self.array -= self.array * self.decay_ratio
 
     def decay_linear(self):
         s, e = self.voxel_crop_range

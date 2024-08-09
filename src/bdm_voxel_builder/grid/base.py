@@ -33,6 +33,9 @@ class Grid:
     ):
         self.name = name
 
+        if isinstance(grid_size, int):
+            grid_size = [grid_size] * 3
+
         self.grid_size = grid_size
 
         self.color = color or Color.black()
@@ -63,6 +66,7 @@ class Grid:
         value = np.array(value, dtype=np.int8)
         if value.min() < 1:
             raise ValueError("grid_size must be nonzero and positive")
+            print(value)
         # if np.unique(value).size != 1: # TODO check. perhaps its already implemented.
         #     raise NotImplementedError("Non square grid not supported yet")
 
@@ -146,10 +150,21 @@ class Grid:
         a2 = grid.array
         return a1 + a2
 
+    def pad_array(self, pad_width: int = 1, values=0):
+        arr = np.pad(
+            self.array,
+            [[pad_width, pad_width], [pad_width, pad_width], [pad_width, pad_width]],
+            "constant",
+            constant_values=values,
+        )
+        self.array = arr
+        self.grid_size = self.array.shape
+        return self.grid_size
+
     @classmethod
     def from_npy(cls, path: os.PathLike, name: str = None):
         arr = np.load(path)
-        return cls(name=name, array=arr)
+        return cls(name=name, array=arr, grid_size=arr.shape)
 
     @classmethod
     def from_vdb(cls, grid: os.PathLike | vdb.GridBase, name: str = None):
