@@ -198,3 +198,4 @@ pyrightconfig.json
 .3dm
 /temp/*
 /data/examples/*.vdb
+/data/live/*
