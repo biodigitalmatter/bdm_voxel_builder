@@ -11,6 +11,7 @@ from bdm_voxel_builder.helpers import (
     get_sub_array,
     random_choice_index_from_best_n,
 )
+from bdm_voxel_builder.helpers.array import get_cube_array_indices
 
 
 class Agent:
@@ -60,7 +61,7 @@ class Agent:
 
     @property
     def cube_array(self):
-        self._cube_array = self.get_cube_array_indices()
+        self._cube_array = get_cube_array_indices()
         return self._cube_array
 
     @cube_array.setter
@@ -330,27 +331,6 @@ class Agent:
         if round_values:
             v.round()
         return v
-
-    def get_cube_array_indices(self, self_contain=False):
-        """26 nb indicies, ordered: top-middle-bottom"""
-        # horizontal
-        f = NB_INDEX_DICT["front"]
-        b = NB_INDEX_DICT["back"]
-        le = NB_INDEX_DICT["left"]
-        r = NB_INDEX_DICT["right"]
-        u = NB_INDEX_DICT["up"]
-        d = NB_INDEX_DICT["down"]
-        # first_story in level:
-        story_1 = [f + le, f, f + r, le, r, b + le, b, b + r]
-        story_0 = [i + d for i in story_1]
-        story_2 = [i + u for i in story_1]
-        if self_contain:
-            nbs_w_corners = (
-                story_2 + [u] + story_1 + [np.asarray([0, 0, 0])] + story_0 + [d]
-            )
-        else:
-            nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
-        return np.vstack(nbs_w_corners)
 
     def get_grid_density(self, grid: Grid, print_=False, nonzero=False):
         """return clay density"""

@@ -85,7 +85,9 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         )
 
         scan.array = loaded_grid.array
-        offset.array = np.zeros_like(scan.array)
+        # offset.array = np.zeros_like(scan.array)
+        offset.array = scan.array.copy()
+
         grids = {"scan": scan, "offset": offset}
         return grids
 
@@ -100,6 +102,11 @@ class Algo11b_CloseVolume(AgentAlgorithm):
             grade=True,
             gravity_shift_bool=True,
         )
+        # # WIP TODO
+        # arr = offset.extrude_from_center_point_using_distance(
+        #     center_point=[0, 0, 0], steps=1
+        # )
+        # offset.array = arr
         pass
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):

@@ -10,6 +10,11 @@ from bdm_voxel_builder.helpers import (
     crop_array,
     get_mask_zone_xxyyzz,
 )
+from bdm_voxel_builder.helpers.array import (
+    NB_INDEX_DICT,
+    distance_to_point,
+    get_cube_array_indices,
+)
 from bdm_voxel_builder.helpers.math import remap
 
 
@@ -189,18 +194,18 @@ class DiffusiveGrid(Grid):
             if not reintroduce_on_the_other_end:
                 # TODO replace to padded array method
                 # TODO fix for non square grids
-                e = self.grid_size[0] - 1
+                e, f, g = self.grid_size
                 # removing the values from the other end after rolling
                 match self.gravity_dir:
                     case GravityDir.LEFT:
-                        y[:][:][e] = 0
+                        y[:][:][e - 1] = 0
 
                     case GravityDir.RIGHT:
                         y[:][:][0] = 0
 
                     case GravityDir.FRONT:
                         m = y.transpose((1, 0, 2))
-                        m[:][:][e] = 0
+                        m[:][:][f - 1] = 0
                         y = m.transpose((1, 0, 2))
 
                     case GravityDir.BACK:
@@ -215,7 +220,7 @@ class DiffusiveGrid(Grid):
 
                     case GravityDir.UP:
                         m = y.transpose((2, 0, 1))
-                        m[:][:][0] = 0
+                        m[:][:][g - 1] = 0
                         y = m.transpose((1, 2, 0))
 
             total_diffusions += self.gravity_ratio * (self.array - y) / 2
@@ -289,3 +294,42 @@ class DiffusiveGrid(Grid):
         else:
             mask = get_mask_zone_xxyyzz(self.grid_size, zone_xxyyzz, return_bool=True)
             self.array[mask] = value
+
+    def extrude_from_center_point_using_distance(
+        self, center_point=[100, 100, 100], steps=1
+    ):
+        """operates with int array"""
+        array = np.ceil(self.array.copy())
+        cube_array = get_cube_array_indices()
+        pad = steps + 1
+        array = np.pad(
+            array,
+            ((pad, pad), (pad, pad), (pad, pad)),
+            "constant",
+            constant_values=((0, 0), (0, 0), (0, 0)),
+        )
+        distances = distance_to_point(array, center_point)
+
+        for i in range(steps):
+            volume_points = np.argwhere(array > 0)
+            print(f"n of volume points: {volume_points}")
+            print(volume_points)
+            print(f"extrude: {i}")
+            for point in volume_points:
+                d = distances[*point]
+                # print(f"point:{point}, dist: {d}")
+                for nb_dir in cube_array:
+                    nb_point = nb_dir + point
+
+                    try:
+                        d2 = distances[*nb_point]
+                        # print(f"nb_point: {nb_point}, dist: {d2}")
+                        if d2 > d:
+                            array[*nb_point] = 1
+                    except Exception as e:
+                        # print(e)
+                        pass
+        e, f, g = array.shape
+        array = array[pad : e - pad, pad : f - pad, pad : g - pad]
+
+        return array

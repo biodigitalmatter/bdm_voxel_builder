@@ -266,3 +266,12 @@ def clip_indices_to_grid_size(
         return clipped
     else:
         return clipped.tolist()
+
+
+def distance_to_point(array: np.ndarray, point: tuple[float, float, float]):
+    # index = np.clip(index, [0, 0, 0], np.array(index) - [1, 1, 1])
+    indices = np.indices(array.shape)
+    center = np.int_(point)
+    x, y, z = indices
+    d = (x - center[0]) ** 2 + (y - center[1]) ** 2 + (z - center[2]) ** 2
+    return d**0.5
