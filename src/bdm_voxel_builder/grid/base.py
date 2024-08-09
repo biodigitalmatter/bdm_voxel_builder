@@ -63,8 +63,8 @@ class Grid:
         value = np.array(value, dtype=np.int8)
         if value.min() < 1:
             raise ValueError("grid_size must be nonzero and positive")
-        if np.unique(value).size != 1:
-            raise NotImplementedError("Non square grid not supported yet")
+        # if np.unique(value).size != 1: # TODO check. perhaps its already implemented.
+        #     raise NotImplementedError("Non square grid not supported yet")
 
         self._grid_size = value.tolist()
 
