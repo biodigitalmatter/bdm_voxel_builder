@@ -80,7 +80,7 @@ class Algo9a(AgentAlgorithm):
     # Agent deployment
     deployment_zone_xxyy = (5, 50, 5, 50)
 
-    check_collision = True
+    check_self_collision = True
     keep_in_bounds = True
 
     grid_to_dump: str = "clay"
@@ -231,7 +231,7 @@ class Algo9a(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube = agent.direction_preference_26_pheromones_v2(1, 0.8, 0.2)
+        directional_bias_cube = agent.direction_preference_26_pheromones(1, 0.8, 0.2)
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
@@ -261,7 +261,7 @@ class Algo9a(AgentAlgorithm):
             grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
-            check_self_collision=self.check_collision,
+            check_self_collision=self.check_self_collision,
             random_batch_size=random_mod,
         )
 

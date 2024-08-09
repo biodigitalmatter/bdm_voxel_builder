@@ -138,7 +138,7 @@ class Algo8b(AgentAlgorithm):
     # Agent deployment
     deployment_zone_xxyy = [0, 60, 0, 60]
 
-    check_collision = True
+    check_self_collision = True
     keep_in_bounds = True
 
     grid_to_dump: str = "clay_grid"
@@ -285,7 +285,7 @@ class Algo8b(AgentAlgorithm):
         ph_cube += random_cube
 
         # # get move dir pref
-        # dir_cube = agent.direction_preference_26_pheromones_v2(
+        # dir_cube = agent.direction_preference_26_pheromones(
         #     self.move_up, self.move_side, self.move_down
         # )
         # ph_cube += dir_cube * self.move_dir_pref_weigth
@@ -295,7 +295,7 @@ class Algo8b(AgentAlgorithm):
             grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
-            check_self_collision=self.check_collision,
+            check_self_collision=self.check_self_collision,
         )
 
         # check if in bounds

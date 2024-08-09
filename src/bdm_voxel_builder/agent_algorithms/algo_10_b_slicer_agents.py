@@ -98,7 +98,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
 
     # Agent deployment
 
-    check_collision = True
+    check_self_collision = True
     keep_in_bounds = True
 
     grid_to_dump: str = "print_dots"
@@ -109,6 +109,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     step_counter = 0
     passive_counter = 0
     passive_limit = 15
+    agent_count = 1
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -302,7 +303,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube = agent.direction_preference_26_pheromones_v2(
+        directional_bias_cube = agent.direction_preference_26_pheromones(
             0.000, 0.5, 0.48
         )
         random_cube = np.random.random(26) + 0.5
@@ -348,7 +349,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
-            check_self_collision=self.check_collision,
+            check_self_collision=self.check_self_collision,
             random_batch_size=random_mod,
         )
 
@@ -383,9 +384,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         move_pheromon_cube = agent.get_direction_cube_values_for_grid(
             pheromon_grid_move, 1
         )
-        directional_bias_cube = agent.direction_preference_26_pheromones_v2(
-            0.9, 0.5, 0.48
-        )
+        directional_bias_cube = agent.direction_preference_26_pheromones(0.9, 0.5, 0.48)
         random_cube = np.random.random(26) + 0.5
         random_cube[:9] = 0
 
@@ -419,7 +418,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             grid_size=self.grid_size,
             fly=False,
             only_bounds=self.keep_in_bounds,
-            check_self_collision=self.check_collision,
+            check_self_collision=self.check_self_collision,
             random_batch_size=random_mod,
         )
 

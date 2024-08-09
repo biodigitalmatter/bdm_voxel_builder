@@ -72,13 +72,12 @@ class Algo8d(AgentAlgorithm):
     # Agent deployment
     deployment_zone_xxyy = [10, 30, 10, 30]
 
-    # move settings
+    # Move settings
     direction_bias = [1, 0.8, 0.2]
     direction_bias_mod = 0.01
     move_ph_mod = 10
 
     # Build settings
-
     clay_decay_ratio = 1 / 100
     reset_after_build: bool = False
     reset_after_erased: bool = False
@@ -246,7 +245,7 @@ class Algo8d(AgentAlgorithm):
             pheromon_grid_move, 1
         )
         directional_bias_cube = agent.direction_preference_26_pheromones(
-            self.direction_bias
+            *self.direction_bias
         )
 
         ############################################################################
