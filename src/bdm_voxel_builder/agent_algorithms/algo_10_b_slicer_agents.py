@@ -109,7 +109,7 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
     step_counter = 0
     passive_counter = 0
     passive_limit = 15
-    agent_count = 1
+    deployment_zone_xxyy = [0, 50, 0, 50]
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -278,6 +278,17 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         agent.move_history = []
         agent.track_flag = None
         self.passive_counter = 0
+
+    def reset_agent(self, agent: Agent):
+        pose = get_random_index_in_zone_xxyy_on_ground(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
+        agent.space_grid.set_value_at_index(agent.pose, 0)
+        agent.pose = pose
+        agent.build_chance = 0
+        agent.erase_chance = 0
+        agent.move_history = []
+        # print('agent reset')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction

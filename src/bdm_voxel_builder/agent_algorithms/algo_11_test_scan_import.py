@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from compas.colors import Color
-
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
@@ -9,6 +7,7 @@ from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
+from compas.colors import Color
 
 
 @dataclass
@@ -19,8 +18,8 @@ class Algo11a_TestScanImport(AgentAlgorithm):
     ## Summary
 
     default voxel builder algorithm
-    agents build on and around an initial 'clay' volume on a 'ground' surface
-    inputs: solid_ground_volume, clay_volume
+    agents build on and around an initial 'clay' volume on a 'scan' surface
+    inputs: solid_scan_volume, clay_volume
     output:
 
 
@@ -54,12 +53,11 @@ class Algo11a_TestScanImport(AgentAlgorithm):
     agent_count: int
     grid_size: int | tuple[int, int, int]
     name: str = "algo_8_d"
-    relevant_data_grids: str = "design"
-    grid_to_dump = "ground"
+    relevant_data_grids: str = "scan"
+    grid_to_dump = "scan"
     seed_iterations = 0
-    ground_level_Z = 0
 
-    scan_ply_folder_path = REPO_DIR / "docs/algo_11 load ply test/ply"
+    scan_ply_folder_path = REPO_DIR / "data/live/scan_ply"
     file_index_to_load = 1
     unit_in_mm = 10
 
@@ -82,8 +80,8 @@ class Algo11a_TestScanImport(AgentAlgorithm):
         returns: grids
         """
         print("algorithm 11 started")
-        ground = DiffusiveGrid(
-            name="ground",
+        scan = DiffusiveGrid(
+            name="scan",
             grid_size=self.grid_size,
         )
         offset = DiffusiveGrid(
@@ -101,22 +99,22 @@ class Algo11a_TestScanImport(AgentAlgorithm):
             file, self.grid_size, voxel_edge_length=self.unit_in_mm, name=file.name
         )
 
-        ground.array = imported_grid.array
+        scan.array = imported_grid.array
         # trim scan to gridsize
         # trim_array = imported_array[0:self.grid_size][0:self.grid_size][0:self.grid_size]
         # print(f'trim_array shape{trim_array.shape}')
-        # ground.array = trim_array
+        # scan.array = trim_array
         print("imported from ply")
 
-        grids = {"ground": ground, "offset": offset}
+        grids = {"scan": scan, "offset": offset}
         return grids
 
     def update_environment(self, state: Environment):
-        ground = state.grids["ground"]
+        scan = state.grids["scan"]
         offset = state.grids["offset"]
         diffuse_diffusive_grid(
             offset,
-            emmission_array=ground.array,
+            emmission_array=scan.array,
             decay_linear=True,
             decay=False,
             grade=True,
