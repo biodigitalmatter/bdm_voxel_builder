@@ -151,6 +151,10 @@ class Grid:
         return a1 + a2
 
     def pad_array(self, pad_width: int = 1, values=0):
+        """pad self.array uniform
+        updates self.grid_size = array.shape
+        return self.grid_size"""
+
         arr = np.pad(
             self.array,
             [[pad_width, pad_width], [pad_width, pad_width], [pad_width, pad_width]],

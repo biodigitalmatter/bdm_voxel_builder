@@ -275,3 +275,276 @@ def distance_to_point(array: np.ndarray, point: tuple[float, float, float]):
     x, y, z = indices
     d = (x - center[0]) ** 2 + (y - center[1]) ** 2 + (z - center[2]) ** 2
     return d**0.5
+
+
+def roll_array(array, shift, axis):
+    """Shifts the array along the specified axis."""
+    if shift == 0:
+        np.zeros_like(array)
+
+    else:
+        array = np.roll(array, shift, axis=axis)
+    return array
+
+
+def pad_array(array: np.ndarray, pad_width: int = 1, values=0):
+    array = np.pad(
+        array,
+        [[pad_width, pad_width], [pad_width, pad_width], [pad_width, pad_width]],
+        "constant",
+        constant_values=values,
+    )
+    return array
+
+
+def offset_array_from_corner(
+    array: np.ndarray,
+    corner: tuple[int, int, int],
+    steps: int,
+    clip_array: bool = False,
+):
+    """corner: index of corner, for example:
+    [0,0,0]
+    [0, -1, 0]
+    [-1, -1, -1]"""
+    pad = steps * 3
+    padded_array = pad_array(array.copy(), pad, 0)
+
+    for j in range(steps):
+        for i in range(len(corner)):
+            axis = i
+            dir = corner[i]
+            if dir == 0:
+                dir = 1
+            elif dir == -1:
+                dir = -1
+            else:
+                # print("int values of corner should be 0 or -1")
+                raise ValueError(corner)
+
+            # print(f"axis:{axis}, dir: {dir}")
+
+            shift = (j + 1) * dir
+            # print(f"shift:{shift}")
+
+            rolled_array = np.roll(padded_array, shift=shift, axis=axis)
+            # print(
+            #     # f"rolled_array {rolled_array[steps:-steps, steps:-steps, steps:-steps]}"
+            # )
+            padded_array += rolled_array
+
+    array = padded_array[pad:-pad, pad:-pad, pad:-pad]
+
+    if clip_array:
+        array = np.clip(array, 0, 1)
+    return array
+
+
+def extrude_array_from_point(
+    array: np.ndarray,
+    point: tuple[int, int, int],
+    steps: int,
+    clip_array: bool = False,
+):
+    shape = array.shape
+    a, b, c = np.clip(point, [0, 0, 0], np.array(shape) - 1)
+    # print(a, b, c)
+    new_array = np.zeros_like(array)
+    for _ in range(steps):
+        for z in [-1, 0]:
+            for i in range(4):
+                y = -1 if i < 2 else 0
+                x = -1 if i % 2 == 0 else 0
+                corner = np.array([x, y, z])
+                # print(f"corner:{corner}")
+                sub_array = array.copy()
+                if x == -1:
+                    sub_array = sub_array[:a, :, :]
+                    pad_width_x = [0, shape[0] - a]
+                    # print(f"subarray:\n{sub_array}")
+                elif x == 0:
+                    sub_array = sub_array[a:, :, :]
+                    pad_width_x = [a, 0]
+                    # print(f"subarray:\n{sub_array}")
+                if y == -1:
+                    sub_array = sub_array[:, :b, :]
+                    pad_width_y = [0, shape[1] - b]
+                    # print(f"subarray:\n{sub_array}")
+                elif y == 0:
+                    sub_array = sub_array[:, b:, :]
+                    pad_width_y = [b, 0]
+                    # print(f"subarray:\n{sub_array}")
+                if z == -1:
+                    sub_array = sub_array[:, :, :c]
+                    pad_width_z = [0, shape[2] - c]
+                    # print(f"subarray:\n{sub_array}")
+                elif z == 0:
+                    sub_array = sub_array[:, :, c:]
+                    pad_width_z = [c, 0]
+                    # print(f"subarray:\n{sub_array}")
+                # print(f"subarray:\n{sub_array}")
+                if np.sum(sub_array) == 0:
+                    pass
+                else:
+                    offsetted_sub_array = offset_array_from_corner(
+                        sub_array, corner, 1, clip_array
+                    )
+                    # print(f"offsetted_sub_array\n{offsetted_sub_array}")
+                    new_array += np.pad(
+                        offsetted_sub_array,
+                        [pad_width_x, pad_width_y, pad_width_z],
+                        "constant",
+                        constant_values=[[0, 0], [0, 0], [0, 0]],
+                    )
+    return new_array
+
+
+def offset_array_radial(array: np.ndarray, steps: int, clip_array: bool = True):
+    array1 = extrude_array_in_direction_expanding(array, [1, 1, 1], steps)
+    array1 += extrude_array_in_direction_expanding(array1, [-1, -1, -1], steps)
+    if clip_array:
+        array1 = np.clip(array1, 0, 1)
+    return array1
+
+
+def extrude_array_in_direction_expanding(
+    array: np.ndarray,
+    direction: tuple[int, int, int],
+    length: int,
+    clip_array: bool = True,
+):
+    """expanding, conical extrusion in int_.vector direction"""
+    direction = np.clip(direction, [-1, -1, -1], [1, 1, 1])
+
+    pad = length
+    for _ in range(length):
+        array = pad_array(array.copy(), pad, 0)
+        for i in range(3):
+            axis = i
+            dir = direction[i]
+            if dir == 0:
+                continue
+            rolled_array = np.roll(array, shift=dir, axis=axis)
+
+            array += rolled_array
+        array = array[pad:-pad, pad:-pad, pad:-pad]
+
+    if clip_array:
+        array = np.clip(array, 0, 1)
+
+    return array
+
+
+def extrude_array_linear(
+    array: np.ndarray,
+    direction: tuple[int, int, int],
+    length: int,
+    clip_array: bool = True,
+    straight: bool = True,
+):
+    """
+    extrude linear, limited to 45 degree directions
+    direction is clipped to (-1, 1)
+    """
+    direction = np.clip(direction, [-1, -1, -1], [1, 1, 1])
+
+    pad = length
+    new_array = array.copy()
+    for j in range(length):
+        array_step = pad_array(array.copy(), pad, 0)
+        for i in range(3):
+            axis = i
+            dir = direction[i]
+            if dir == 0:
+                continue
+            shift = (j + 1) * dir
+            array_step = np.roll(array_step, shift=shift, axis=axis)
+
+        new_array += array_step[pad:-pad, pad:-pad, pad:-pad]
+
+    if clip_array:
+        new_array = np.clip(new_array, 0, 1)
+
+    return new_array
+
+
+def extrude_array_along_vector(
+    array: np.ndarray,
+    vector: tuple[float, float, float],
+    length: int,
+    clip_array: bool = True,
+    straight: bool = True,
+):
+    """
+    linear extrusion, direction angle is 'unlimited'
+    direction = [1,5,-4] for example"""
+    vector = np.array(vector, dtype=np.float64)
+    index_steps = get_index_steps_along_vector(vector, length)
+    pad = length
+    new_array = array.copy()
+    for j in range(len(index_steps)):
+        index_direction = index_steps[j]
+        print(f"index dir:{index_direction}")
+        array_step = pad_array(array.copy(), pad, 0)
+        for i in range(3):
+            axis = i
+            shift = index_direction[i]
+            if shift == 0:
+                continue
+            array_step = np.roll(array_step, shift=shift, axis=axis)
+
+        new_array += array_step[pad:-pad, pad:-pad, pad:-pad]
+
+    if clip_array:
+        new_array = np.clip(new_array, 0, 1)
+
+    return new_array
+
+
+def get_index_steps_along_vector(
+    vector: tuple[float, float, float],
+    length: int,
+):
+    vector = np.array(vector, dtype=np.float64)
+    v_hat = vector / np.linalg.norm(vector)
+    index_steps = []
+    for i in range(length):
+        d = (i + 1) * v_hat
+        print(d)
+        d = np.round(d)
+        index_steps.append(d)
+    return np.unique(np.array(index_steps, dtype=np.int64), axis=0)
+
+
+# index_steps = get_index_steps_along_vector(vector, length)
+# print(index_steps)
+
+
+# # """test offset_array_from_corner"""
+# # array = np.zeros([6, 6, 6])
+# # array[2, 2, 2] = 1
+
+# # print(f"original array: \n{array}")
+# # offset = 100
+# # index = [2, 3, 4]
+
+# # array = offset_array_from_index(array, index, offset, clip_array=True)
+
+# # print(f"offsetted_array: \n{array}")
+
+# # print(f"offsetted_array sum: \n{np.sum(array)}")
+
+# """test extrude_array_linear"""
+# array = np.zeros([7, 7, 7])
+# # array[2:3, 2:4, 2:4] = 1
+# array[2, 2, 2] = 1
+
+# print(f"original array: \n{array}")
+# length = 3
+# vector = [0, 1, 0]
+
+# array = extrude_array_along_vector(array, vector, length)
+
+# array = offset_array_radial(array, 1)
+
+# print(f"extruded_array: \n{array}")
