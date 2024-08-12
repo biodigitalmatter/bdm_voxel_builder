@@ -118,14 +118,14 @@ def pointcloud_to_grid_array(
     grid_array = np.zeros(grid_size)
 
     indices = np.array(pointcloud.points).round().astype(np.int8)
-
-    if indices.min() < 0:
-        raise ValueError(
-            "Pointcloud contains negative values, needs to be transformed to index grid."
-        )  # noqa: E501
+    print(f"pointcloud bounds: {np.min(indices)}, {np.max(indices)}")
+    # if indices.min() < 0:
+    #     raise ValueError(
+    #         "Pointcloud contains negative values, needs to be transformed to index grid."
+    #     )  # noqa: E501
 
     for i, j, k in indices:
-        if max((i, j, k)) >= max(grid_size):
+        if np.max((i, j, k)) >= np.max(grid_size) or np.min((i, j, k)) < 0:
             raise IndexError(f"Index out of bounds: {i,j,k} in {grid_size}")
         grid_array[i, j, k] = value
     return grid_array.astype(dtype)

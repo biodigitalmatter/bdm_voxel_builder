@@ -1,12 +1,8 @@
 from dataclasses import dataclass
-import os
-
-import numpy as np
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
@@ -36,7 +32,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
     dir_save_scan_npy = REPO_DIR / "data/live/work/01_scanned/npy"
 
     file_index_to_load = 0
-    unit_in_mm = 10
+    # unit_in_mm = 10
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -56,57 +52,66 @@ class Algo11b_CloseVolume(AgentAlgorithm):
 
         returns: grids
         """
+        # radius = kwargs.get('radius')
+        # mode = kwargs.get('mode')
         print("algorithm 11 started")
 
         # filename = "2024-08-09_16_15_12_grid_20240731_stone_scan_5mm__01.vdb"
         # file_path = os.path.join(self.dir_save_scan, filename)
 
         # load vdb
-        file_path = get_nth_newest_file_in_folder(self.dir_save_scan)
-        loaded_grid = Grid.from_vdb(grid=file_path)
-        shape = loaded_grid.pad_array(
-            pad_width=5, values=0
-        )  # TODO not sure is a good idea...
-        self.grid_size = shape
+        # file_path = get_nth_newest_file_in_folder(self.dir_save_scan)
+        # loaded_grid = Grid.from_vdb(grid=file_path)
+        # shape = loaded_grid.pad_array(
+        #     pad_width=5, values=0
+        # )  # TODO not sure is a good idea...
+        # self.grid_size = shape
         # load npy
-        # file_path = get_nth_newest_file_in_folder(self.dir_save_scan_npy)
-        # loaded_grid = loaded_grid.from_npy(file_path)
+        file_path = get_nth_newest_file_in_folder(self.dir_save_scan_npy)
+        loaded_grid = Grid.from_npy(file_path)
+
+        # shape = loaded_grid.pad_array(
+        #     pad_width=5, values=0
+        # )  # TODO not sure is a good idea...
+        # self.grid_size = shape
 
         scan = DiffusiveGrid(
             name="scan",
             grid_size=self.grid_size,
         )
-        offset = DiffusiveGrid(
-            name="offset",
+        solid = DiffusiveGrid(
+            name="solid",
             grid_size=self.grid_size,
-            color=Color.from_rgb255(25, 100, 55),
-            gradient_resolution=100,
-            decay_ratio=1 / 10,
+            color=Color.from_rgb255(125, 170, 185),
         )
 
         scan.array = loaded_grid.array
-        # offset.array = np.zeros_like(scan.array)
-        offset.array = scan.array.copy()
 
-        grids = {"scan": scan, "offset": offset}
+        solid.array = scan.array.copy()
+
+        # SOLID METHOD OPTIONS
+        # solid.extrude_along_vector([-15, 3, -20], 5)
+        solid.extrude_unit([0, -1, -1], 25)
+
+        # solid.offset_radial(3)
+
+        # solid.extrude_from_point([100, 20, 120], 50)
+
+        grids = {"scan": scan, "solid": solid}
         return grids
 
     def update_environment(self, state: Environment):
-        scan = state.grids["scan"]
-        offset = state.grids["offset"]
-        diffuse_diffusive_grid(
-            offset,
-            emmission_array=scan.array,
-            decay_linear=True,
-            decay=False,
-            grade=True,
-            gravity_shift_bool=True,
-        )
-        # # WIP TODO
-        # arr = offset.extrude_from_center_point_using_distance(
-        #     center_point=[0, 0, 0], steps=1
+        # scan = state.grids["scan"]
+        # solid = state.grids["solid"]
+        # diffuse_diffusive_grid(
+        #     solid,
+        #     emmission_array=scan.array,
+        #     decay_linear=True,
+        #     decay=False,
+        #     grade=True,
+        #     gravity_shift_bool=True,
         # )
-        # offset.array = arr
+
         pass
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):

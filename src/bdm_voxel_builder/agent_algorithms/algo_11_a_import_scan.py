@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import numpy as np
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
@@ -34,7 +35,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
     dir_save_scan_npy = REPO_DIR / "data/live/work/01_scanned/npy"
 
     file_index_to_load = 0
-    unit_in_mm = 10
+    # unit_in_mm = 10
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -55,7 +56,6 @@ class Algo11a_ImportScan(AgentAlgorithm):
         returns: grids
         """
         print("algorithm 11 started")
-        print(self.grid_size)
         scan = DiffusiveGrid(
             name="scan",
             grid_size=self.grid_size,
@@ -67,19 +67,18 @@ class Algo11a_ImportScan(AgentAlgorithm):
             gradient_resolution=100,
             decay_ratio=1 / 10,
         )
-
         file = get_nth_newest_file_in_folder(
             self.scan_ply_folder_path, self.file_index_to_load
         )
-        imported_grid = Grid.from_ply(
-            file, self.grid_size, voxel_edge_length=self.unit_in_mm, name=file.name
-        )
+        imported_grid = Grid.from_ply(file, self.grid_size, name=file.name)
+
+        print(f"imported file: {file}")
         save_ndarray(imported_grid.array, note="", folder_path=self.dir_save_scan_npy)
         imported_grid.save_vdb(self.dir_save_scan)
         print(f"saved to {self.dir_save_scan}")
         scan.array = imported_grid.array
 
-        print("imported from ply")
+        print(f"imported from ply, sum = {np.sum(scan.array)}")
 
         grids = {"scan": scan, "offset": offset, "imported_grid": imported_grid}
         return grids

@@ -1,3 +1,5 @@
+from math import ceil
+
 import numpy as np
 import numpy.typing as npt
 
@@ -177,7 +179,7 @@ def get_array_density_from_zone_xxyyzz(
 
     x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz
     vol = (abs(x_min - x_max) + 1) * (abs(y_min - y_max) + 1) * (abs(z_min - z_max) + 1)
-    print("vol", vol)
+    # print("vol", vol)
     mask = np.zeros(shape, dtype=np.int8)
     mask[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = 1
     v = np.where(mask == 1, array, 0)
@@ -186,10 +188,10 @@ def get_array_density_from_zone_xxyyzz(
         d = np.sum(v) / vol
     else:
         n = np.count_nonzero(v)
-        print(f"n = {n}")
+        # print(f"n = {n}")
         m = grid_vol - n
         d = m / vol
-    print(f"density:{d}")
+    # print(f"density:{d}")
     return d
 
 
@@ -328,9 +330,7 @@ def offset_array_from_corner(
             # print(f"shift:{shift}")
 
             rolled_array = np.roll(padded_array, shift=shift, axis=axis)
-            # print(
-            #     # f"rolled_array {rolled_array[steps:-steps, steps:-steps, steps:-steps]}"
-            # )
+
             padded_array += rolled_array
 
     array = padded_array[pad:-pad, pad:-pad, pad:-pad]
@@ -477,26 +477,60 @@ def extrude_array_along_vector(
     linear extrusion, direction angle is 'unlimited'
     direction = [1,5,-4] for example"""
     vector = np.array(vector, dtype=np.float64)
-    index_steps = get_index_steps_along_vector(vector, length)
-    pad = length
-    new_array = array.copy()
-    for j in range(len(index_steps)):
-        index_direction = index_steps[j]
-        print(f"index dir:{index_direction}")
+    u_vector = vector / np.linalg.norm(vector)
+    index_directions = get_index_steps_along_vector(vector, length)
+    n = len(index_directions)
+    print(u_vector)
+    pad = n
+    padded_array = pad_array(array.copy(), pad, 0)
+    new_array = padded_array.copy()
+    for j in range(length):
+        # print(f"index dir:{index_direction}")
+        for i in range(3):
+            axis = i
+            shift = ceil(index_directions[j][i])
+            if shift == 0:
+                continue
+            new_array += np.roll(padded_array, shift=shift, axis=axis)
+
+    array = new_array[pad:-pad, pad:-pad, pad:-pad]
+
+    if clip_array:
+        array = np.clip(array, 0, 1)
+
+    return array
+
+
+def extrude_array_along_vector_b(
+    array: np.ndarray,
+    vector: tuple[float, float, float],
+    length: int,
+    clip_array: bool = True,
+):
+    """
+    linear extrusion, direction angle is 'unlimited'
+    direction = [1,5,-4] for example"""
+    vector = np.array(vector, dtype=np.float64)
+    u_vector = vector / np.linalg.norm(vector)
+    print(u_vector)
+    pad = 4
+    # new_array = array.copy()
+    for _j in range(length):
+        # print(f"index dir:{index_direction}")
         array_step = pad_array(array.copy(), pad, 0)
         for i in range(3):
             axis = i
-            shift = index_direction[i]
+            shift = ceil(u_vector[i])
             if shift == 0:
                 continue
             array_step = np.roll(array_step, shift=shift, axis=axis)
 
-        new_array += array_step[pad:-pad, pad:-pad, pad:-pad]
+        array += array_step[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        new_array = np.clip(new_array, 0, 1)
+        array = np.clip(array, 0, 1)
 
-    return new_array
+    return array
 
 
 def get_index_steps_along_vector(
@@ -508,10 +542,18 @@ def get_index_steps_along_vector(
     index_steps = []
     for i in range(length):
         d = (i + 1) * v_hat
-        print(d)
+        # print(d)
         d = np.round(d)
         index_steps.append(d)
     return np.unique(np.array(index_steps, dtype=np.int64), axis=0)
+
+
+def get_normal_vector(
+    vector: tuple[float, float, float],
+):
+    vector = np.array(vector, dtype=np.float64)
+    v_hat = vector / np.linalg.norm(vector)
+    return v_hat
 
 
 # index_steps = get_index_steps_along_vector(vector, length)
@@ -543,6 +585,6 @@ def get_index_steps_along_vector(
 
 # array = extrude_array_along_vector(array, vector, length)
 
-# array = offset_array_radial(array, 1)
+# # array = offset_array_radial(array, 1)
 
 # print(f"extruded_array: \n{array}")

@@ -9,7 +9,7 @@ from bdm_voxel_builder.agent_algorithms.algo_11_b_close_volume import (
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
-grid_size = 40
+grid_size = 126
 iterations = 1
 agent_count = 1
 interval = 1
@@ -20,11 +20,7 @@ name = f"_scan_make_solid_res_{grid_size}"
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo11b_CloseVolume(
-        agent_count=agent_count,
-        grid_size=grid_size,
-        name=name,
-    ),
+    algo=Algo11b_CloseVolume(agent_count=agent_count, grid_size=grid_size, name=name),
     visualizer=CompasViewerVisualizer(save_file=False, skip_grids=()),
     save_interval=interval,
     visualize_interval=interval,

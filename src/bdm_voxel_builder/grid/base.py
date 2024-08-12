@@ -68,12 +68,13 @@ class Grid:
 
     @grid_size.setter
     def grid_size(self, value):
-        if isinstance(value, int):
-            value = [value, value, value]
-        value = np.array(value, dtype=np.int8)
-        if value.min() < 1:
+        if isinstance(value, int | float):
+            value = np.array([value, value, value], dtype=np.int8)
+        elif isinstance(value, list | tuple):
+            value = np.array(value, dtype=np.int8)
+        print(value)
+        if np.min(value) < 1:
             raise ValueError("grid_size must be nonzero and positive")
-            print(value)
         # if np.unique(value).size != 1: # TODO check. perhaps its already implemented.
         #     raise NotImplementedError("Non square grid not supported yet")
 
@@ -162,13 +163,15 @@ class Grid:
         updates self.grid_size = array.shape
         return self.grid_size"""
 
-        self.array = np.pad(
+        array = np.pad(
             self.array,
             [[pad_width, pad_width], [pad_width, pad_width], [pad_width, pad_width]],
             "constant",
             constant_values=values,
         )
-        self.grid_size = self.array.shape
+        print(array.shape)
+        self.array = array
+        self.grid_size = list(array.shape)
         return self.grid_size
 
     def shrink_array(self, width: int):
@@ -183,6 +186,9 @@ class Grid:
 
     def extrude_along_vector(self, vector: tuple[float, float, float], length: int):
         self.array = extrude_array_along_vector(self.array, vector, length, True)
+
+    def extrude_unit(self, vector: tuple[int, int, int], steps: int):
+        self.array = extrude_array_linear(self.array, vector, steps, True)
 
     def extrude_from_point(self, point: tuple[int, int, int], steps: int):
         self.array = extrude_array_from_point(self.array, point, steps, True)
@@ -240,14 +246,15 @@ class Grid:
         if grid_size is None and voxel_edge_length is None:
             raise ValueError("Either grid_size or unit_in_mm must be provided")
 
-        if isinstance(grid_size, int):
-            grid_size = [grid_size] * 3
-
         if isinstance(pointcloud, os.PathLike):
             pointcloud = cg.Pointcloud.from_json(pointcloud)
 
         if not grid_size:
-            grid_size = max(pointcloud.aabb.dimensions) // voxel_edge_length + 1
+            grid_size = int(max(pointcloud.aabb.dimensions)) // voxel_edge_length + 1
+        # print(f"pointcloud.aabb.dimensions{pointcloud.aabb.dimensions}")
+        if isinstance(grid_size, int):
+            grid_size = [grid_size] * 3
+        # print(f"grid_size in from pointcloud{grid_size}")
 
         # TODO: Replace with multiplied version
         Sc, R, Tl = _get_xform_box2grid(pointcloud.aabb, grid_size=grid_size)

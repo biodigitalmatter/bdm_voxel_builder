@@ -48,7 +48,7 @@ class DiffusiveGrid(Grid):
         voxel_crop_range=(0, 1),
     ):
         if isinstance(grid_size, int):
-            grid_size = [grid_size] * 3
+            grid_size = np.array([grid_size] * 3, dtype=np.int64)
 
         super().__init__(
             grid_size,
@@ -80,7 +80,7 @@ class DiffusiveGrid(Grid):
             colors = 1 - colors
 
         newshape = self.grid_size + [1]
-        # TODO check if  gridsize is a tuple...
+        # TODO check if  self.grid_size is a tuple...
 
         reds = np.reshape(colors * (r), newshape=newshape)
         greens = np.reshape(colors * (g), newshape=newshape)
@@ -132,17 +132,17 @@ class DiffusiveGrid(Grid):
         # diffuse per six face_neighbors
         total_diffusions = np.zeros_like(self.array)
 
-        if isinstance(self.grid_size, int):
-            gridsize = [self.grid_size, self.grid_size, self.grid_size]
-        else:
-            gridsize = self.grid_size
+        # if isinstance(self.grid_size, int):
+        #     self.grid_size = [self.grid_size, self.grid_size, self.grid_size]
+        # else:
+        #     self.grid_size = self.grid_size
 
         for i in range(6):
             # y: shift neighbor
             y = np.copy(self.array)
             y = np.roll(y, shifts[i % 2], axis=axes[i])
             if not reintroduce_on_the_other_end:  # TODO do it with np.pad
-                e = gridsize[axes[i]] - 1
+                e = self.grid_size[axes[i]] - 1
                 # removing the values from the other end after rolling
                 if i == 0:
                     y[:][:][e] = 0
