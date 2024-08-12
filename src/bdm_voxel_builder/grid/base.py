@@ -17,6 +17,13 @@ from bdm_voxel_builder.helpers import (
     xform_to_compas,
     xform_to_vdb,
 )
+from bdm_voxel_builder.helpers.array import (
+    extrude_array_along_vector,
+    extrude_array_from_point,
+    extrude_array_in_direction_expanding,
+    extrude_array_linear,
+    offset_array_radial,
+)
 from bdm_voxel_builder.helpers.geometry import (
     _get_xform_box2grid,
 )
@@ -150,20 +157,40 @@ class Grid:
         a2 = grid.array
         return a1 + a2
 
-    def pad_array(self, pad_width: int = 1, values=0):
+    def pad_array(self, pad_width: int, values=0):
         """pad self.array uniform
         updates self.grid_size = array.shape
         return self.grid_size"""
 
-        arr = np.pad(
+        self.array = np.pad(
             self.array,
             [[pad_width, pad_width], [pad_width, pad_width], [pad_width, pad_width]],
             "constant",
             constant_values=values,
         )
-        self.array = arr
         self.grid_size = self.array.shape
         return self.grid_size
+
+    def shrink_array(self, width: int):
+        pad = width
+        self.array = self.array[pad:-pad, pad:-pad, pad:-pad]
+
+    def offset_radial(self, radius: int):
+        self.array = offset_array_radial(self.array, radius, True)
+
+    def offset_along_axes(self, direction, steps):
+        self.array = extrude_array_linear(self.array, direction, steps, True)
+
+    def extrude_along_vector(self, vector: tuple[float, float, float], length: int):
+        self.array = extrude_array_along_vector(self.array, vector, length, True)
+
+    def extrude_from_point(self, point: tuple[int, int, int], steps: int):
+        self.array = extrude_array_from_point(self.array, point, steps, True)
+
+    def extrude_tapered(self, direction: tuple[int, int, int], steps: int):
+        self.array = extrude_array_in_direction_expanding(
+            self.array, direction, steps, True
+        )
 
     @classmethod
     def from_npy(cls, path: os.PathLike, name: str = None):

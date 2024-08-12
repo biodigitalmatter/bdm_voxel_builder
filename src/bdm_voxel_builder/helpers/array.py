@@ -344,7 +344,7 @@ def extrude_array_from_point(
     array: np.ndarray,
     point: tuple[int, int, int],
     steps: int,
-    clip_array: bool = False,
+    clip_array: bool = True,
 ):
     shape = array.shape
     a, b, c = np.clip(point, [0, 0, 0], np.array(shape) - 1)
@@ -440,7 +440,6 @@ def extrude_array_linear(
     direction: tuple[int, int, int],
     length: int,
     clip_array: bool = True,
-    straight: bool = True,
 ):
     """
     extrude linear, limited to 45 degree directions
@@ -473,7 +472,6 @@ def extrude_array_along_vector(
     vector: tuple[float, float, float],
     length: int,
     clip_array: bool = True,
-    straight: bool = True,
 ):
     """
     linear extrusion, direction angle is 'unlimited'

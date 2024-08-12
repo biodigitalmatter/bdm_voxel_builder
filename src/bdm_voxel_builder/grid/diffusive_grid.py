@@ -14,6 +14,7 @@ from bdm_voxel_builder.helpers.array import (
     NB_INDEX_DICT,
     distance_to_point,
     get_cube_array_indices,
+    offset_array_radial,
 )
 from bdm_voxel_builder.helpers.math import remap
 
@@ -294,42 +295,3 @@ class DiffusiveGrid(Grid):
         else:
             mask = get_mask_zone_xxyyzz(self.grid_size, zone_xxyyzz, return_bool=True)
             self.array[mask] = value
-
-    def extrude_from_center_point_using_distance(
-        self, center_point=[100, 100, 100], steps=1
-    ):
-        """operates with int array"""
-        array = np.ceil(self.array.copy())
-        cube_array = get_cube_array_indices()
-        pad = steps + 1
-        array = np.pad(
-            array,
-            ((pad, pad), (pad, pad), (pad, pad)),
-            "constant",
-            constant_values=((0, 0), (0, 0), (0, 0)),
-        )
-        distances = distance_to_point(array, center_point)
-
-        for i in range(steps):
-            volume_points = np.argwhere(array > 0)
-            print(f"n of volume points: {volume_points}")
-            print(volume_points)
-            print(f"extrude: {i}")
-            for point in volume_points:
-                d = distances[*point]
-                # print(f"point:{point}, dist: {d}")
-                for nb_dir in cube_array:
-                    nb_point = nb_dir + point
-
-                    try:
-                        d2 = distances[*nb_point]
-                        # print(f"nb_point: {nb_point}, dist: {d2}")
-                        if d2 > d:
-                            array[*nb_point] = 1
-                    except Exception as e:
-                        # print(e)
-                        pass
-        e, f, g = array.shape
-        array = array[pad : e - pad, pad : f - pad, pad : g - pad]
-
-        return array
