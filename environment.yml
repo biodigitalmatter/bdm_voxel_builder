@@ -10,6 +10,7 @@ dependencies:
   - compas=>2.3.0
   - compas_fab
   - compas_viewer
+  - compas_rrc
   - invoke
   - matplotlib
   - numpy
