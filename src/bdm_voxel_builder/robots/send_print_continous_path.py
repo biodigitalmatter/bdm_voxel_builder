@@ -7,7 +7,7 @@ import json
 
 import compas_rrc as rrc
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
-from compas.geometry import Frame, Point, Pointcloud
+from compas.geometry import Frame
 from compas_rhino.conversions import plane_to_compas_frame
 
 # def load_pointcloud(file=None):
@@ -16,14 +16,16 @@ from compas_rhino.conversions import plane_to_compas_frame
 #     return pointcloud
 
 
-def send_program(
+def send_program_dots(
     planes: list[Frame],
     client=None,
     speed=100,
     movel=True,
     zone="fine",
+    print_IO="True",
     tool_name=None,
     wobj_name=None,
+    print_IO_name="LOCAL_IO_5",
 ):
     run = True
 
@@ -84,16 +86,15 @@ def send_program(
         for i, plane in enumerate(planes):
             sp = speed[i] if isinstance(speed, list) else speed
             zo = zone[i] if isinstance(zone, list) else zone
+            digital_value = print_IO[i] if isinstance(zone, list) else print_IO
+            digital_value = 1 if digital_value in (True, 1) else 0
             motion_type = movel[i] if isinstance(movel, list) else movel
 
             frame = plane_to_compas_frame(plane)
             print(f"send move to frame :: {i}")
 
             client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
-
-
-# ??? does move_to_frame
-# orients frames to workobject or global space ????
+            client.send(rrc.SetDigital(io_name=print_IO_NAME, value=digital_value))
 
 
 if __name__ == "__main__":
@@ -111,15 +112,18 @@ if __name__ == "__main__":
     zone = data["zone"]
     movel = data["movel"]
 
+    print_IO_NAME = "LOCAL_IO_5"
+
     tool_name = None
     wobj_name = None
 
-    send_program(
+    send_program_dots(
         frames,
         client,
         speed,
         movel,
         zone,
+        print_IO,
         tool_name,
         wobj_name,
     )

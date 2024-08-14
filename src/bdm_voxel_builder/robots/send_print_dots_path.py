@@ -8,6 +8,7 @@ import json
 import compas_rrc as rrc
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 from compas.geometry import Frame, Point, Pointcloud
+from compas.geometry.transformation import Transformation as T
 from compas_rhino.conversions import plane_to_compas_frame
 
 # def load_pointcloud(file=None):
@@ -93,12 +94,40 @@ def send_program_dots(
             frame = plane_to_compas_frame(plane)
             print(f"send move to frame :: {i}")
 
-            rrc.SetDigital(io_name=print_IO_NAME, value=digital_value)
-            client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
+            if digital_value == 0:
+                client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
+            else:
+                extrude_and_wait(frame, sp, zo, motion_type, wait_time=2)
 
 
-# ??? does move_to_frame
-# orients frames to workobject or global space ????
+def extrude_and_wait(frame, sp, zo, motion_type, wait_time=2, wait_time_after=0):
+    cmds = [
+        rrc.MoveToFrame(frame, sp, zo, motion_type),
+        rrc.SetDigital(io_name=print_IO_NAME, value=1),
+        rrc.WaitTime(wait_time),
+        rrc.SetDigital(io_name=print_IO_NAME, value=0),
+        rrc.WaitTime(wait_time_after),
+    ]
+    [client.send(cmd) for cmd in cmds]
+
+
+def extrude_with_z_hop(
+    frame, sp, zo, motion_type, wait_time=2, wait_time_after=0, z_hop=15
+):
+    to_z_frame = Frame([0, 0, z_hop], [1, 0, 0], [0, 1, 0])
+    move_z = T.from_frame(to_z_frame)
+    frame_z_hop = Frame.transform(move_z)
+
+    cmds = [
+        rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
+        rrc.MoveToFrame(frame, sp, zo, motion_type),
+        rrc.SetDigital(io_name=print_IO_NAME, value=1),
+        rrc.WaitTime(wait_time),
+        rrc.SetDigital(io_name=print_IO_NAME, value=0),
+        rrc.WaitTime(wait_time_after),
+        rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
+    ]
+    [client.send(cmd) for cmd in cmds]
 
 
 if __name__ == "__main__":
