@@ -1,19 +1,12 @@
-"""
-from gh
-"""
-
-# from compas import json_dump, json_load
-import json
-
 import compas_rrc as rrc
-from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
+from bdm_voxel_builder import DATA_DIR
+
+# from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
+from compas import json_load
 from compas.geometry import Frame
 from compas_rhino.conversions import plane_to_compas_frame
 
-# def load_pointcloud(file=None):
-#     # TODO
-#     pointcloud = None
-#     return pointcloud
+PRINT_IO_NAME = "LOCAL_IO_5"
 
 
 def send_program_dots(
@@ -94,25 +87,27 @@ def send_program_dots(
             print(f"send move to frame :: {i}")
 
             client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
-            client.send(rrc.SetDigital(io_name=print_IO_NAME, value=digital_value))
+            client.send(rrc.SetDigital(io_name=PRINT_IO_NAME, value=digital_value))
 
 
 if __name__ == "__main__":
     # get client object
     client = None  # TODO
 
-    folder_path = ""
-    file = get_nth_newest_file_in_folder(folder_path)
-    print(f"import file: {file}")
+    file_name = "fab_data_cylinder_continous.json"
+    filepath = DATA_DIR / "live" / "fab_data" / file_name
 
-    data = json.load(file)
+    # file = get_nth_newest_file_in_folder(folder_path)
+    print(f"import file: {filepath}")
+
+    data = json_load(filepath)
     frames = data["frames"]
     print_IO = data["print_IO"]
     speed = data["speed"]
     zone = data["zone"]
     movel = data["movel"]
 
-    print_IO_NAME = "LOCAL_IO_5"
+    PRINT_IO_NAME = "LOCAL_IO_5"
 
     tool_name = None
     wobj_name = None

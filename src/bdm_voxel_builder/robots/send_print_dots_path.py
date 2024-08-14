@@ -1,20 +1,13 @@
-"""
-from gh
-"""
-
-# from compas import json_dump, json_load
-import json
-
 import compas_rrc as rrc
-from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
-from compas.geometry import Frame, Point, Pointcloud
+from bdm_voxel_builder import DATA_DIR
+
+# from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
+from compas import json_load
+from compas.geometry import Frame
 from compas.geometry.transformation import Transformation as T
 from compas_rhino.conversions import plane_to_compas_frame
 
-# def load_pointcloud(file=None):
-#     # TODO
-#     pointcloud = None
-#     return pointcloud
+PRINT_IO_NAME = "LOCAL_IO_5"
 
 
 def send_program_dots(
@@ -26,7 +19,7 @@ def send_program_dots(
     print_IO="True",
     tool_name=None,
     wobj_name=None,
-    print_IO_name="LOCAL_IO_5",
+    dot_print_style=True,
 ):
     run = True
 
@@ -94,18 +87,22 @@ def send_program_dots(
             frame = plane_to_compas_frame(plane)
             print(f"send move to frame :: {i}")
 
-            if digital_value == 0:
+            if dot_print_style:  # dot style print with z hop
+                if digital_value == 0:
+                    client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
+                else:
+                    extrude_with_z_hop(frame, sp, zo, motion_type, wait_time=2)
+            else:  # continous print path
                 client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
-            else:
-                extrude_and_wait(frame, sp, zo, motion_type, wait_time=2)
+                client.send(rrc.SetDigital(io_name=PRINT_IO_NAME, value=digital_value))
 
 
 def extrude_and_wait(frame, sp, zo, motion_type, wait_time=2, wait_time_after=0):
     cmds = [
         rrc.MoveToFrame(frame, sp, zo, motion_type),
-        rrc.SetDigital(io_name=print_IO_NAME, value=1),
+        rrc.SetDigital(io_name=PRINT_IO_NAME, value=1),
         rrc.WaitTime(wait_time),
-        rrc.SetDigital(io_name=print_IO_NAME, value=0),
+        rrc.SetDigital(io_name=PRINT_IO_NAME, value=0),
         rrc.WaitTime(wait_time_after),
     ]
     [client.send(cmd) for cmd in cmds]
@@ -121,9 +118,9 @@ def extrude_with_z_hop(
     cmds = [
         rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
         rrc.MoveToFrame(frame, sp, zo, motion_type),
-        rrc.SetDigital(io_name=print_IO_NAME, value=1),
+        rrc.SetDigital(io_name=PRINT_IO_NAME, value=1),
         rrc.WaitTime(wait_time),
-        rrc.SetDigital(io_name=print_IO_NAME, value=0),
+        rrc.SetDigital(io_name=PRINT_IO_NAME, value=0),
         rrc.WaitTime(wait_time_after),
         rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
     ]
@@ -133,22 +130,23 @@ def extrude_with_z_hop(
 if __name__ == "__main__":
     # get client object
     client = None  # TODO
+    file_name = "fab_data_cylinder_continous.json"
+    filepath = DATA_DIR / "live" / "fab_data" / file_name
 
-    folder_path = ""
-    file = get_nth_newest_file_in_folder(folder_path)
-    print(f"import file: {file}")
+    # file = get_nth_newest_file_in_folder(folder_path)
+    print(f"import file: {filepath}")
 
-    data = json.load(file)
+    data = json_load(filepath)
     frames = data["frames"]
     print_IO = data["print_IO"]
     speed = data["speed"]
     zone = data["zone"]
     movel = data["movel"]
 
-    print_IO_NAME = "LOCAL_IO_5"
-
     tool_name = None
     wobj_name = None
+
+    dot_print_style = True
 
     send_program_dots(
         frames,
@@ -159,4 +157,5 @@ if __name__ == "__main__":
         print_IO,
         tool_name,
         wobj_name,
+        dot_print_style,
     )
