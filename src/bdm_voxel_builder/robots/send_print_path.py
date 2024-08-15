@@ -5,14 +5,15 @@ from bdm_voxel_builder import DATA_DIR
 from compas import json_load
 from compas.geometry import Frame
 from compas.geometry.transformation import Transformation as T
-from compas_rhino.conversions import plane_to_compas_frame
+from compas_fab.backends.ros import RosClient
+from compas_rrc import AbbClient
 
-PRINT_IO_NAME = "LOCAL_IO_5"
+RUN_EXTRUDER_DO = "Local_IO_0_DO5"
+DIR_EXTRUDER_DO = "Local_IO_0_DO6"
 
 
 def send_program_dots(
     planes: list[Frame],
-    client=None,
     speed=100,
     movel=True,
     zone="fine",
@@ -48,6 +49,7 @@ def send_program_dots(
     # print("Z50" in rrc.Zone.__dict__)
     # print(50 in rrc.Zone.__dict__.values())
     if zone and not isinstance(zone, list):
+        print(zone)
         if zone in rrc.Zone.__dict__:
             zone = rrc.Zone.__dict__[zone]
         elif zone in rrc.Zone.__dict__.values():
@@ -67,42 +69,44 @@ def send_program_dots(
     else:
         zone = rrc.Zone.FINE
 
-    if not client:
-        raise Exception("No client, click to connect to ROS first.")
-    elif not client.ros.is_connected:
-        raise Exception("Not connected to ROS")
-
     if run:
-        client.send(rrc.SetTool(tool_name))
-        client.send(rrc.SetWorkObject(wobj_name))
-        client.send(rrc.SetAcceleration(100, 100))
-        client.send(rrc.SetMaxSpeed(100, 150))
-        for i, plane in enumerate(planes):
-            sp = speed[i] if isinstance(speed, list) else speed
-            zo = zone[i] if isinstance(zone, list) else zone
-            digital_value = print_IO[i] if isinstance(zone, list) else print_IO
-            digital_value = 1 if digital_value in (True, 1) else 0
-            motion_type = movel[i] if isinstance(movel, list) else movel
+        with RosClient() as ros_client:
+            print(ros_client)
+            client = AbbClient(ros=ros_client)
+            client.send(rrc.SetTool(tool_name))
+            client.send(rrc.SetWorkObject(wobj_name))
+            client.send(rrc.SetAcceleration(100, 100))
+            client.send(rrc.SetMaxSpeed(100, 150))
 
-            frame = plane_to_compas_frame(plane)
-            print(f"send move to frame :: {i}")
+            for i, plane in enumerate(planes):
+                sp = speed[i] if isinstance(speed, list) else speed
+                zo = zone[i] if isinstance(zone, list) else zone
+                digital_value = print_IO[i] if isinstance(zone, list) else print_IO
+                digital_value = 1 if digital_value in (True, 1) else 0
+                motion_type = movel[i] if isinstance(movel, list) else movel
 
-            if dot_print_style:  # dot style print with z hop
-                if digital_value == 0:
+                frame = plane
+                print(f"send move to frame :: {i}")
+
+                if dot_print_style:  # dot style print with z hop
+                    if digital_value == 0:
+                        client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
+                    else:
+                        extrude_with_z_hop(frame, sp, zo, motion_type, wait_time=2)
+                else:  # continous print path
+                    print(frame)
                     client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
-                else:
-                    extrude_with_z_hop(frame, sp, zo, motion_type, wait_time=2)
-            else:  # continous print path
-                client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
-                client.send(rrc.SetDigital(io_name=PRINT_IO_NAME, value=digital_value))
+                    client.send(
+                        rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=digital_value)
+                    )
 
 
 def extrude_and_wait(frame, sp, zo, motion_type, wait_time=2, wait_time_after=0):
     cmds = [
         rrc.MoveToFrame(frame, sp, zo, motion_type),
-        rrc.SetDigital(io_name=PRINT_IO_NAME, value=1),
+        rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1),
         rrc.WaitTime(wait_time),
-        rrc.SetDigital(io_name=PRINT_IO_NAME, value=0),
+        rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0),
         rrc.WaitTime(wait_time_after),
     ]
     [client.send(cmd) for cmd in cmds]
@@ -118,9 +122,9 @@ def extrude_with_z_hop(
     cmds = [
         rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
         rrc.MoveToFrame(frame, sp, zo, motion_type),
-        rrc.SetDigital(io_name=PRINT_IO_NAME, value=1),
+        rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1),
         rrc.WaitTime(wait_time),
-        rrc.SetDigital(io_name=PRINT_IO_NAME, value=0),
+        rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0),
         rrc.WaitTime(wait_time_after),
         rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
     ]
@@ -130,7 +134,7 @@ def extrude_with_z_hop(
 if __name__ == "__main__":
     # get client object
     client = None  # TODO
-    file_name = "fab_data_cylinder_continous.json"
+    file_name = "fab_data_cylinder.json"
     filepath = DATA_DIR / "live" / "fab_data" / file_name
 
     # file = get_nth_newest_file_in_folder(folder_path)
@@ -139,18 +143,18 @@ if __name__ == "__main__":
     data = json_load(filepath)
     frames = data["frames"]
     print_IO = data["print_IO"]
-    speed = data["speed"]
+    # speed = data["speed"]
+    speed = 100
     zone = data["zone"]
     movel = data["movel"]
 
-    tool_name = None
-    wobj_name = None
+    tool_name = "t_erratic"
+    wobj_name = "wobj_bhg"
 
-    dot_print_style = True
+    dot_print_style = False
 
     send_program_dots(
         frames,
-        client,
         speed,
         movel,
         zone,
