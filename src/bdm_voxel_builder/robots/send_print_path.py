@@ -16,8 +16,8 @@ def send_program_dots(
     planes: list[Frame],
     speed=100,
     movel=True,
-    zone="fine",
-    print_IO="True",
+    zone="Z5",
+    print_IO=0,
     tool_name=None,
     wobj_name=None,
     dot_print_style=True,
@@ -81,10 +81,9 @@ def send_program_dots(
             for i, plane in enumerate(planes):
                 sp = speed[i] if isinstance(speed, list) else speed
                 zo = zone[i] if isinstance(zone, list) else zone
-                digital_value = print_IO[i] if isinstance(zone, list) else print_IO
-                digital_value = 1 if digital_value in (True, 1) else 0
+                digital_value = print_IO[i] if isinstance(print_IO, list) else print_IO
                 motion_type = movel[i] if isinstance(movel, list) else movel
-
+                print(digital_value)
                 frame = plane
                 print(f"send move to frame :: {i}")
 
@@ -94,16 +93,16 @@ def send_program_dots(
                     else:
                         extrude_with_z_hop(frame, sp, zo, motion_type, wait_time=2)
                 else:  # continous print path
-                    print(frame)
                     client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
+                    print(f"digital_value: {digital_value}")
                     client.send(
                         rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=digital_value)
                     )
 
 
-def extrude_and_wait(frame, sp, zo, motion_type, wait_time=2, wait_time_after=0):
+def extrude_and_wait(frame, sp, motion_type, wait_time=2, wait_time_after=0):
     cmds = [
-        rrc.MoveToFrame(frame, sp, zo, motion_type),
+        rrc.MoveToFrame(frame, sp, "FINE", motion_type),
         rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1),
         rrc.WaitTime(wait_time),
         rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0),
@@ -113,20 +112,20 @@ def extrude_and_wait(frame, sp, zo, motion_type, wait_time=2, wait_time_after=0)
 
 
 def extrude_with_z_hop(
-    frame, sp, zo, motion_type, wait_time=2, wait_time_after=0, z_hop=15
+    frame, sp, motion_type, wait_time=2, wait_time_after=0, z_hop=15
 ):
     to_z_frame = Frame([0, 0, z_hop], [1, 0, 0], [0, 1, 0])
     move_z = T.from_frame(to_z_frame)
     frame_z_hop = Frame.transform(move_z)
 
     cmds = [
-        rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
-        rrc.MoveToFrame(frame, sp, zo, motion_type),
+        rrc.MoveToFrame(frame_z_hop, sp, "Z5", motion_type),
+        rrc.MoveToFrame(frame, sp, "FINE", motion_type),
         rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1),
         rrc.WaitTime(wait_time),
         rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0),
         rrc.WaitTime(wait_time_after),
-        rrc.MoveToFrame(frame_z_hop, sp, zo, motion_type),
+        rrc.MoveToFrame(frame_z_hop, sp, "Z5", motion_type),
     ]
     [client.send(cmd) for cmd in cmds]
 
