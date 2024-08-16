@@ -1,15 +1,19 @@
 from dataclasses import dataclass
 
 import numpy as np
+from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
     diffuse_diffusive_grid,
-    get_random_index_in_zone_xxyy_on_ground,
+    get_random_index_in_zone_xxyy_on_Z_level,
 )
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from compas.colors import Color
+
+from bdm_voxel_builder.grid.base import Grid
+from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 
 
 @dataclass
@@ -28,6 +32,8 @@ class Algo8eRidge(AgentAlgorithm):
 
     """
 
+    import_ground_from_scan = True
+    dir_import_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
     agent_count: int
     grid_size: int | tuple[int, int, int]
     name: str = "algo_8_e"
@@ -37,12 +43,12 @@ class Algo8eRidge(AgentAlgorithm):
 
     # environment geometry #############################################
     add_box = True
-    box_template = [20, 30, 25, 30, 1, 2]
+    stone_box_template = [20, 30, 25, 30, 1, 40]
     ground_level_Z = 0
 
     # agent settings ###################################################
-    deployment_zone_xxyy = [20, 30, 15, 15]
-
+    # deployment_zone_xxyy = [20, 30, 15, 15]
+    deploy_zone_margin = [15, 15, 2]
     # build settings ###################################################
     build_overhang = False
 
@@ -89,11 +95,26 @@ class Algo8eRidge(AgentAlgorithm):
         rgb_ground = (100, 100, 100)
         rgb_queen = (232, 226, 211)
         rgb_existing = (207, 179, 171)
-        ground = DiffusiveGrid(
-            name="ground",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(*rgb_ground),
-        )
+
+        # create ground from npy import
+        if self.import_ground_from_scan:
+            file_path = get_nth_newest_file_in_folder(self.dir_import_solid_npy)
+            imported_grid = Grid.from_npy(file_path)
+            print(f"imported grid from {file_path}")
+            ground = DiffusiveGrid(
+                name="ground",
+                grid_size=imported_grid.grid_size,
+                color=Color.from_rgb255(*rgb_ground),
+            )
+            ground.array = imported_grid.array
+
+            self.grid_size = imported_grid.grid_size
+        else:
+            ground = DiffusiveGrid(
+                name="ground",
+                grid_size=self.grid_size,
+                color=Color.from_rgb255(*rgb_ground),
+            )
         agent_space = DiffusiveGrid(
             name="agent_space",
             grid_size=self.grid_size,
@@ -121,14 +142,36 @@ class Algo8eRidge(AgentAlgorithm):
             flip_colors=True,
             decay_ratio=1 / 100,
         )
+        stone = DiffusiveGrid(
+            name="attract",
+            grid_size=self.grid_size,
+            color=Color.from_rgb255(*rgb_queen),
+            flip_colors=True,
+            decay_ratio=1 / 100,
+        )
+        stone.set_values_in_zone_xxyyzz(self.stone_box_template, 1)
+
+        deploy_zone = DiffusiveGrid(name="deploy_zone", grid_size=self.grid_size)
+        deploy_zone.array = np.zeros_like(ground.array)
+        m, n, o = self.deploy_zone_margin
+        e, f, g = self.grid_size
+        deploy_zone.array[m : e - m, n : f - n, o : g - o] = 1
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.set_values_in_zone_xxyyzz(
-            [0, ground.grid_size[0], 0, ground.grid_size[1], 0, self.ground_level_Z], 1
-        )
+        if not self.import_ground_from_scan:
+            ground.set_values_in_zone_xxyyzz(
+                [
+                    0,
+                    ground.grid_size[0],
+                    0,
+                    ground.grid_size[1],
+                    0,
+                    self.ground_level_Z,
+                ],
+                1,
+            )
 
-        if self.add_box:
-            clay_grid.set_values_in_zone_xxyyzz(self.box_template, 1)
+        print(self.grid_size)
 
         # WRAP ENVIRONMENT
         grids = {
@@ -137,12 +180,14 @@ class Algo8eRidge(AgentAlgorithm):
             "pheromon_move": pheromon_move,
             "clay": clay_grid,
             "track": track_grid,
+            "stone": stone,
+            "deploy_zone": deploy_zone,
         }
         return grids
 
     def update_environment(self, state: Environment):
         grids = state.grids
-        emission_array_for_move_ph = grids["clay"].array
+        emission_array_for_move_ph = grids["clay"].array + grids["stone"].array
         diffuse_diffusive_grid(
             grids["pheromon_move"],
             emmission_array=emission_array_for_move_ph,
@@ -173,20 +218,16 @@ class Algo8eRidge(AgentAlgorithm):
             )
 
             # deploy agent
-            self.reset_agent(agent)
+            agent.deploy_airborne(
+                ground, grids["deploy_zone"], True, self.ground_level_Z
+            )
             agents.append(agent)
         return agents
 
-    def reset_agent(self, agent: Agent):
-        pose = get_random_index_in_zone_xxyy_on_ground(
-            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
-        )
-        agent.space_grid.set_value_at_index(agent.pose, 0)
-        agent.pose = pose
-        agent.build_chance = 0
-        agent.erase_chance = 0
-        agent.move_history = []
-        # print('agent reset')
+    def reset_agent(self, agent: Agent, ground, deploy_zone):
+        agent.deploy_airborne(ground, deploy_zone, True, self.ground_level_Z)
+
+    #     # print('agent reset')
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -272,10 +313,14 @@ class Algo8eRidge(AgentAlgorithm):
         ##########################################################################
 
         clay_grid = state.grids["clay"]
+        stone = state.grids["stone"]
+
         build_chance = 0
         erase_chance = 0
 
         # set chances based on movement pattern
+        array = clay_grid.array + stone.array
+        agent.get_array_value_at_index(array, agent.pose + [0, 0, -1])
         below = clay_grid.get_value_at_index(agent.pose + [0, 0, -1])
         if self.build_overhang is False:
             if below > 0:
@@ -342,17 +387,19 @@ class Algo8eRidge(AgentAlgorithm):
         # if moved:
         self.calculate_build_chances(agent, state)
         built, erased = self.build_by_chance(agent, state)
+        ground = state.grids["ground"]
+        deploy_zone = state.grids["deploy_zone"]
         # print(f'built: {built}, erased: {erased}')
         if (built is True or erased is True) and self.reset_after_build:
-            self.reset_agent(agent)
+            agent.deploy_airborne(ground, deploy_zone, True)
             # print("reset in built")
 
         if agent.die_chance >= self.agent_age_limit:
-            self.reset_agent(agent)
+            agent.deploy_airborne(ground, deploy_zone, True)
         # MOVE
         moved = self.move_agent(agent, state)
 
         # RESET IF STUCK
         if not moved:
-            self.reset_agent(agent)
+            agent.deploy_airborne(ground, deploy_zone, True)
             # print('reset in move, couldnt move')

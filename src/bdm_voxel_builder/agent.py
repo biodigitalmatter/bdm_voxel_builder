@@ -3,6 +3,11 @@ from math import ceil, trunc
 import numpy as np
 import numpy.typing as npt
 
+from bdm_voxel_builder.agent_algorithms.common import (
+    get_any_free_voxel_above_array,
+    get_lowest_free_voxel_above_array,
+    get_random_index_in_zone_xxyy_on_Z_level,
+)
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
     NB_INDEX_DICT,
@@ -41,6 +46,8 @@ class Agent:
         self.save_move_history = save_move_history
         self.build_probability = 0
         self.track_flag = None
+        self.passive_counter = 0
+
         self._cube_array = []
         self._climb_style = ""
         self._build_chance = 0
@@ -983,3 +990,47 @@ class Agent:
             if get_sub_array(grid, 1, self.pose, format_values=0) > 0:
                 return True
         return False
+
+    def deploy_airborne(
+        self, grid_deploy_on, grid_deploy_in, reset_move_history=True, ground_Z=0
+    ):
+        pose = get_any_free_voxel_above_array(
+            grid_deploy_on.array, np.ones_like(grid_deploy_in.array)
+        )
+
+        if not isinstance(pose, np.ndarray | list):  # failed
+            e, f, _g = grid_deploy_in.grid_size
+            pose = get_random_index_in_zone_xxyy_on_Z_level(  # noqa: F821
+                [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_Z
+            )
+
+        self.reset_at_pose(pose, reset_move_history)
+        return pose
+
+    def deploy_airborne_min(
+        self, grid_deploy_on, grid_deploy_in, reset_move_history=True
+    ):
+        pose = get_lowest_free_voxel_above_array(
+            grid_deploy_on.array, grid_deploy_in.array
+        )
+
+        if not isinstance(pose, np.ndarray | list):  # failed
+            e, f, _g = grid_deploy_in.grid_size
+            pose = get_random_index_in_zone_xxyy_on_Z_level(  # noqa: F821
+                [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, self.ground_level_Z
+            )
+
+        self.reset_at_pose(self, pose, reset_move_history)
+        return pose
+
+    def reset_at_pose(self, pose, reset_move_history=True):
+        self.space_grid.set_value_at_index(self.pose, 0)
+        x, y, z = pose
+        self.pose = [x, y, z]
+
+        self.build_chance = 0
+        self.erase_chance = 0
+        self.track_flag = None
+        self.passive_counter = 0
+        if reset_move_history:
+            self.move_history = []

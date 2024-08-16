@@ -19,7 +19,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
     //data/live/scan_ply
 
     dumps pointcloud to:
-    data/live/work/01_scanned
+    data/live/build_grid/01_scanned
 
     """
 
@@ -31,8 +31,8 @@ class Algo11a_ImportScan(AgentAlgorithm):
     seed_iterations = 0
 
     scan_ply_folder_path = REPO_DIR / "data/live/scan_ply"
-    dir_save_scan = REPO_DIR / "data/live/work/01_scanned"
-    dir_save_scan_npy = REPO_DIR / "data/live/work/01_scanned/npy"
+    dir_save_scan = REPO_DIR / "data/live/build_grid/01_scanned"
+    dir_save_scan_npy = REPO_DIR / "data/live/build_grid/01_scanned/npy"
 
     file_index_to_load = 0
     # unit_in_mm = 10

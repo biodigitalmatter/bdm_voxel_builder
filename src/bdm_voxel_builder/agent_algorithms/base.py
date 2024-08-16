@@ -19,9 +19,5 @@ class AgentAlgorithm(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def reset_agent(self):
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def setup_agents(self):
         raise NotImplementedError

@@ -5,7 +5,7 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
     diffuse_diffusive_grid,
-    get_random_index_in_zone_xxyy_on_ground,
+    get_random_index_in_zone_xxyy_on_Z_level,
 )
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
@@ -206,7 +206,7 @@ class Algo8c(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent):
-        pose = get_random_index_in_zone_xxyy_on_ground(
+        pose = get_random_index_in_zone_xxyy_on_Z_level(
             self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
         )
         agent.space_grid.set_value_at_index(agent.pose, 0)

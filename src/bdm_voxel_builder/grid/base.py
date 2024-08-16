@@ -72,7 +72,7 @@ class Grid:
             value = np.array([value, value, value], dtype=np.int8)
         elif isinstance(value, list | tuple):
             value = np.array(value, dtype=np.int8)
-        print(value)
+        # print(value)
         if np.min(value) < 1:
             raise ValueError("grid_size must be nonzero and positive")
         # if np.unique(value).size != 1: # TODO check. perhaps its already implemented.

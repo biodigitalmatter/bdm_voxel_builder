@@ -94,7 +94,37 @@ def get_lowest_free_voxel_above_array(array_to_search_on, search_boundary):
         return None
 
 
-def get_random_index_in_zone_xxyy_on_ground(
+def get_any_free_voxel_above_array(array_to_search_on, search_boundary):
+    """finds the lowest index of a free voxel on an array along Z vector(axis = 2)
+    in the boundary. Search where boundary = 1 and where array = 0.
+
+    input:
+        array_to_search_on : int array'
+        search_boundary : int array
+
+    returns the index np.ndarray([x, y, z])"""
+    printed = array_to_search_on.copy()
+    printed = np.ceil(printed)
+    design = search_boundary.copy()
+    design = np.ceil(design)
+    not_design = np.ones_like(printed) - design
+    printed = np.pad(printed, (1, 1), "constant", constant_values=-1)
+    shifted = np.roll(printed, 1, 2)
+    # print(f"ground sum: {np.sum(printed)}")
+    options_array = printed - shifted
+    options_array = options_array[1:-1, 1:-1, 1:-1] + not_design
+    if np.sum(options_array) > 0:
+        options_array = np.clip(options_array, -1, 0)
+        # print(f"options_array {options_array}")
+        place_options = np.argwhere(options_array == -1)
+        # print(f"place_options {place_options}")
+        i = np.random.choice(np.shape(place_options[0]))
+        x, y, z = place_options[i]
+    else:
+        return None
+
+
+def get_random_index_in_zone_xxyy_on_Z_level(
     deployment_zone_xxyy, grid_size: int | tuple[int, int, int], ground_level=0
 ):
     """

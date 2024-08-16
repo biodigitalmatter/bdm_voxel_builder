@@ -6,7 +6,7 @@ from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
     diffuse_diffusive_grid,
     get_lowest_free_voxel_above_array,
-    get_random_index_in_zone_xxyy_on_ground,
+    get_random_index_in_zone_xxyy_on_Z_level,
 )
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
@@ -255,32 +255,22 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             agents.append(agent)
         return agents
 
-    def deploy_agent_airborne(self, agent: Agent, state: Environment):
-        printed_clay = state.grids["printed_clay"]
-        design = state.grids["design"]
-        pose = get_lowest_free_voxel_above_array(printed_clay.array, design.array)
+    # def deploy_agent_airborne_min(self, agent: Agent, state: Environment):
+    #     printed_clay = state.grids["printed_clay"]
+    #     design = state.grids["design"]
+    #     pose = get_lowest_free_voxel_above_array(printed_clay.array, design.array)
 
-        if not isinstance(pose, np.ndarray | list):
-            pose = get_random_index_in_zone_xxyy_on_ground(
-                [0, 50, 0, 50], design.grid_size, self.ground_level_Z
-            )
+    #     if not isinstance(pose, np.ndarray | list):
+    #         pose = get_random_index_in_zone_xxyy_on_Z_level(
+    #             [0, 50, 0, 50], design.grid_size, self.ground_level_Z
+    #         )
 
-        self.reset_agent_at_pose(agent, pose)
-        return pose
-
-    def reset_agent_at_pose(self, agent: Agent, pose):
-        agent.space_grid.set_value_at_index(agent.pose, 0)
-        x, y, z = pose
-        agent.pose = [x, y, z]
-
-        agent.build_chance = 0
-        agent.erase_chance = 0
-        agent.move_history = []
-        agent.track_flag = None
-        self.passive_counter = 0
+    #     agent.reset_at_pose(pose, reset_move_history=True)
+    #     agent.passive_counter = 0
+    #     return pose
 
     def reset_agent(self, agent: Agent):
-        pose = get_random_index_in_zone_xxyy_on_ground(
+        pose = get_random_index_in_zone_xxyy_on_Z_level(
             self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
         )
         agent.space_grid.set_value_at_index(agent.pose, 0)
@@ -612,7 +602,9 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
             agent.track_flag = None
 
         if self.passive_counter > self.passive_limit:
-            self.deploy_agent_airborne(agent, state)
+            printed_clay = state.grids["printed_clay"]
+            design = state.grids["design"]
+            agent.deploy_airborne_min(printed_clay, design)
             print(f"passive reset{agent.pose}")
 
         # check end states:

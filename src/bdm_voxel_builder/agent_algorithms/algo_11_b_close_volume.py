@@ -8,6 +8,8 @@ from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
 from compas.colors import Color
 
+from bdm_voxel_builder.helpers.file import save_ndarray
+
 
 @dataclass
 class Algo11b_CloseVolume(AgentAlgorithm):
@@ -16,7 +18,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
     //data/live/scan_ply
 
     dumps pointcloud to:
-    data/live/work/01_scanned
+    data/live/build_grid/01_scanned
 
     """
 
@@ -27,9 +29,11 @@ class Algo11b_CloseVolume(AgentAlgorithm):
     grid_to_dump = "scan"
     seed_iterations = 0
 
-    scan_ply_folder_path = REPO_DIR / "data/live/scan_ply"
-    dir_save_scan = REPO_DIR / "data/live/work/01_scanned"
-    dir_save_scan_npy = REPO_DIR / "data/live/work/01_scanned/npy"
+    # directory import
+    dir_scan_import = REPO_DIR / "data/live/build_grid/01_scanned"
+    dir_scan_import_npy = REPO_DIR / "data/live/build_grid/01_scanned/npy"
+    dir_save_solid = REPO_DIR / "data/live/build_grid/02_solid"
+    dir_save_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
 
     file_index_to_load = 0
     # unit_in_mm = 10
@@ -57,17 +61,17 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         print("algorithm 11 started")
 
         # filename = "2024-08-09_16_15_12_grid_20240731_stone_scan_5mm__01.vdb"
-        # file_path = os.path.join(self.dir_save_scan, filename)
+        # file_path = os.path.join(self.dir_scan_import, filename)
 
         # load vdb
-        # file_path = get_nth_newest_file_in_folder(self.dir_save_scan)
+        # file_path = get_nth_newest_file_in_folder(self.dir_scan_import)
         # loaded_grid = Grid.from_vdb(grid=file_path)
         # shape = loaded_grid.pad_array(
         #     pad_width=5, values=0
         # )  # TODO not sure is a good idea...
         # self.grid_size = shape
         # load npy
-        file_path = get_nth_newest_file_in_folder(self.dir_save_scan_npy)
+        file_path = get_nth_newest_file_in_folder(self.dir_scan_import_npy)
         loaded_grid = Grid.from_npy(file_path)
 
         # shape = loaded_grid.pad_array(
@@ -91,11 +95,12 @@ class Algo11b_CloseVolume(AgentAlgorithm):
 
         # SOLID METHOD OPTIONS
         # solid.extrude_along_vector([-15, 3, -20], 5)
-        solid.extrude_unit([0, -1, -1], 25)
+        solid.extrude_unit([0, 0, -1], 50)
 
         # solid.offset_radial(3)
 
         # solid.extrude_from_point([100, 20, 120], 50)
+        save_ndarray(solid.array, note="", folder_path=self.dir_save_solid_npy)
 
         grids = {"scan": scan, "solid": solid}
         return grids
