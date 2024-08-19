@@ -29,6 +29,7 @@ def send_program_dots(
     zone="Z5",
     print_IO=0,
     dir_IO=0,
+    wait_time=1,
     tool_name=None,
     wobj_name=None,
     dot_print_style=True,
@@ -69,47 +70,31 @@ def send_program_dots(
             for i, plane in enumerate(planes):
                 sp = speed[i] if isinstance(speed, list) else speed
                 zo = zone[i] if isinstance(zone, list) else zone
+                wait_i = wait_time[i] if isinstance(wait_time, list) else wait_time
                 IO_5 = print_IO[i] if isinstance(print_IO, list) else print_IO
                 IO_6 = dir_IO[i] if isinstance(dir_IO, list) else dir_IO
                 motion_type = movel[i] if isinstance(movel, list) else movel
                 frame = plane
-                print(f"next frame: {frame}")
-                print(f"send move to frame :: {i}")
+                # print(f"next frame: {frame}")
+                print(f"send :: {i}")
 
                 if dot_print_style:  # dot style print with z hop
                     if IO_5 == 0:
                         client.send(rrc.MoveToFrame(frame, sp, 5, motion_type))
-                    else:
+                    elif IO_5 == 1 and IO_6 == 1:
+                        client.send(rrc.MoveToFrame(frame, sp, 5, motion_type))
+                        client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=IO_5))
+                        client.send(rrc.SetDigital(io_name=DIR_EXTRUDER_DO, value=IO_6))
+                    elif IO_5 == 1 and IO_6 == 0:
                         extrude_with_z_hop(
                             client,
                             frame,
                             sp,
                             motion_type,
-                            wait_time=2,
+                            wait_time=wait_i,
                             wait_time_after=0,
-                            z_hop=1,
+                            z_hop=0,
                         )
-
-                        # wait_time = 1
-                        # z_hop = 10
-                        # f = Frame([0, 0, z_hop], [1, 0, 0], [0, 1, 0])
-                        # move_z = T.from_frame(f)
-                        # frame_z_hop = frame.copy()
-                        # frame_z_hop.transform(move_z)
-                        # print(f"zhop_frame:{frame_z_hop}")
-
-                        # client.send(
-                        #     rrc.MoveToFrame(frame_z_hop, sp, rrc.Zone.Z5, motion_type)
-                        # )
-                        # client.send(
-                        #     rrc.MoveToFrame(frame, sp, rrc.Zone.FINE, motion_type)
-                        # )
-                        # client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1))
-                        # client.send(rrc.WaitTime(wait_time))
-                        # client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0))
-                        # client.send(
-                        #     rrc.MoveToFrame(frame_z_hop, sp, rrc.Zone.Z5, motion_type)
-                        # )
                 else:  # continous print path
                     client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
                     client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=IO_5))
@@ -137,7 +122,7 @@ def extrude_with_z_hop(
     move_z = T.from_frame(f)
     frame_z_hop = frame.copy()
     frame_z_hop.transform(move_z)
-    print(f"zhop_frame:{frame_z_hop}")
+    # print(f"zhop_frame:{frame_z_hop}")
 
     client.send(rrc.MoveToFrame(frame_z_hop, sp, 5, motion_type))
     client.send(rrc.MoveToFrame(frame, sp, -1, motion_type))
@@ -151,7 +136,7 @@ def extrude_with_z_hop(
 
 if __name__ == "__main__":
     # get client object
-    file_name = "fab_data_cylinder_3.json"
+    file_name = "dot_print_test_01.json"
     filepath = DATA_DIR / "live" / "fab_data" / file_name
 
     # file = get_nth_newest_file_in_folder(DATA_DIR / "live" / "fab_data")
@@ -164,6 +149,8 @@ if __name__ == "__main__":
     speed = data["speed"]
     zone = data["zone"]
     movel = data["movel"]
+    wait_time = data["wait_time"]
+    zone = 5
 
     tool_name = "t_erratic"
     wobj_name = "wobj_bhg"
@@ -177,6 +164,7 @@ if __name__ == "__main__":
         zone,
         print_IO,
         dir_IO,
+        wait_time,
         tool_name,
         wobj_name,
         dot_print_style,
