@@ -421,7 +421,7 @@ class Agent:
         return v
 
     def get_grid_density_in_slice_shape(
-        self, grid: Grid, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False
+        self, grid: Grid, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False, print_=False
     ):
         """returns grid density
         slice shape = [
@@ -451,7 +451,7 @@ class Agent:
             density = sum_values / slice_volume
         else:
             density = np.count_nonzero(values) / slice_volume
-        if density > 0:
+        if density > 0 and print_:
             print(
                 f"slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}"  # noqa: E501
             )
@@ -462,7 +462,7 @@ class Agent:
         return d
 
     def get_array_density_in_slice_shape(
-        self, array, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False
+        self, array, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False, print_=False
     ):
         """returns grid density
         slice shape = [
@@ -493,7 +493,7 @@ class Agent:
             density = sum_values / slice_volume
         else:
             density = np.count_nonzero(values) / slice_volume
-        if density > 0:
+        if density > 0 and print_:
             print(f"shape of input array{np.shape(array)}")
             print(
                 f"slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}"  # noqa: E501
@@ -1013,12 +1013,12 @@ class Agent:
         pose = get_lowest_free_voxel_above_array(
             grid_deploy_on.array, grid_deploy_in.array
         )
-
-        if not isinstance(pose, np.ndarray | list):
-            e, f, _g = grid_deploy_in.grid_size
-            pose = get_random_index_in_zone_xxyy_on_Z_level(  # noqa: F821
-                [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_level_Z
-            )
+        print(f"reset to {pose}")
+        # if not isinstance(pose, np.ndarray | list):
+        #     e, f, _g = grid_deploy_in.grid_size
+        #     pose = get_random_index_in_zone_xxyy_on_Z_level(  # noqa: F821
+        #         [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_level_Z
+        #     )
 
         self.reset_at_pose(pose, reset_move_history)
         return pose

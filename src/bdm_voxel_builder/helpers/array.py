@@ -170,27 +170,28 @@ def get_array_density_from_zone_xxyyzz(
     """
     # make sure params are in bounds
     shape = array.shape
-    grid_vol = array.size
+    # grid_vol = array.size
     # print(f'shape {shape}, grid vol: {grid_vol}')
     x, y, z = pose
     x_min, x_max, y_min, y_max, z_min, z_max = relative_zone_xxyyzz
     zone_xxyyzz = [x_min + x, x_max + x, y_min + y, y_max + y, z_min + z, z_max + z]
     zone_xxyyzz = clip_indices_to_grid_size(zone_xxyyzz, shape)
-
+    # print(zone_xxyyzz)
     x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz
     vol = (abs(x_min - x_max) + 1) * (abs(y_min - y_max) + 1) * (abs(z_min - z_max) + 1)
     # print("vol", vol)
     mask = np.zeros(shape, dtype=np.int8)
     mask[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = 1
     v = np.where(mask == 1, array, 0)
+    print(f"v_sum {np.sum(v)}")
     # print('v', v)
     if not nonzero:
         d = np.sum(v) / vol
     else:
         n = np.count_nonzero(v)
         # print(f"n = {n}")
-        m = grid_vol - n
-        d = m / vol
+        # m = grid_vol - n
+        d = n / vol
     # print(f"density:{d}")
     return d
 
