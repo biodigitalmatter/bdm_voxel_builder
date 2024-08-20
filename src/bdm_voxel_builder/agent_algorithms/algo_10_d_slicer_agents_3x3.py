@@ -467,8 +467,8 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
         in_design = agent.get_array_value_at_index(design.array, agent.pose)
 
         max_print_goal_density = 0.95
-        on_the_edge = 0.5
-        min_normal_print_density_below = 0.65
+        on_the_edge = 0.65
+        min_normal_print_density_below = 0.8
 
         min_overhang_print_density_below = 0.2  # this defines the overhang
 
