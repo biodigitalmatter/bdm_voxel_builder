@@ -992,7 +992,7 @@ class Agent:
         return False
 
     def deploy_airborne(
-        self, grid_deploy_on, grid_deploy_in, reset_move_history=True, ground_Z=0
+        self, grid_deploy_on, grid_deploy_in, reset_move_history=True, ground_level_Z=0
     ):
         pose = get_any_free_voxel_above_array(
             grid_deploy_on.array, np.ones_like(grid_deploy_in.array)
@@ -1001,26 +1001,26 @@ class Agent:
         if not isinstance(pose, np.ndarray | list):  # failed
             e, f, _g = grid_deploy_in.grid_size
             pose = get_random_index_in_zone_xxyy_on_Z_level(  # noqa: F821
-                [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_Z
+                [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_level_Z
             )
 
         self.reset_at_pose(pose, reset_move_history)
         return pose
 
     def deploy_airborne_min(
-        self, grid_deploy_on, grid_deploy_in, reset_move_history=True
+        self, grid_deploy_on, grid_deploy_in, reset_move_history=True, ground_level_Z=0
     ):
         pose = get_lowest_free_voxel_above_array(
             grid_deploy_on.array, grid_deploy_in.array
         )
 
-        if not isinstance(pose, np.ndarray | list):  # failed
+        if not isinstance(pose, np.ndarray | list):
             e, f, _g = grid_deploy_in.grid_size
             pose = get_random_index_in_zone_xxyy_on_Z_level(  # noqa: F821
-                [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, self.ground_level_Z
+                [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_level_Z
             )
 
-        self.reset_at_pose(self, pose, reset_move_history)
+        self.reset_at_pose(pose, reset_move_history)
         return pose
 
     def reset_at_pose(self, pose, reset_move_history=True):

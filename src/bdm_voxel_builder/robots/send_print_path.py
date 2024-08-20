@@ -93,7 +93,7 @@ def send_program_dots(
                             motion_type,
                             wait_time=wait_i,
                             wait_time_after=0,
-                            z_hop=0,
+                            z_hop=30,
                         )
                 else:  # continous print path
                     client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))

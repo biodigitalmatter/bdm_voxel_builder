@@ -604,7 +604,9 @@ class Algo10b_VoxelSlicer(AgentAlgorithm):
         if self.passive_counter > self.passive_limit:
             printed_clay = state.grids["printed_clay"]
             design = state.grids["design"]
-            agent.deploy_airborne_min(printed_clay, design)
+            agent.deploy_airborne_min(
+                printed_clay, design, ground_level_Z=self.ground_level_Z
+            )
             print(f"passive reset{agent.pose}")
 
         # check end states:

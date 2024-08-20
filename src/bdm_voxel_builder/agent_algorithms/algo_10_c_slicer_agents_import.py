@@ -12,6 +12,8 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from compas.colors import Color
 
+from bdm_voxel_builder.helpers.array import get_mask_zone_xxyyzz
+
 
 @dataclass
 class Algo10c_VoxelSlicer(AgentAlgorithm):
@@ -56,7 +58,7 @@ class Algo10c_VoxelSlicer(AgentAlgorithm):
     agent_count: int
     grid_size: int | tuple[int, int, int]
     name: str = "algo_10_slicer"
-    relevant_data_grids: str = "printed_dots"
+    relevant_data_grids: str = "printed_clay"
 
     seed_iterations: int = 50
 
@@ -69,22 +71,6 @@ class Algo10c_VoxelSlicer(AgentAlgorithm):
 
     track_length = 20
     track_flag = None
-
-    # IMPORTED GEOMETRY ----- PLACEHOLDER
-    add_simple_design = False
-    add_complex_design = True
-    box_add_1 = [3, 8, 3, 10, 1, 5]
-    box_add_2 = [15, 20, 15, 18, 1, 40]
-    box_add_3 = [0, 12, 0, 10, 4, 25]
-    box_add_4 = [0, 18, 0, 15, 15, 40]
-
-    # box_template_2 = [20, 35, 6, 10, 4, 8]
-    box_subtract_1 = [8, 15, 8, 16, 3, 20]
-    # box_subtract_1 = [8, 20, 8, 18, 10, 10]
-
-    ground_stair_1 = [0, 50, 20, 50, 0, 2]
-    # ground_stair_2 = [20, 50, 0, 30, 0, 3]
-    ground_level_Z = 0
 
     reach_to_build: int = 1
     reach_to_erase: int = 1
@@ -110,6 +96,8 @@ class Algo10c_VoxelSlicer(AgentAlgorithm):
     passive_counter = 0
     passive_limit = 15
     deployment_zone_xxyy = [0, 50, 0, 50]
+
+    ground_level_Z = 0
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -188,21 +176,44 @@ class Algo10c_VoxelSlicer(AgentAlgorithm):
         )
 
         ### CREATE GROUND ARRAY *could be imported from scan
-        ground.set_values_in_zone_xxyyzz(
-            [0, ground.grid_size[0], 0, ground.grid_size[1], 0, self.ground_level_Z], 1
-        )
+
+        # IMPORT DESIGN TODO
+
+        # CREATE MOCK UP DESIGN
+
+        box_1 = [5, 15, 5, 15, 1, 10]
+        # box_2 = [15, 20, 15, 18, 1, 40]
+        # box_3 = [0, 12, 0, 10, 4, 25]
+        # box_4 = [0, 18, 0, 15, 15, 40]
+        ground_box = [
+            0,
+            self.grid_size[0],
+            0,
+            self.grid_size[1],
+            0,
+            self.ground_level_Z,
+        ]
+
+        zones = [box_1]
+        # zones = [box_1, box_2, box_3, box_4]
+        zones_not = [ground_box]
+        ground_zones = [ground_box]
+        mockup_design = np.zeros(self.grid_size)  # noqa: F821
+        for zone in zones:
+            mask = get_mask_zone_xxyyzz(self.grid_size, zone, return_bool=True)
+            mockup_design[mask] = 1
+        for zone in zones_not:
+            mask = get_mask_zone_xxyyzz(self.grid_size, zone, return_bool=True)
+            mockup_design[mask] = 0
+
+        mockup_ground = np.zeros(self.grid_size)  # noqa: F821
+        for zone in ground_zones:
+            mask = get_mask_zone_xxyyzz(self.grid_size, zone, return_bool=True)
+            mockup_ground[mask] = 1
 
         # imported design TEMP
-        if self.add_simple_design:
-            design.set_values_in_zone_xxyyzz(self.box_add_1, 1)
-        if self.add_complex_design:
-            ground.set_values_in_zone_xxyyzz(self.ground_stair_1, 1)
-            design.set_values_in_zone_xxyyzz(self.box_add_1, 1)
-            design.set_values_in_zone_xxyyzz(self.box_add_2, 1)
-            design.set_values_in_zone_xxyyzz(self.box_add_3, 1)
-            design.set_values_in_zone_xxyyzz(self.box_add_4, 1)
-            design.set_values_in_zone_xxyyzz(self.box_subtract_1, 0)
-            design.set_values_in_zone_xxyyzz(self.ground_stair_1, 0)
+        design.array = mockup_design
+        ground.array = mockup_ground
         # WRAP ENVIRONMENT
 
         grids = {
@@ -604,7 +615,10 @@ class Algo10c_VoxelSlicer(AgentAlgorithm):
         if self.passive_counter > self.passive_limit:
             printed_clay = state.grids["printed_clay"]
             design = state.grids["design"]
-            agent.deploy_airborne_min(printed_clay, design)
+            agent.deploy_airborne_min(
+                printed_clay, design, ground_level_Z=self.ground_level_Z
+            )
+
             print(f"passive reset{agent.pose}")
 
         # check end states:
