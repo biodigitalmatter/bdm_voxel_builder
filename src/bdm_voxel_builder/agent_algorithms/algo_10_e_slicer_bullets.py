@@ -81,7 +81,7 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
     # move_index_map = index_map_sphere_scale_NU(
     #     radius=3.8, min_radius=2, scale_NU=[1, 1, 0.5]
     # )
-    radius = 4
+    radius = 6
     min_radius = 3
     move_index_map = index_map_sphere(radius, min_radius)
     bullet_radius = 2.5
@@ -321,6 +321,7 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         array_on = printed_clay.array + ground.array
         pose = get_lowest_free_voxel_above_array(array_on, design.array)
         agent.space_grid.set_value_at_index(agent.pose, 0)
+        print(f"reset pose: {pose}")
         agent.pose = pose
         agent.build_chance = 0
         agent.erase_chance = 0
