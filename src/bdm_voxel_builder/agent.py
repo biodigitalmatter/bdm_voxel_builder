@@ -16,7 +16,12 @@ from bdm_voxel_builder.helpers import (
     get_sub_array,
     random_choice_index_from_best_n,
 )
-from bdm_voxel_builder.helpers.array import get_array_values_by_index_map_at_point, get_cube_array_indices, get_value_by_index_map, index_map_move_and_clip, index_map_sphere
+from bdm_voxel_builder.helpers.array import (
+    get_cube_array_indices,
+    get_value_by_index_map,
+    index_map_move_and_clip,
+    index_map_sphere,
+)
 
 
 class Agent:
@@ -347,7 +352,6 @@ class Agent:
             print(f"grid values:\n{values}\n")
             print(f"grid_density:{density} in pose:{self.pose}")
         return density
-        
 
     def get_array_density(self, array: np.ndarray, print_=False, nonzero=False):
         """return clay density"""
@@ -367,12 +371,14 @@ class Agent:
             print(f"grid values:\n{values}\n")
             print(f"grid_density:{density} in pose:{self.pose}")
         return density
-    
 
-    def get_array_density_by_index_map(self, array: np.ndarray, index_map, pose=None, print_=False, nonzero=False):
+    def get_array_density_by_index_map(
+        self, array: np.ndarray, index_map, pose=None, print_=False, nonzero=False
+    ):
         """return clay density"""
-        if pose: pass
-        else: pose=self.pose
+        if not isinstance(pose, np.ndarray | list):
+            pose = self.pose
+
         values = get_value_by_index_map(array, index_map, pose, return_list=True)
         # nb_indices = self.get_nb_indices_26(self.pose)
         # values = []
@@ -638,11 +644,16 @@ class Agent:
         # print(exclude)
         exclude_pheromones = np.asarray(exclude)
         return exclude_pheromones
-    
+
     def filter_move_index_map(
-        self, solid_array, index_map, fly=False, agent_size = 1, check_self_collision=False
+        self,
+        solid_array,
+        index_map_oriented,
+        fly=False,
+        agent_size=1,
+        check_self_collision=False,
     ):
-        """return move option index map
+        """return move_option_indices, selection_index_list
 
         the grid in the index_map is checked:
         1. free of solid array
@@ -651,49 +662,57 @@ class Agent:
         """
         # get nb cell indicies
         # nb_cells = self.get_nb_indices_6(self.pose)
-        index_map = index_map_move_and_clip(index_map, self.pose, self.space_grid.grid_size, )
-        
-        # # filter indices within solid
-        # v = get_array_values_by_index_map_at_point(solid_array, nb_pose, index_map)
-        # index_map = index_map[v == 0]
-        cells_to_check = list(index_map)
 
-        exclude = []  # FALSE if agent can move there, True if cannot
+        # # filter indices within solid
+        # v = get_value_by_index_map(solid_array, index_map, nb_pose)
+        # index_map = index_map[v == 0]
+        cells_to_check = list(index_map_oriented)
+
+        # exclude = []  # FALSE if agent can move there, True if cannot
         agent_size_index_map = index_map_sphere(agent_size, 0.1)
-        
+
         # iterate through nb cells
         move_options = []
-        exclude = []
-        for nb_pose in cells_to_check:
+        # exclude = []
+        option_index = []
+        for i, nb_pose in enumerate(cells_to_check):
             # check if nb cell is empty
-            i, j, k = nb_pose
+            e, f, g = nb_pose
 
-            solid_value = solid_array[i][j][k]
+            solid_value = solid_array[e, f, g]
             if solid_value > 0:
-                exclude.append(True)
+                # exclude.append(True)
+                pass
             else:
                 # check self collision
-                self_collision_values = get_array_values_by_index_map_at_point(
-                    self.space_grid.array, nb_pose, agent_size_index_map
-                    )
+                self_collision_values = get_value_by_index_map(
+                    self.space_grid.array, agent_size_index_map, nb_pose
+                )
                 nb_value_collision = np.sum(self_collision_values)
                 if nb_value_collision > 0:
-                    exclude.append(True)
+                    # exclude.append(True)
+                    pass
                 # check move on ground
                 else:
                     if not fly:
                         # check all nbs
-                        nbs_values = get_array_values_by_index_map_at_point(solid_array, nb_pose, agent_size_index_map)
+                        nbs_values = get_value_by_index_map(
+                            solid_array, agent_size_index_map, nb_pose
+                        )
                         if np.sum(nbs_values) == 0:
                             move_options.append(nb_pose)
-                            exclude.append(False)
+                            option_index.append(i)
+                            # exclude.append(False)
                         else:
-                            exclude.append(True)
+                            # exclude.append(True)
+                            pass
                     else:
                         move_options.append(nb_pose)
-                        exclude.append(False)
 
-        return np.asarray(move_options), np.asarray(exclude)
+                        option_index.append(i)
+                        # exclude.append(False)
+
+        return np.asarray(move_options), np.asarray(option_index)
 
     def move_on_ground_by_ph_cube(
         self,
@@ -796,14 +815,10 @@ class Agent:
         self.space_grid.set_value_at_index(index=self.pose, value=1)
         return True
 
-
     def move_by_index_map(
         self,
-        solid_array,
-        pheromon_map,
-        step_size_limits = [2, 4],
-        fly=None,
-        check_self_collision=False,
+        move_index_map,
+        pheromon_values_map,
         random_batch_size: int = 1,
     ):
         """move in the direciton of the strongest pheromon - random choice of best three
@@ -814,34 +829,21 @@ class Agent:
         return bool_
         """
 
-        # CHOOSE WHERE TO MOVE 
-        # direction_cube = self.get_nb_indices_26(self.pose)
-        min_radius, radius = step_size_limits
-        move_index_map = index_map_sphere(radius, min_radius)
-
-        # # # limit options to inside
-        # if only_bounds:
-        #     direction_cube = clip_indices_to_grid_size(direction_cube, grid_size)
-
-        # add penalty for invalid moves based on an array
-        move_index_map, exclude = self.filter_move_index_map(
-            solid_array, move_index_map, fly, check_self_collision=check_self_collision
-        )
-        pheromon_map[exclude] = -1
-
+        # CHOOSE WHERE TO MOVE
         # select randomly from the best n value
         if random_batch_size <= 1:
             pass
-            i = np.argmax(pheromon_map)
+            i = np.argmax(pheromon_values_map)
         else:
-            i = random_choice_index_from_best_n(pheromon_map, random_batch_size)
-        if pheromon_map[i] == -1:
+            i = random_choice_index_from_best_n(pheromon_values_map, random_batch_size)
+            # print(f"choice index {i}")
+        if pheromon_values_map[i] == -1:
             return False
 
         # best option
-        new_pose = move_index_map[i]
-
-
+        move_vector = move_index_map[i]
+        new_pose = self.pose + move_vector
+        print(f"NEW POSE ######## {new_pose}")
         # ACTUAL MOVE
         if self.save_move_history:
             v = new_pose - self.pose

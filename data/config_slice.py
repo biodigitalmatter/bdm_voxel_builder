@@ -9,15 +9,17 @@ from bdm_voxel_builder.agent_algorithms.algo_10_c_slicer_agents_import import (
 from bdm_voxel_builder.agent_algorithms.algo_10_d_slicer_agents_3x3 import (
     Algo10d_VoxelSlicer,
 )
-from bdm_voxel_builder.agent_algorithms.algo_10_e_slicer_bullets import Algo10e_VoxelSlicer
+from bdm_voxel_builder.agent_algorithms.algo_10_e_slicer_bullets import (
+    Algo10e_VoxelSlicer,
+)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # test slice
 grid_size = [40, 40, 20]
-iterations = 100
+iterations = 20
 agent_count = 1
-interval = iterations / 4
+interval = 1
 name = f"test_config_slice_b_i{iterations}a{agent_count}"
 
 config = Config(
