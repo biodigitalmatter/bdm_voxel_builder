@@ -716,6 +716,65 @@ class Agent:
         self.space_grid.set_value_at_index(index=self.pose, value=1)
         return True
 
+
+    def move_by_index_map(
+        self,
+        solid_array,
+        pheromon_cube,
+        step_radius_limits = [2, 4],
+        grid_size=None,
+        fly=None,
+        only_bounds=True,
+        check_self_collision=False,
+        random_batch_size: int = 1,
+    ):
+        """move in the direciton of the strongest pheromon - random choice of best three
+        checks invalid moves
+        solid grid collision
+        self collision
+        selects a random direction from the 'n' best options
+        return bool_
+        """
+        direction_cube = self.get_nb_indices_26(self.pose)
+        index_map = index_map_sphere()
+        # # limit options to inside
+        if only_bounds:
+            direction_cube = clip_indices_to_grid_size(direction_cube, grid_size)
+
+        # add penalty for invalid moves based on an array
+        exclude = self.get_move_mask_26_of_array(
+            solid_array, grid_size, fly, check_self_collision=check_self_collision
+        )
+        pheromon_cube[exclude] = -1
+
+        # select randomly from the best n value
+        if random_batch_size <= 1:
+            pass
+            i = np.argmax(pheromon_cube)
+        else:
+            i = random_choice_index_from_best_n(pheromon_cube, random_batch_size)
+        if pheromon_cube[i] == -1:
+            return False
+
+        # best option
+        new_pose = direction_cube[i]
+
+        if self.save_move_history:
+            v = new_pose - self.pose
+            self.move_history.append(v)
+
+        # update space grid before move
+        if self.leave_trace:
+            self.track_grid.set_value_at_index(index=self.pose, value=1)
+        self.space_grid.set_value_at_index(index=self.pose, value=0)
+
+        # move
+        self.pose = new_pose
+
+        # update location in space grid
+        self.space_grid.set_value_at_index(index=self.pose, value=1)
+        return True
+
     def get_direction_cube_values_for_grid_domain(self, grid: Grid, domain, strength=1):
         # mirrored above domain end and squezed with the domain length
         # centered at 1
