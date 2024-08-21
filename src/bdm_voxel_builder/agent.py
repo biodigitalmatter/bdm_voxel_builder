@@ -830,12 +830,17 @@ class Agent:
         """
         # CHOOSE WHERE TO MOVE
         # select randomly from the best n value
-        if random_batch_size <= 1:
-            pass
-            i = np.argmax(pheromon_values_map)
+        if len(pheromon_values_map) > 0:
+            if random_batch_size <= 1:
+                pass
+                i = np.argmax(pheromon_values_map)
+            else:
+                i = random_choice_index_from_best_n(
+                    pheromon_values_map, random_batch_size
+                )
+                # print(f"choice index {i}")
         else:
-            i = random_choice_index_from_best_n(pheromon_values_map, random_batch_size)
-            # print(f"choice index {i}")
+            return False
         if pheromon_values_map[i] == -1:
             return False
 

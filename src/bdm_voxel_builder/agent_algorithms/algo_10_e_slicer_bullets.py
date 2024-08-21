@@ -84,9 +84,9 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
     radius = 4
     min_radius = 3
     move_index_map = index_map_sphere(radius, min_radius)
-    radius = 2.5
+    bullet_radius = 2.5
     bullet_h = 1
-    bullet_index_map = index_map_cylinder(radius, bullet_h)
+    bullet_index_map = index_map_cylinder(bullet_radius, bullet_h)
 
     build_chance_flat_rate = 1
 
@@ -459,7 +459,21 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
                     agent.build_chance = 0
 
     def check_print_chance_flat_rate(self, agent: Agent, state: Environment, rate=0.6):
-        agent.build_chance += rate
+        printed_clay = state.grids["printed_clay"]
+        ground = state.grids["ground"]
+        print_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
+        check_above = index_map_cylinder(self.bullet_radius, 15)
+        printed_density_above = agent.get_array_density_by_index_map(
+            print_and_ground,
+            check_above,
+            agent.pose + [0, 0, +1],
+            nonzero=True,
+        )
+        print(f"printed_density_above {printed_density_above}")
+        if printed_density_above > 0.1:
+            agent.build_chance = 0
+        else:
+            agent.build_chance += rate
 
     def check_print_chance(self, agent: Agent, state: Environment):
         design = state.grids["design"]
@@ -467,6 +481,7 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         ground = state.grids["ground"]
 
         # reset build chance
+
         agent.build_chance = 0
 
         # merge ground with design and ground w printed
