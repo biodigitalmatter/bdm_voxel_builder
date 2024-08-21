@@ -81,8 +81,8 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
     # move_index_map = index_map_sphere_scale_NU(
     #     radius=3.8, min_radius=2, scale_NU=[1, 1, 0.5]
     # )
-    radius = 6
-    min_radius = 3
+    radius = 10
+    min_radius = 6
     move_index_map = index_map_sphere(radius, min_radius)
     bullet_radius = 2.5
     bullet_h = 1

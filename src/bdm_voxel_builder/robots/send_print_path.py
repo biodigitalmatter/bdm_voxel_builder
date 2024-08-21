@@ -75,8 +75,8 @@ def send_program_dots(
                 IO_6 = dir_IO[i] if isinstance(dir_IO, list) else dir_IO
                 motion_type = movel[i] if isinstance(movel, list) else movel
                 frame = plane
-                # print(f"next frame: {frame}")
                 print(f"send :: {i}")
+                print(f"next frame: {frame}")
 
                 if dot_print_style:  # dot style print with z hop
                     if IO_5 == 0:
