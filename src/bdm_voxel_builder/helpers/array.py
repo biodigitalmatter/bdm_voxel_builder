@@ -301,7 +301,7 @@ def index_map_cylinder(radius = 3, h = 2, min_radius = None):
     return index_map.transpose()
 
 
-def index_map_sphere_scale_NU(radius = 1.5, scale_NU = [1, 1, 0.5], min_radius = None):
+def index_map_sphere_scale_NU(radius = 1.5, min_radius = None, scale_NU = [1, 1, 0.5],):
     """returns index map"""
     original_radius = radius
     scale_NU = np.array(scale_NU)
@@ -335,33 +335,45 @@ def index_map_sphere_scale_NU(radius = 1.5, scale_NU = [1, 1, 0.5], min_radius =
     return arr.transpose()
 
 
-def get_array_values_by_index_map_at_point(
-        array: np.ndarray, point: tuple[int, int, int], index_map: np.ndarray
+def index_map_move_and_clip(
+        index_map: np.ndarray,
+        move_to: tuple[int, int, int] = [0,0,0], 
+        grid_size: tuple[int, int, int] = None, 
     ):
-    shape = array.shape
-    index_map += np.int_(point)
-    print(index_map)
-    index_map = (np.clip(index_map, [0,0,0], shape))
-    index_map = np.unique(index_map, axis = 0)
-    print(index_map)
-    v = []
-    for x,y,z in index_map:
-        v.append(array[x,y,z])
-    return v
+    index_map += np.int_(move_to)
+    if grid_size:
+        index_map = (np.clip(index_map, [0,0,0], grid_size))
+        index_map = np.unique(index_map, axis = 0)
+    return index_map
 
 
-def get_array_values_by_index_map_at_point(
-        array: np.ndarray, point: tuple[int, int, int], index_map: np.ndarray
-    ):
-    index_map += np.int_(point)
-    print(index_map)
-    index_map = (np.clip(index_map, [0,0,0], array.shape))
-    index_map = np.unique(index_map, axis = 0)
-    print(index_map)
-    v = []
-    for x,y,z in index_map:
-        v.append(array[x,y,z])
-    return v
+# def get_array_values_by_index_map_at_point(
+#         array: np.ndarray, point: tuple[int, int, int], index_map: np.ndarray
+#     ):
+#     shape = array.shape
+#     index_map += np.int_(point)
+#     print(index_map)
+#     index_map = (np.clip(index_map, [0,0,0], shape))
+#     index_map = np.unique(index_map, axis = 0)
+#     print(index_map)
+#     v = []
+#     for x,y,z in index_map:
+#         v.append(array[x,y,z])
+#     return v
+
+
+# def get_array_values_by_index_map_at_point(
+#         array: np.ndarray, point: tuple[int, int, int], index_map: np.ndarray
+#     ):
+#     index_map += np.int_(point)
+#     print(index_map)
+#     index_map = (np.clip(index_map, [0,0,0], array.shape))
+#     index_map = np.unique(index_map, axis = 0)
+#     print(index_map)
+#     v = []
+#     for x,y,z in index_map:
+#         v.append(array[x,y,z])
+#     return v
 
 
 def get_value_by_index_map(array, index_map, index_map_origin = [0,0,0], return_list=False):
@@ -384,7 +396,7 @@ def get_value_by_index_map(array, index_map, index_map_origin = [0,0,0], return_
         return filtered_values
 
 
-def set_value_by_index_map(array, index_map, index_map_origin = [0,0,0], value = 1, return_list=False):
+def set_value_by_index_map(array, index_map, index_map_origin = [0,0,0], value = 1):
     """
     Filters the values of a 3D NumPy array based on an index map.
         numpy.ndarray: A 1D array containing the filtered values.

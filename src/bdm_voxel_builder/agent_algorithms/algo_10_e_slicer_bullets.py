@@ -12,11 +12,11 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from compas.colors import Color
 
-from bdm_voxel_builder.helpers.array import get_mask_zone_xxyyzz
+from bdm_voxel_builder.helpers.array import get_mask_zone_xxyyzz, get_value_by_index_map, index_map_sphere, index_map_sphere_scale_NU, set_value_by_index_map
 
 
 @dataclass
-class Algo10d_VoxelSlicer(AgentAlgorithm):
+class Algo10e_VoxelSlicer(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo_10 SLICER BASIC:
 
@@ -67,6 +67,15 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
     print_goal_density = 0.2
     max_print_goal_density = 0.4
     print_goal_density_below = 7 / 9
+
+    move_index_map = index_map_sphere_scale_NU(radius = 3.8, min_radius=2, scale_NU=[1,1,0.5])
+    bullet_min_radius = 3.2
+    bullet_index_map = index_map_sphere_scale_NU(radius=3.8, min_radius=bullet_min_radius, scale_NU=[1,1,0.5])
+
+
+
+
+    agent_step_size_limits = [2,3]
 
     print_one_voxel = False
     print_cross_shape = False
@@ -307,6 +316,7 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
         move agent
         return True if moved, False if not or in ground
         """
+        move_index_map = self.move_index_map
         pheromon_grid_move = state.grids["pheromon_move"]
         ground = state.grids["ground"]
         design = state.grids["design"]
@@ -319,57 +329,58 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
         if gv != 0:
             return False
 
-        clay_density_filled = agent.get_grid_density(design, nonzero=True)
         # move by pheromon_grid_move
-        move_pheromon_cube = agent.get_direction_cube_values_for_grid(
-            pheromon_grid_move, 1
-        )
-        directional_bias_cube = agent.direction_preference_26_pheromones(
-            0.000, 0.5, 0.48
-        )
-        random_cube = np.random.random(26) + 0.5
-        random_cube[:9] = 0
+        move_pheromon_map_values = get_value_by_index_map(pheromon_grid_move, move_index_map, agent.pose, )
 
-        design_value_nbs = agent.get_grid_nb_values_26(design, agent.pose)
+        shape = np.shape(move_pheromon_map_values)
+        random_map_values = np.random.random(shape * 2) + 0.5
+
+        directional_bias_values = np.where(move_index_map[:,:,2] < 0, move_index_map[:,:,2], 0)
+
+        design_map_values = get_value_by_index_map(design.array, move_index_map, agent.pose)
+
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
         ############################################################################
+        clay_density_filled = agent.get_array_density_by_index_map(
+            design.array, move_index_map, self.pose, nonzero=True
+        )
 
         if clay_density_filled < 0.25:
             """far from the clay, agents are aiming to get there"""
-            direction_cube = move_pheromon_cube
+            pheromon_map = move_pheromon_map_values
             random_mod = 2
 
         elif clay_density_filled >= 0.25:
             """clay isnt that attractive anymore, they prefer climbing or random move"""
-            move_pheromon_cube_build = agent.get_direction_cube_values_for_grid(
-                pheromon_build_flags, 1
-            )
-            directional_bias_cube *= 1
-            random_cube *= 0.1
-            move_pheromon_cube_build *= 0
-            move_pheromon_cube *= 0.1
-            design_value_nbs *= 0.8
-            direction_cube = (
-                directional_bias_cube
-                + random_cube
-                + move_pheromon_cube_build
-                + design_value_nbs
+            # move_pheromon_cube_build = agent.get_direction_cube_values_for_grid(
+            #     pheromon_build_flags, 1
+            # )
+            directional_bias_values *= 1
+            random_map_values *= 0.1
+            # move_pheromon_cube_build *= 0
+            move_pheromon_map_values *= 0.1
+            design_map_values *= 0
+            pheromon_map = (
+                directional_bias_values
+                + random_map_values
+                + move_pheromon_map_values
+                + design_map_values
             )
             random_mod = 1
 
+        
         ############################################################################
 
         # move by pheromons, avoid collision
         collision_array = printed_clay.array + ground.array
 
-        moved = agent.move_by_pheromons(
+        moved = agent.move_by_index_map(
             solid_array=collision_array,
-            pheromon_cube=direction_cube,
-            grid_size=self.grid_size,
+            pheromon_map=pheromon_map,
+            step_size_limits=self.agent_step_size_limits,
             fly=False,
-            only_bounds=self.keep_in_bounds,
             check_self_collision=self.check_self_collision,
             random_batch_size=random_mod,
         )
@@ -435,27 +446,12 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
         # merge ground with design and ground w printed
         print_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
         # design_and_ground = np.clip((design.array + ground.array), 0, 1)
-        if self.print_5x5:
-            n = 2
-        elif self.print_3x3 or self.print_cross_shape:
-            n = 1
-        # design_density_around = agent.get_array_density_in_slice_shape(
-        #     design_and_ground,
-        #     [n, n, 0, 0, 0, 0],
-        # )
-        # design_density_below = agent.get_array_density_in_slice_shape(
-        #     design_and_ground, [n, n, 0, 0, 0, -1]
-        # )
-        # printed_density_around = agent.get_array_density_in_slice_shape(
-        #     print_and_ground, [n, n, 0, 0, 0, 0]
-        # )
-        box_around = [-n, n + 1, -n, n + 1, 0, 1]
-        design_density_around = agent.get_array_density_in_box(
-            design.array, box_around, nonzero=True
+        
+        design_density_around = agent.get_array_density_by_index_map(
+            design.array, self.bullet_index_map, agent.pose, nonzero=True
         )
-        box_below = [-n, n + 1, -n, n + 1, -1, 0]
         printed_density_below = agent.get_array_density_in_box(
-            print_and_ground, box_below, nonzero=True
+            print_and_ground, self.bullet_index_map, agent.pose - [0,0, -self.bullet_min_radius / 2], nonzero=True
         )
         # printed_density_below = agent.get_array_density_in_slice_shape(
         #     print_and_ground, [n, n, 1, 0, 0, -1], print_=True
@@ -468,7 +464,7 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
 
         max_print_goal_density = 0.95
         on_the_edge = 0.65
-        min_normal_print_density_below = 0.8
+        min_normal_print_density_below = 0.6
 
         min_overhang_print_density_below = 0.2  # this defines the overhang
 
@@ -522,22 +518,8 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
             self.print_dot_counter += 1
 
             # update printed_clay_volume_array
-            if self.print_one_voxel:
-                printed_clay.array[x][y][z] = 1
-            elif self.print_cross_shape:
-                agent.set_grid_value_cross_shape(printed_clay, 1)
-            elif self.print_3x3:
-                zone = [x - 1, x + 1, y - 1, y + 1, z, z]
-                printed_clay.set_values_in_zone_xxyyzz(zone, 1)
-            elif self.print_5x5:
-                # zone = [x - 2, x + 2, y - 2, y + 2, z, z]
-                # printed_clay.set_values_in_zone_xxyyzz(zone, 1)
-
-                zone = [x - 2, x + 2, y - 1, y + 1, z, z]
-                printed_clay.set_values_in_zone_xxyyzz(zone, 1)
-                zone = [x - 1, x + 1, y - 2, y + 2, z, z]
-                printed_clay.set_values_in_zone_xxyyzz(zone, 1)
-
+            self.move_index_map
+            printed_clay.array = set_value_by_index_map(printed_clay.array, self.bullet_index_map, agent.pose)
             built = True
         else:
             built = False
@@ -564,10 +546,7 @@ class Algo10d_VoxelSlicer(AgentAlgorithm):
         # BUILD
         if moved:
             # check print chance
-            if self.print_one_voxel:
-                self.check_print_chance_one_voxel(agent, state)
-            else:
-                self.check_print_chance(agent, state)
+            self.check_print_chance(agent, state)
 
             built = self.print_build(agent, state)
 
