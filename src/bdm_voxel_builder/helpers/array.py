@@ -597,7 +597,8 @@ def extrude_array_from_point(
     return new_array
 
 
-def offset_array_radial(array: np.ndarray, steps: int, clip_array: bool = True):
+def offset_array_radial(array_: np.ndarray, steps: int, clip_array: bool = True):
+    array = array_.copy()
     array1 = extrude_array_in_direction_expanding(array, [1, 1, 1], steps)
     array1 += extrude_array_in_direction_expanding(array1, [-1, -1, -1], steps)
     if clip_array:

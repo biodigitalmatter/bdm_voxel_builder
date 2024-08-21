@@ -817,7 +817,7 @@ class Agent:
 
     def move_by_index_map(
         self,
-        move_index_map,
+        move_index_map_absolute_locations,
         pheromon_values_map,
         random_batch_size: int = 1,
     ):
@@ -828,7 +828,6 @@ class Agent:
         selects a random direction from the 'n' best options
         return bool_
         """
-
         # CHOOSE WHERE TO MOVE
         # select randomly from the best n value
         if random_batch_size <= 1:
@@ -840,10 +839,12 @@ class Agent:
         if pheromon_values_map[i] == -1:
             return False
 
-        # best option
-        move_vector = move_index_map[i]
+        # best option, relative
+        move_vector = move_index_map_absolute_locations[i]
         new_pose = self.pose + move_vector
-        print(f"NEW POSE ######## {new_pose}")
+        # best option, absolute
+        new_pose = move_index_map_absolute_locations[i]
+        print(f"new_pose {new_pose}")
         # ACTUAL MOVE
         if self.save_move_history:
             v = new_pose - self.pose
