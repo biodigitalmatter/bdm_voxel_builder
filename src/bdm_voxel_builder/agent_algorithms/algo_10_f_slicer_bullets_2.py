@@ -297,20 +297,6 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
             agents.append(agent)
         return agents
 
-    # def deploy_agent_airborne_min(self, agent: Agent, state: Environment):
-    #     printed_clay = state.grids["printed_clay"]
-    #     design = state.grids["design"]
-    #     pose = get_lowest_free_voxel_above_array(printed_clay.array, design.array)
-
-    #     if not isinstance(pose, np.ndarray | list):
-    #         pose = get_random_index_in_zone_xxyy_on_Z_level(
-    #             [0, 50, 0, 50], design.grid_size, self.ground_level_Z
-    #         )
-
-    #     agent.reset_at_pose(pose, reset_move_history=True)
-    #     agent.passive_counter = 0
-    #     return pose
-
     def reset_agent(self, agent: Agent, grids):
         # pose = get_random_index_in_zone_xxyy_on_Z_level(
         #     self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z

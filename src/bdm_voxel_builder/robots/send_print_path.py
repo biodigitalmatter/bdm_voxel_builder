@@ -3,7 +3,7 @@ from bdm_voxel_builder import DATA_DIR
 
 # from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 from compas import json_load
-from compas.geometry import Frame
+from compas.geometry import Frame, Vector
 from compas.geometry.transformation import Transformation as T
 from compas_fab.backends.ros import RosClient
 from compas_rrc import AbbClient
@@ -95,6 +95,7 @@ def send_program_dots(
                             wait_time_after=0,
                             z_hop=30,
                         )
+
                 else:  # continous print path
                     client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
                     client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=IO_5))
@@ -118,17 +119,24 @@ def extrude_and_wait(client, frame, sp, motion_type, wait_time=2, wait_time_afte
 def extrude_with_z_hop(
     client, frame, sp, motion_type, wait_time=2, wait_time_after=0, z_hop=15
 ):
-    f = Frame([0, 0, z_hop], [1, 0, 0], [0, 1, 0])
-    move_z = T.from_frame(f)
+    f1 = frame.copy()
+    origin = frame.point
+    z_ax = frame.zaxis
+    z_ax.unitize()
+    origin += z_ax * z_hop * -1
+    f2 = Frame(origin, frame.xaxis, frame.yaxis)
+    # move_z = T.from_frame(f)
+    offset = T.from_frame_to_frame(frame, f2)
     frame_z_hop = frame.copy()
-    frame_z_hop.transform(move_z)
-    # print(f"zhop_frame:{frame_z_hop}")
-
+    frame_z_hop.transform(offset)
+    #### DRY RUN!!!
+    print(f"zhop_frame:{frame_z_hop}")
+    wait_time = 0.5
     client.send(rrc.MoveToFrame(frame_z_hop, sp, 5, motion_type))
-    client.send(rrc.MoveToFrame(frame, sp, -1, motion_type))
-    client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1))
+    client.send(rrc.MoveToFrame(f1, sp, 5, motion_type=motion_type))
+    # client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1))
     client.send(rrc.WaitTime(wait_time))
-    client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0))
+    # client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0))
     if wait_time_after > 0:
         client.send(rrc.WaitTime(wait_time_after))
     client.send(rrc.MoveToFrame(frame_z_hop, sp, 5, motion_type))
