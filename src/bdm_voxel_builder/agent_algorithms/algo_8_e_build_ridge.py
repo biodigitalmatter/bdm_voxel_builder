@@ -4,16 +4,12 @@ import numpy as np
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import (
-    diffuse_diffusive_grid,
-    get_random_index_in_zone_xxyy_on_Z_level,
-)
+from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
-from compas.colors import Color
-
 from bdm_voxel_builder.grid.base import Grid
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
+from compas.colors import Color
 
 
 @dataclass
@@ -32,7 +28,7 @@ class Algo8eRidge(AgentAlgorithm):
 
     """
 
-    import_ground_from_scan = True
+    import_ground_from_scan = False
     dir_import_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
     agent_count: int
     grid_size: int | tuple[int, int, int]
@@ -43,7 +39,7 @@ class Algo8eRidge(AgentAlgorithm):
 
     # environment geometry #############################################
     add_box = True
-    stone_box_template = [20, 30, 25, 30, 1, 40]
+    stone_box_template = [20, 30, 25, 30, 1, 10]
     ground_level_Z = 0
 
     # agent settings ###################################################

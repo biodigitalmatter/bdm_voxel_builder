@@ -4,23 +4,20 @@ from bdm_voxel_builder.agent_algorithms.algo_8_e_build_ridge import Algo8eRidge
 from bdm_voxel_builder.agent_algorithms.algo_10_a_slicer_agents import (
     Algo10a_VoxelSlicer,
 )
-from bdm_voxel_builder.agent_algorithms.algo_11_test_scan_import import (
-    Algo11a_TestScanImport,
-)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
-grid_size = 40
+grid_size = [40, 40, 40]
 iterations = 1000
 agent_count = 10
-interval = 500
+interval = 100
 name = f"test_8_d_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo8d(
+    algo=Algo8eRidge(
         agent_count=agent_count,
         grid_size=grid_size,
         name=name,
