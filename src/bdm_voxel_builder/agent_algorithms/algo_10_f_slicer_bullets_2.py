@@ -437,8 +437,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         )
 
         print(
-            f"""
-            agent pose: {agent.pose}, bullet volume: {np.sum(printed_clay.array)}
+            f"""agent pose: {agent.pose}
             design_density_around: {design_density_around}
             printed_density_below: {printed_density_below}
             printed_density_above: {printed_density_above}"""
