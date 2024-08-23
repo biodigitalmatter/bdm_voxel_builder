@@ -10,13 +10,11 @@ from bdm_voxel_builder.agent_algorithms.common import (
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers.array import (
-    extrude_array_linear,
     get_mask_zone_xxyyzz,
     get_value_by_index_map,
     index_map_cylinder,
     index_map_move_and_clip,
     index_map_sphere,
-    index_map_sphere_scale_NU,
     offset_array_radial,
     set_value_by_index_map,
 )
@@ -189,7 +187,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
         # CREATE MOCK UP DESIGN
 
-        box_1 = [25, 35, 25, 35, 1, 20]
+        box_1 = [10, 40, 10, 40, 1, 20]
         # box_2 = [15, 20, 15, 18, 1, 40]
         # box_3 = [0, 12, 0, 10, 4, 25]
         # box_4 = [0, 18, 0, 15, 15, 40]
@@ -443,8 +441,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             agent pose: {agent.pose}, bullet volume: {np.sum(printed_clay.array)}
             design_density_around: {design_density_around}
             printed_density_below: {printed_density_below}
-            printed_density_above: {printed_density_above}
-        """
+            printed_density_above: {printed_density_above}"""
         )
 
         if design_density_around >= self.minimum_design_density_around:
