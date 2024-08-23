@@ -24,7 +24,7 @@ from compas.colors import Color
 
 
 @dataclass
-class Algo10e_VoxelSlicer(AgentAlgorithm):
+class Algo10f_VoxelSlicer(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo_10 SLICER BASIC:
 
@@ -90,27 +90,17 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
 
     build_chance_flat_rate = 1
 
-    print_one_voxel = False
-    print_cross_shape = False
-    print_3x3 = False
-    print_5x5 = True
-
-    track_length = 1
-    track_flag = None
+    # track_length = 1
+    # track_flag = None
 
     reach_to_build: int = 1
     reach_to_erase: int = 1
 
-    # decay_clay_bool: bool = True
-    ####################################################
-
-    stacked_chances: bool = True
     reset_after_build: bool = True
     reset_after_erased: bool = False
 
     # Agent deployment
 
-    check_self_collision = True
     keep_in_bounds = True
 
     grid_to_dump: str = "print_dots"
@@ -121,7 +111,7 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
     step_counter = 0
     passive_counter = 0
     passive_limit = 500
-    deployment_zone_xxyy = [0, 50, 0, 50]
+    # deployment_zone_xxyy = [0, 50, 0, 50]
 
     ground_level_Z = 0
     walk_in_region = None
@@ -322,7 +312,7 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         return True if moved, False if not or in ground
         """
         move_index_map = self.move_index_map
-        move_index_map_clipped_oriented = index_map_move_and_clip(
+        move_map_oriented = index_map_move_and_clip(
             move_index_map, agent.pose, agent.space_grid.grid_size
         )
         pheromon_grid_move = state.grids["pheromon_move"]
@@ -352,17 +342,14 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         walk_in_region_map = get_value_by_index_map(
             walk_in_region, self.move_index_map, agent.pose, dtype=np.float64
         )
+        walk_in_region_mask = walk_in_region_map == 1
 
-        print(f"INDEX: {agent.pose}")
-
-        l = len(move_pheromon_map)
-        random_map_values = np.random.random(l) + 0.5
-        # print(f"random_map_values_shape {random_map_values.shape}")
+        map_size = len(move_pheromon_map)
+        random_map_values = np.random.random(map_size) + 0.5
         dir_map = index_map_move_and_clip(
             self.move_index_map, agent.pose, agent.space_grid.grid_size
         )
         directional_bias_map = np.array(dir_map, dtype=np.float64)[:, 2] - agent.pose[2]
-        # print(f"directional_bias_map.shape {directional_bias_map.shape}")
 
         ############################################################################
         # CHANGE MOVE BEHAVIOUR ####################################################
@@ -373,25 +360,23 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         if clay_density_filled < 0.25:
             random_mod = 2
             pheromon_map = random_map_values * 0.1
-            mask = walk_in_region_map == 1
-            pheromon_map = pheromon_map[mask]
-            move_index_map_clipped_oriented = move_index_map_clipped_oriented[mask]
+            pheromon_map = pheromon_map[walk_in_region_mask]
         else:
+            random_mod = 1
             directional_bias_map *= -0.5
             random_map_values *= 0.001
             move_pheromon_map *= 0.1
             pheromon_map = +directional_bias_map + random_map_values + move_pheromon_map
 
-            mask = walk_in_region_map == 1
-            pheromon_map = pheromon_map[mask]
-            move_index_map_clipped_oriented = move_index_map_clipped_oriented[mask]
-            random_mod = 1
+        walk_in_region_mask = walk_in_region_map == 1
+        pheromons_masked = pheromon_map[walk_in_region_mask]
+        move_index_masked = move_map_oriented[walk_in_region_mask]
 
         ############################################################################
 
         moved = agent.move_by_index_map(
-            move_index_map_absolute_locations=move_index_map_clipped_oriented,
-            pheromon_values_map=pheromon_map,
+            move_index_map_absolute_locations=move_index_masked,
+            pheromon_values_map=pheromons_masked,
             random_batch_size=random_mod,
         )
 
@@ -415,43 +400,13 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
             pheromon_build_flags.diffuse()
             pheromon_build_flags.decay()
 
-    def check_print_chance_one_voxel(self, agent: Agent, state: Environment):
-        design = state.grids["design"]
-        printed_clay = state.grids["printed_clay"]
-        ground = state.grids["ground"]
-
-        # reset build chance
-        agent.build_chance = 0
-
-        # merge ground with design and ground w printed
-        print_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
-
-        v_in_design = agent.get_array_value_at_index(design.array, agent.pose)
-        pose_below = agent.pose + [0, 0, -1]
-        v_print_below = agent.get_array_value_at_index(print_and_ground, pose_below)
-
-        if v_in_design > 0:
-            # agent in design
-            # check overhang
-            if v_print_below > 0:
-                # no overhang
-                agent.build_chance = 1
-            else:
-                v = agent.get_nb_values_3x3_below_of_array(print_and_ground)
-                print_density_below = np.count_nonzero(v) / 9
-                if print_density_below >= self.overhang_limit:
-                    # print(f"OVERHANG: {print_density_below}")
-                    agent.build_chance = 1
-                else:
-                    agent.build_chance = 0
-
     def check_print_chance_flat_rate(self, agent: Agent, state: Environment, rate=0.6):
         printed_clay = state.grids["printed_clay"]
         ground = state.grids["ground"]
-        print_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
+        printed_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
         check_above = index_map_cylinder(self.bullet_radius, 15)
         printed_density_above = agent.get_array_density_by_index_map(
-            print_and_ground,
+            printed_and_ground,
             check_above,
             agent.pose + [0, 0, +1],
             nonzero=True,
@@ -462,7 +417,7 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         else:
             agent.build_chance += rate
 
-    def check_print_chance(self, agent: Agent, state: Environment):
+    def check_print_chance_indesign(self, agent: Agent, state: Environment):
         design = state.grids["design"]
         printed_clay = state.grids["printed_clay"]
         ground = state.grids["ground"]
@@ -472,20 +427,20 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         agent.build_chance = 0
 
         # merge ground with design and ground w printed
-        print_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
+        printed_and_ground = np.clip((printed_clay.array + ground.array), 0, 1)
         # design_and_ground = np.clip((design.array + ground.array), 0, 1)
 
         design_density_around = agent.get_array_density_by_index_map(
             design.array, self.bullet_index_map, agent.pose, nonzero=True
         )
         printed_density_below = agent.get_array_density_by_index_map(
-            print_and_ground,
+            printed_and_ground,
             self.bullet_index_map,
             agent.pose - [0, 0, -1],
             nonzero=True,
         )
         printed_density_above = agent.get_array_density_by_index_map(
-            print_and_ground,
+            printed_and_ground,
             self.bullet_index_map,
             agent.pose - [0, 0, +1],
             nonzero=True,
@@ -493,22 +448,31 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
 
         print(f"agent pose: {agent.pose}, array sum: {np.sum(printed_clay.array)}")
         print(
-            f"printed d below: {printed_density_below}, design d around {design_density_around}"
+            f"""
+            agent pose: {agent.pose}, bullet volume: {np.sum(printed_clay.array)}
+            design_density_around: {design_density_around}
+            printed_density_below: {printed_density_below}
+            printed_density_above: {printed_density_above}
+        """
         )
-        in_design = agent.get_array_value_at_index(design.array, agent.pose)
 
-        if in_design:
-            if printed_density_above > 0.05:
+        minimum_design_density_around = 0.6
+        minimum_printed_density_below = 0.8
+        overhang_limit = 0.5
+        maximum_printed_density_above = 0.01
+
+        if design_density_around >= minimum_design_density_around:
+            if printed_density_above > maximum_printed_density_above:
+                # collision
                 agent.build_chance = 0
-            elif printed_density_below > 0.75:
+            elif printed_density_below >= minimum_printed_density_below:
                 # no overhang
                 agent.build_chance = 1
-                # if design_density_around < max_print_goal_density:
-                #     agent.build_chance = 1
-            elif printed_density_below > 0.33 and design_density_around < 0.6:
-                # overhang on the edge
+            elif printed_density_below >= overhang_limit:
+                # overhang
                 agent.build_chance = 1
         else:
+            # out of the design boundary
             pass
 
     def print_build(self, agent: Agent, state: Environment):
@@ -565,43 +529,42 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
 
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
-        """MOVE BUILD .RESET"""
-        moved = True
+        """BUILD MOVE *RESET"""
+
         # BUILD
-        if moved:
-            # check print chance
-            # self.check_print_chance(agent, state)
-            if not self.build_chance_flat_rate:
-                self.check_print_chance(agent, state)
-            else:
-                self.check_print_chance_flat_rate(
-                    agent, state, rate=self.build_chance_flat_rate
-                )
 
-            built = self.print_build(agent, state)
+        # check print chance
+        if not self.build_chance_flat_rate:
+            self.check_print_chance(agent, state)
+        else:
+            self.check_print_chance_flat_rate(
+                agent, state, rate=self.build_chance_flat_rate
+            )
 
-            # create new flag if there isnt any yet
-            if built and not isinstance(agent.track_flag, np.ndarray):
-                agent.track_flag = agent.pose
-                agent.move_history = []
-                self.step_counter = 0
-                print(f"new flag:{agent.pose}")
+        built = self.print_build(agent, state)
 
-            # update env if there is a flag
-            if isinstance(agent.track_flag, np.ndarray):
-                self.step_counter += 1
-                self.update_env__track_flag_emmision(agent, state)
-            if built:
-                print(f"built {agent.pose}")
-                if self.reset_after_build:
-                    # agent.deploy_airborne_min(
-                    #     state.grids["printed_clay"],
-                    #     state.grids["design"],
-                    #     ground_level_Z=self.ground_level_Z,
-                    # )
-                    self.reset_agent(agent, state.grids)
-            if not built:
-                self.passive_counter += 1
+        # create new flag if there isnt any yet
+        if built and not isinstance(agent.track_flag, np.ndarray):
+            agent.track_flag = agent.pose
+            agent.move_history = []
+            self.step_counter = 0
+            print(f"new flag:{agent.pose}")
+
+        # update env if there is a flag
+        if isinstance(agent.track_flag, np.ndarray):
+            self.step_counter += 1
+            self.update_env__track_flag_emmision(agent, state)
+        if built:
+            print(f"built {agent.pose}")
+            if self.reset_after_build:
+                # agent.deploy_airborne_min(
+                #     state.grids["printed_clay"],
+                #     state.grids["design"],
+                #     ground_level_Z=self.ground_level_Z,
+                # )
+                self.reset_agent(agent, state.grids)
+        if not built:
+            self.passive_counter += 1
 
         # MOVE
         moved = self.move_agent(agent, state)
