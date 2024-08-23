@@ -77,15 +77,14 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
     # MOVE SETTINGS
     walk_in_region_thickness = 1
 
-    walk_radius = 4
-    min_walk_radius = 2
+    walk_radius = 7
+    min_walk_radius = 1
     move_index_map = index_map_sphere(walk_radius, min_walk_radius)
     bullet_radius = 2.5
     bullet_h = 1
     bullet_index_map = index_map_cylinder(bullet_radius, bullet_h)
 
-    track_length = 100
-    track_flag = None
+    track_length = 20
 
     reach_to_build: int = 1
     reach_to_erase: int = 1
@@ -187,7 +186,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
         # CREATE MOCK UP DESIGN
 
-        box_1 = [10, 40, 10, 40, 1, 20]
+        box_1 = [10, 30, 10, 30, 1, 10]
         # box_2 = [15, 20, 15, 18, 1, 40]
         # box_3 = [0, 12, 0, 10, 4, 25]
         # box_4 = [0, 18, 0, 15, 15, 40]
@@ -241,7 +240,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
     def update_environment(self, state: Environment):
         grids = state.grids
         emission_array_for_move_ph = (
-            grids["design"].array * 0.0001 + grids["printed_clay"].array * 0.33
+            grids["design"].array * 0.33 + grids["printed_clay"].array * 0.33
         )
         diffuse_diffusive_grid(
             grids["pheromon_move"],
@@ -307,7 +306,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         ground = state.grids["ground"]
         design = state.grids["design"]
         printed_clay = state.grids["printed_clay"]
-        # pheromon_build_flags = state.grids["pheromon_build_flags"]
+        pheromon_build_flags = state.grids["pheromon_build_flags"]
         # check solid volume inclusion
         walk_on_array = np.clip(ground.array + printed_clay.array, 0, 1)
         walk_on_array_offset = offset_array_radial(walk_on_array, 1)
@@ -320,41 +319,53 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         if gv != 0:
             return False
 
-        # move by pheromon_grid_move
-
-        move_pheromon_map = get_value_by_index_map(
+        # ph attraction towards design
+        pheromon_grid_map = get_value_by_index_map(
             pheromon_grid_move.array,
             self.move_index_map,
             agent.pose,
         )
+        # ph attraction toward build track start
+        build_track_flag_map = get_value_by_index_map(
+            pheromon_build_flags.array,
+            self.move_index_map,
+            agent.pose,
+        )
+        # legal move mask
         walk_in_region_map = get_value_by_index_map(
             walk_in_region, self.move_index_map, agent.pose, dtype=np.float64
         )
         walk_in_region_mask = walk_in_region_map == 1
-
-        map_size = len(move_pheromon_map)
+        # random map
+        map_size = len(pheromon_grid_map)
         random_map_values = np.random.random(map_size) + 0.5
+        # global direction preference
         dir_map = index_map_move_and_clip(
             self.move_index_map, agent.pose, agent.space_grid.grid_size
         )
+        # print(dir_map)
+        move_z_coordinate = np.array(dir_map, dtype=np.float64)[:, 2] - agent.pose[2]
+        # print(f"move_z_coordinate {move_z_coordinate}")
 
-        move_down_bias_map = np.array(dir_map, dtype=np.float64)[:, 2] - agent.pose[2]
-        move_down_bias_map *= -1
-
-        design_density = agent.get_array_density_by_index_map(
+        density_in_move_map = agent.get_array_density_by_index_map(
             design.array, self.move_index_map, nonzero=True
         )
+
+        # MOVE PREFERENCE SETTINGS
+
         # outside design boundary - direction toward design
-        if design_density < 0.15:
-            random_mod = 3
-            pheromon_map = random_map_values * 0.1
-            pheromon_map = pheromon_map[walk_in_region_mask]
-        else:
+        if density_in_move_map < 0.2:
             random_mod = 2
-            move_down_bias_map *= -0.5
-            random_map_values *= 0.001
-            move_pheromon_map *= 0.1
-            pheromon_map = move_down_bias_map + random_map_values + move_pheromon_map
+            pheromon_map = move_z_coordinate * -0
+            pheromon_map += pheromon_grid_map * 1
+        # inside design space >> direction down
+        else:
+            random_mod = 4
+            move_z_coordinate *= -1
+            random_map_values *= 0.1
+            pheromon_grid_map *= 0
+            build_track_flag_map *= 1.5
+            pheromon_map = move_z_coordinate + random_map_values + pheromon_grid_map
 
         # filter legal moves
         walk_in_region_mask = walk_in_region_map == 1

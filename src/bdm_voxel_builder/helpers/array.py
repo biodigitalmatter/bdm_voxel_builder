@@ -391,10 +391,11 @@ def set_value_by_index_map(array, index_map_, origin, value=1):
     # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
     index_map = index_map_.copy()
     index_map += np.array(origin, dtype=np.int64)
-    index_map = np.unique((np.clip(index_map, [0, 0, 0], array.shape)), axis=0)
+    index_map = np.unique(
+        (np.clip(index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]))), axis=0
+    )
     indices = tuple(np.array(index_map).T)
-
-    # Extract the elements using advanced indexing
+    # Extract the elements using  indexing
     array[indices] = value
     return array
 
