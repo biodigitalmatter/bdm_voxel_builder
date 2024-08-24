@@ -5,7 +5,9 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
     diffuse_diffusive_grid,
+    get_any_free_voxel_above_array,
     get_lowest_free_voxel_above_array,
+    get_random_index_in_zone_xxyy_on_Z_level,
 )
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
@@ -78,7 +80,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
     walk_in_region_thickness = 1
 
     walk_radius = 7
-    min_walk_radius = 1
+    min_walk_radius = 3
     move_index_map = index_map_sphere(walk_radius, min_walk_radius)
     bullet_radius = 2.5
     bullet_h = 1
@@ -97,9 +99,8 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
     grid_to_dump: str = "print_dots"
 
     print_dot_counter = 0
-    step_counter = 0
     passive_counter = 0
-    # deployment_zone_xxyy = [0, 50, 0, 50]
+    deployment_zone_xxyy = [0, 50, 0, 50]
 
     ground_level_Z = 0
     walk_in_region = None
@@ -139,8 +140,8 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             color=Color.from_rgb255(34, 116, 240),
             decay_ratio=1 / 10000,
         )
-        pheromon_move = DiffusiveGrid(
-            name="pheromon_move",
+        pheromon_grid_move = DiffusiveGrid(
+            name="pheromon_grid_move",
             grid_size=self.grid_size,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
@@ -149,7 +150,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             gradient_resolution=0,
         )
         pheromon_build_flags = DiffusiveGrid(
-            name="pheromon_move",
+            name="pheromon_build_flags",
             grid_size=self.grid_size,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
@@ -186,7 +187,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
         # CREATE MOCK UP DESIGN
 
-        box_1 = [10, 30, 10, 30, 1, 10]
+        box_1 = [10, 100, 10, 100, 1, 15]
         # box_2 = [15, 20, 15, 18, 1, 40]
         # box_3 = [0, 12, 0, 10, 4, 25]
         # box_4 = [0, 18, 0, 15, 15, 40]
@@ -228,7 +229,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         grids = {
             "agent": agent_space,
             "ground": ground,
-            "pheromon_move": pheromon_move,
+            "pheromon_grid_move": pheromon_grid_move,
             "pheromon_build_flags": pheromon_build_flags,
             "design": design,
             "track": track_grid,
@@ -243,7 +244,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             grids["design"].array * 0.33 + grids["printed_clay"].array * 0.33
         )
         diffuse_diffusive_grid(
-            grids["pheromon_move"],
+            grids["pheromon_grid_move"],
             emmission_array=emission_array_for_move_ph,
             blocking_grids=[grids["ground"], grids["printed_clay"]],
             gravity_shift_bool=False,
@@ -276,16 +277,17 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent, grids):
-        # pose = get_random_index_in_zone_xxyy_on_Z_level(
-        #     self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
-        # )
+        pose = get_random_index_in_zone_xxyy_on_Z_level(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
         printed_clay = grids["printed_clay"]
         ground = grids["ground"]
         design = grids["design"]
         array_on = printed_clay.array + ground.array
-        pose = get_lowest_free_voxel_above_array(array_on, design.array)
+        # pose = get_lowest_free_voxel_above_array(array_on, design.array)
+        # pose = get_any_free_voxel_above_array(array_on, design.array)
         agent.space_grid.set_value_at_index(agent.pose, 0)
-        print(f"reset pose: {pose}")
+        print(f"RESET POSE pose: {pose}")
         agent.pose = pose
         agent.build_chance = 0
         agent.erase_chance = 0
@@ -302,7 +304,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         move_map_oriented = index_map_move_and_clip(
             self.move_index_map, agent.pose, agent.space_grid.grid_size
         )
-        pheromon_grid_move = state.grids["pheromon_move"]
+        pheromon_grid_move = state.grids["pheromon_grid_move"]
         ground = state.grids["ground"]
         design = state.grids["design"]
         printed_clay = state.grids["printed_clay"]
@@ -355,17 +357,22 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
         # outside design boundary - direction toward design
         if density_in_move_map < 0.2:
-            random_mod = 2
-            pheromon_map = move_z_coordinate * -0
-            pheromon_map += pheromon_grid_map * 1
+            random_mod = 1
+            pheromon_map = pheromon_grid_map * 1 + move_z_coordinate * -0
+
         # inside design space >> direction down
         else:
-            random_mod = 4
+            random_mod = 3
             move_z_coordinate *= -1
             random_map_values *= 0.1
             pheromon_grid_map *= 0
             build_track_flag_map *= 1.5
-            pheromon_map = move_z_coordinate + random_map_values + pheromon_grid_map
+            pheromon_map = (
+                move_z_coordinate
+                + random_map_values
+                + pheromon_grid_map
+                + build_track_flag_map
+            )
 
         # filter legal moves
         walk_in_region_mask = walk_in_region_map == 1
@@ -386,6 +393,8 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         ):
             moved = False
             print(f"not in bounds at{agent.pose}")
+
+        agent.step_counter += 1
 
         return moved
 
@@ -447,12 +456,12 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             nonzero=True,
         )
 
-        print(
-            f"""agent pose: {agent.pose}
-            design_density_around: {design_density_around}
-            printed_density_below: {printed_density_below}
-            printed_density_above: {printed_density_above}"""
-        )
+        # print(
+        #     f"""agent pose: {agent.pose}
+        #     design_density_around: {design_density_around}
+        #     printed_density_below: {printed_density_below}
+        #     printed_density_above: {printed_density_above}"""
+        # )
 
         if design_density_around >= self.minimum_design_density_around:
             if printed_density_above > self.maximum_printed_density_above:
@@ -547,10 +556,10 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             self.reset_agent(agent, state.grids)
             print("reset in move, couldnt move")
 
-        elif self.step_counter == self.track_length:
+        elif agent.step_counter == self.track_length:
             agent.move_history = []
-            agent.track_flag = None
-            self.step_counter = 0
+            agent.track_flag = agent.pose
+            agent.step_counter = 0
 
         # check end states:
         self.check_end_state_agent(agent, state)

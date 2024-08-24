@@ -51,6 +51,7 @@ class Agent:
         self.save_move_history = save_move_history
         self.build_probability = 0
         self.track_flag = None
+        self.step_counter = 0
         self.passive_counter = 0
 
         self._cube_array = []
