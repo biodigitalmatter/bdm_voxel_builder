@@ -72,14 +72,14 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
     # PRINT SETTINGS
     minimum_design_density_around = 0.6
-    minimum_printed_density_below = 0.8
-    overhang_limit = 0.5
+    minimum_printed_density_below = 0.6
+    overhang_limit = 0.4
     maximum_printed_density_above = 0.01
 
     # MOVE SETTINGS
     walk_in_region_thickness = 1
 
-    walk_radius = 7
+    walk_radius = 4
     min_walk_radius = 3
     move_index_map = index_map_sphere(walk_radius, min_walk_radius)
     bullet_radius = 2.5
@@ -187,7 +187,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
         # CREATE MOCK UP DESIGN
 
-        box_1 = [10, 100, 10, 100, 1, 15]
+        box_1 = [10, 60, 10, 40, 1, 15]
         # box_2 = [15, 20, 15, 18, 1, 40]
         # box_3 = [0, 12, 0, 10, 4, 25]
         # box_4 = [0, 18, 0, 15, 15, 40]
@@ -366,7 +366,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             move_z_coordinate *= -1
             random_map_values *= 0.1
             pheromon_grid_map *= 0
-            build_track_flag_map *= 1.5
+            build_track_flag_map *= 10
             pheromon_map = (
                 move_z_coordinate
                 + random_map_values
@@ -558,6 +558,8 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
         elif agent.step_counter == self.track_length:
             agent.move_history = []
+            # if self.reset_after_track:
+            #     agent
             agent.track_flag = agent.pose
             agent.step_counter = 0
 

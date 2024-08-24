@@ -19,10 +19,10 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # test slice
-grid_size = [100, 100, 17]
+grid_size = [70, 50, 17]
 iterations = 1000
 agent_count = 1
-interval = 1000
+interval = 500
 name = f"slicer_f_walk_r_7-1_{iterations}a{agent_count}"
 
 config = Config(
