@@ -10,12 +10,6 @@ from bdm_voxel_builder.helpers import (
     crop_array,
     get_mask_zone_xxyyzz,
 )
-from bdm_voxel_builder.helpers.array import (
-    NB_INDEX_DICT,
-    distance_to_point,
-    get_cube_array_indices,
-    offset_array_radial,
-)
 from bdm_voxel_builder.helpers.math import remap
 
 

@@ -10,13 +10,11 @@ from bdm_voxel_builder.agent_algorithms.common import (
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers.array import (
-    extrude_array_linear,
     get_mask_zone_xxyyzz,
     get_value_by_index_map,
     index_map_cylinder,
     index_map_move_and_clip,
     index_map_sphere,
-    index_map_sphere_scale_NU,
     offset_array_radial,
     set_value_by_index_map,
 )
@@ -369,8 +367,8 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
 
         print(f"INDEX: {agent.pose}")
 
-        l = len(move_pheromon_map)
-        random_map_values = np.random.random(l) + 0.5
+        map_len = len(move_pheromon_map)
+        random_map_values = np.random.random(map_len) + 0.5
         # print(f"random_map_values_shape {random_map_values.shape}")
         dir_map = index_map_move_and_clip(
             self.move_index_map, agent.pose, agent.space_grid.grid_size

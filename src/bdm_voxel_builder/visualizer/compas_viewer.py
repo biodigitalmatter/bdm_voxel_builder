@@ -1,10 +1,9 @@
-from compas.data import json_dump
-from compas.geometry import Point, Pointcloud
-from compas_viewer import Viewer
-
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.helpers import convert_grid_array_to_pts, get_savepath
 from bdm_voxel_builder.visualizer.base import Visualizer
+from compas.data import json_dump
+from compas.geometry import Point, Pointcloud
+from compas_viewer import Viewer
 
 
 class CompasViewerVisualizer(Visualizer):

@@ -304,7 +304,7 @@ def index_map_cylinder(radius=3, h=2, min_radius=None):
 def index_map_sphere_scale_NU(
     radius=1.5,
     min_radius=None,
-    scale_NU=[1, 1, 0.5],
+    scale_NU=(1, 1, 0.5),
 ):
     """returns index map"""
     original_radius = radius

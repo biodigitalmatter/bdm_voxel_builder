@@ -1,7 +1,6 @@
 # ruff: noqa: E712
 import numpy as np
 import pytest
-
 from bdm_voxel_builder.helpers.array import get_mask_zone_xxyyzz
 
 

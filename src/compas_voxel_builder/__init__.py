@@ -1,7 +1,7 @@
 import compas
 
 # TODO: This is a fix for a GH drawing issue
-# It can probably be removed after 
+# It can probably be removed after
 # https://github.com/compas-dev/compas/pull/1382
 if compas.is_grasshopper():
     import compas_ghpython.drawing

@@ -19,7 +19,6 @@ from bdm_voxel_builder.helpers import (
 from bdm_voxel_builder.helpers.array import (
     get_cube_array_indices,
     get_value_by_index_map,
-    index_map_move_and_clip,
     index_map_sphere,
 )
 
