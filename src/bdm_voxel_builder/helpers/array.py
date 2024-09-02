@@ -352,7 +352,7 @@ def index_map_move_and_clip(
     return index_map
 
 
-def get_value_by_index_map(
+def get_values_by_index_map(
     array, index_map_, origin, return_list=False, dtype=np.float64
 ):
     """

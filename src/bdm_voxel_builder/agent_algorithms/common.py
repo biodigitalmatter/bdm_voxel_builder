@@ -63,13 +63,18 @@ def diffuse_diffusive_grid(
             grid.grade()
 
 
-def get_any_voxel_in_region(index_map_array):
-    """returns a random index where index_map_array == 1.
+def get_any_voxel_in_region(index_map_array, non_zero=True):
+    """returns a random index where...
+    nonzero:
+        index_map_array != 0
+    else:
+        index_map_array == 1
+    """
 
-    input:
-        array_to_search_on : int array'
-        search_boundary : int array"""
-    indices = np.argwhere(index_map_array == 1)
+    if non_zero:
+        indices = np.argwhere(index_map_array != 0)
+    else:
+        indices = np.argwhere(index_map_array == 1)
     map_len = len(indices)
     i = np.random.choice(map_len)
     return indices[i]

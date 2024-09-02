@@ -1,3 +1,4 @@
+import random as r
 from math import ceil, trunc
 
 import numpy as np
@@ -5,6 +6,7 @@ import numpy.typing as npt
 
 from bdm_voxel_builder.agent_algorithms.common import (
     get_any_free_voxel_above_array,
+    get_any_voxel_in_region,
     get_lowest_free_voxel_above_array,
     get_random_index_in_zone_xxyy_on_Z_level,
 )
@@ -18,7 +20,8 @@ from bdm_voxel_builder.helpers import (
 )
 from bdm_voxel_builder.helpers.array import (
     get_cube_array_indices,
-    get_value_by_index_map,
+    get_values_by_index_map,
+    index_map_cylinder,
     index_map_sphere,
 )
 
@@ -61,6 +64,22 @@ class Agent:
         self._build_limit = 1
         self._erase_limit = 1
 
+        self.move_shape_map = None
+        self.built_shape_map = None
+        self.print_limit_1 = 0.5
+        self.print_limit_2 = 0.5
+        self.print_limit_3 = 0.5
+
+        self.build_limit = 1
+        self.erase_limit = 1
+        self.reset_after_build = False
+        self.reset_after_erase = False
+
+        self.build_gain_random_range = [0.25, 0.75]
+        self.erase_gain_random_range = [0.25, 0.75]
+
+        self.max_steps = None
+
     @property
     def pose(self):
         return np.asarray(self._pose, dtype=np.int32)
@@ -69,7 +88,14 @@ class Agent:
     def pose(self, v):
         if not isinstance(v, list | np.ndarray):
             raise ValueError("pose must be a list or an array")
+
+        if self.leave_trace and isinstance(self._pose, list | np.ndarray):
+            self.space_grid.set_value_at_index(self._pose, 0)
+
         self._pose = np.asarray(v, dtype=np.int32)  # [i,j,k]
+
+        if self.leave_trace:
+            self.space_grid.set_value_at_index(self._pose, 1)
 
     @property
     def cube_array(self):
@@ -379,7 +405,7 @@ class Agent:
         if not isinstance(pose, np.ndarray | list):
             pose = self.pose
 
-        values = get_value_by_index_map(array, index_map, pose, return_list=True)
+        values = get_values_by_index_map(array, index_map, pose, return_list=True)
         # nb_indices = self.get_nb_indices_26(self.pose)
         # values = []
         # for pose in nb_indices:
@@ -645,7 +671,7 @@ class Agent:
         exclude_pheromones = np.asarray(exclude)
         return exclude_pheromones
 
-    def filter_move_index_map(
+    def filter_move_shape_map(
         self,
         solid_array,
         index_map_oriented,
@@ -664,7 +690,7 @@ class Agent:
         # nb_cells = self.get_nb_indices_6(self.pose)
 
         # # filter indices within solid
-        # v = get_value_by_index_map(solid_array, index_map, nb_pose)
+        # v = get_values_by_index_map(solid_array, index_map, nb_pose)
         # index_map = index_map[v == 0]
         cells_to_check = list(index_map_oriented)
 
@@ -685,7 +711,7 @@ class Agent:
                 pass
             else:
                 # check self collision
-                self_collision_values = get_value_by_index_map(
+                self_collision_values = get_values_by_index_map(
                     self.space_grid.array, agent_size_index_map, nb_pose
                 )
                 nb_value_collision = np.sum(self_collision_values)
@@ -696,7 +722,7 @@ class Agent:
                 else:
                     if not fly:
                         # check all nbs
-                        nbs_values = get_value_by_index_map(
+                        nbs_values = get_values_by_index_map(
                             solid_array, agent_size_index_map, nb_pose
                         )
                         if np.sum(nbs_values) == 0:
@@ -817,8 +843,8 @@ class Agent:
 
     def move_by_index_map(
         self,
-        oriented_index_map,
-        pheromon_values,
+        index_map_in_place,
+        move_values,
         random_batch_size: int = 1,
     ):
         """move in the direciton of the strongest pheromon - random choice of best three
@@ -830,23 +856,23 @@ class Agent:
         """
         # CHOOSE WHERE TO MOVE
         # select randomly from the best n value
-        if len(pheromon_values) > 0:
+        if len(move_values) > 0:
             if random_batch_size <= 1:
                 pass
-                i = np.argmax(pheromon_values)
+                i = np.argmax(move_values)
             else:
-                i = random_choice_index_from_best_n(pheromon_values, random_batch_size)
+                i = random_choice_index_from_best_n(move_values, random_batch_size)
                 # print(f"choice index {i}")
         else:
             return False
-        if pheromon_values[i] == -1:
+        if move_values[i] == -1:
             return False
 
         # best option, relative
-        move_vector = oriented_index_map[i]
+        move_vector = index_map_in_place[i]
         new_pose = self.pose + move_vector
         # best option, absolute
-        new_pose = oriented_index_map[i]
+        new_pose = index_map_in_place[i]
         # print(f"new_pose {new_pose}")
         # ACTUAL MOVE
         if self.save_move_history:
@@ -1183,3 +1209,62 @@ class Agent:
         self.passive_counter = 0
         if reset_move_history:
             self.move_history = []
+
+    def deploy_in_region(self, region, reset_move_history=True):
+        pose = get_any_voxel_in_region(region)
+        self.pose = pose
+        self.build_chance = 0
+        self.erase_chance = 0
+        if reset_move_history:
+            self.move_history = []
+            self.step_counter = 0
+
+    def update_build_chance_random(self):
+        a, b = self.build_gain_random_range
+        random_gain = r.random() * (b - a) + a
+        self.build_chance += random_gain
+
+    def update_erase_chance_random(self):
+        a, b = self.erase_gain_random_range
+        random_gain = np.random.random(1) * (b - a) + a
+        self.erase_chance += random_gain
+
+    def update_build_chance_max_density_above(
+        self, volume_array, max_density_limit, radius, height, rate=0.5
+    ):
+        map = index_map_cylinder(radius, height)
+        density_above = self.get_array_density_by_index_map(
+            volume_array,
+            map,
+            self._pose + [0, 0, +1],
+            nonzero=True,
+        )
+        if density_above > max_density_limit:
+            self.build_chance = 0
+        else:
+            self.build_chance += rate
+
+    def update_build_chance_max_density_around(
+        self,
+        volume_array,
+        density_range,
+        radius=2,
+        offset_vector=[0, 0, 0],
+        gain=0.5,
+        penalty=-0.5,
+    ):
+        map = index_map_sphere(radius)
+        density = self.get_array_density_by_index_map(
+            volume_array,
+            map,
+            self._pose + offset_vector,
+            nonzero=True,
+        )
+        min_, max_ = density_range
+        if min_ <= density <= max_:
+            self.build_chance += gain
+        else:
+            if not penalty:
+                self.build_chance = 0
+            else:
+                self.build_chance += penalty

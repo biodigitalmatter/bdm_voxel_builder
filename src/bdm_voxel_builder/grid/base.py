@@ -68,23 +68,12 @@ class Grid:
 
     @grid_size.setter
     def grid_size(self, value):
-        print("setter function in")
-        print(f"value in setter:{value}")
-        print(f"type in setter: {type(value)}")
         if isinstance(value, int | float):
             value = np.array([value, value, value], dtype=np.int32)
         elif isinstance(value, list | tuple):
             value = np.array(value, dtype=np.int32)
-            print(f"value in setter isinstance:{value}")
-            print(f"type in setter: {type(value)}")
-            print(f"np.min(value) in setter: {np.min(value)}")
-
-        # print(value)
         if np.min(value) < 1:
             raise ValueError("grid_size must be nonzero and positive")
-        # if np.unique(value).size != 1: # TODO check. perhaps its already implemented.
-        #     raise NotImplementedError("Non square grid not supported yet")
-
         self._grid_size = value.tolist()
 
     def get_local_bbox(self) -> cg.Box:
