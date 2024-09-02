@@ -63,6 +63,18 @@ def diffuse_diffusive_grid(
             grid.grade()
 
 
+def get_any_voxel_in_region(index_map_array):
+    """returns a random index where index_map_array == 1.
+
+    input:
+        array_to_search_on : int array'
+        search_boundary : int array"""
+    indices = np.argwhere(index_map_array == 1)
+    map_len = len(indices)
+    i = np.random.choice(map_len)
+    return indices[i]
+
+
 def get_lowest_free_voxel_above_array(array_to_search_on, search_boundary):
     """finds the lowest index of a free voxel on an array along Z vector(axis = 2)
     in the boundary. Search where boundary = 1 and where array = 0.

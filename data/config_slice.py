@@ -19,11 +19,12 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # test slice
-grid_size = [70, 50, 17]
+grid_size = [70, 50, 30]
 iterations = 1000
 agent_count = 1
-interval = 500
+interval = 1000
 name = f"slicer_f_walk_r_7-1_{iterations}a{agent_count}"
+skip_grids = ("pheromon_grid_move", "agent_space", "pheromon_build_flags")
 
 config = Config(
     iterations=iterations,
@@ -33,7 +34,10 @@ config = Config(
         grid_size=grid_size,
         name=name,
     ),
-    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("pheromon_move")),
+    visualizer=CompasViewerVisualizer(
+        save_file=True,
+        skip_grids=skip_grids,
+    ),
     save_interval=interval,
     visualize_interval=interval,
 )

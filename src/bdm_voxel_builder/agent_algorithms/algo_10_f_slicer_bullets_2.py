@@ -5,6 +5,8 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
     diffuse_diffusive_grid,
+    get_any_voxel_in_region,
+    get_lowest_free_voxel_above_array,
     get_random_index_in_zone_xxyy_on_Z_level,
 )
 from bdm_voxel_builder.environment import Environment
@@ -70,15 +72,15 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
     # PRINT SETTINGS
     minimum_design_density_around = 0.6
-    minimum_printed_density_below = 0.6
-    overhang_limit = 0.4
+    minimum_printed_density_below = 0.2
+    overhang_limit = 0.1
     maximum_printed_density_above = 0.01
 
     # MOVE SETTINGS
-    walk_in_region_thickness = 1
+    walk_in_region_thickness = 2
 
     walk_radius = 4
-    min_walk_radius = 3
+    min_walk_radius = 2
     move_index_map = index_map_sphere(walk_radius, min_walk_radius)
     bullet_radius = 2.5
     bullet_h = 1
@@ -89,7 +91,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
     reach_to_build: int = 1
     reach_to_erase: int = 1
 
-    reset_after_build: bool = False
+    reset_after_build: bool = True
     reset_after_erased: bool = False
 
     # Agent deployment
@@ -275,14 +277,15 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent, grids):
-        pose = get_random_index_in_zone_xxyy_on_Z_level(
-            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
-        )
-        printed_clay = grids["printed_clay"]
-        ground = grids["ground"]
-        design = grids["design"]
-        array_on = printed_clay.array + ground.array
-        # pose = get_lowest_free_voxel_above_array(array_on, design.array)
+        # pose = get_random_index_in_zone_xxyy_on_Z_level(
+        #     self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        # )
+        # printed_clay = grids["printed_clay"]
+        # ground = grids["ground"]
+        # design = grids["design"]
+        # array_on = printed_clay.array + ground.array
+        arr = self.walk_in_region
+        pose = get_any_voxel_in_region(arr)
         # pose = get_any_free_voxel_above_array(array_on, design.array)
         agent.space_grid.set_value_at_index(agent.pose, 0)
         print(f"RESET POSE pose: {pose}")

@@ -847,7 +847,7 @@ class Agent:
         new_pose = self.pose + move_vector
         # best option, absolute
         new_pose = oriented_index_map[i]
-        print(f"new_pose {new_pose}")
+        # print(f"new_pose {new_pose}")
         # ACTUAL MOVE
         if self.save_move_history:
             v = new_pose - self.pose
