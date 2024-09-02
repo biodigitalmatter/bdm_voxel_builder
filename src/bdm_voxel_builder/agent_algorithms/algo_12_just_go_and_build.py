@@ -156,12 +156,12 @@ class Algo12_Random_builder(AgentAlgorithm):
     def make_ground_mockup(self, grid_size):
         a, b, c = grid_size
         box_1 = [10, 25, 10, 40, 1, 4]
-        # box_2 = [15, 20, 15, 18, 1, 40]
-        # box_3 = [0, 12, 0, 10, 4, 25]
-        # box_4 = [0, 18, 0, 15, 15, 40]
-        base_layer = [0, a, 0, b, 0, 1]
+        box_2 = [15, 20, 15, 18, 1, 40]
+        box_3 = [0, 12, 0, 10, 4, 5]
+        box_4 = [0, 18, 0, 15, 15, 40]
+        base_layer = [0, a, 0, int(b * 0.75), 0, 0]
         mockup_ground = np.zeros(grid_size)  # noqa: F821
-        ground_zones = [box_1, base_layer]
+        ground_zones = [box_1, box_2, box_3, box_4, base_layer]
         for zone in ground_zones:
             mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
             mockup_ground[mask] = 1
@@ -197,16 +197,16 @@ class Algo12_Random_builder(AgentAlgorithm):
             agent.deploy_in_region(self.region_legal_move)
             # agent settings
             if i < self.agent_count * 0.5:
-                build_gain_random_range = [0, 0.2]
+                build_gain_random_range = [0.1, 0.3]
                 walk_radius = 2
                 min_walk_radius = 1
-                bullet_radius = 2
+                bullet_radius = 1
                 max_steps = 20
             else:
-                build_gain_random_range = [0.2, 0.4]
-                walk_radius = 4
+                build_gain_random_range = [0, 0.2]
+                walk_radius = 5
                 min_walk_radius = 2
-                bullet_radius = 2.5
+                bullet_radius = 3
                 max_steps = 100
 
             agent.move_shape_map = index_map_sphere(walk_radius, min_walk_radius)
