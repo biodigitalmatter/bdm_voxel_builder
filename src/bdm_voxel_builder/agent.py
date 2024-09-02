@@ -37,9 +37,9 @@ class Agent:
         save_move_history: bool = True,
     ):
         if pose is None:
-            self._pose = np.asarray([0, 0, 0], dtype=np.int8)
+            self._pose = np.asarray([0, 0, 0], dtype=np.int32)
         else:
-            self._pose = np.asarray(pose, dtype=np.int8)  # [i,j,k]
+            self._pose = np.asarray(pose, dtype=np.int32)  # [i,j,k]
         self.compass_array = compass_array
         # self.limited_to_ground = limited_to_ground
         self.leave_trace: bool = leave_trace
@@ -63,13 +63,13 @@ class Agent:
 
     @property
     def pose(self):
-        return np.asarray(self._pose, dtype=np.int8)
+        return np.asarray(self._pose, dtype=np.int32)
 
     @pose.setter
     def pose(self, v):
         if not isinstance(v, list | np.ndarray):
             raise ValueError("pose must be a list or an array")
-        self._pose = np.asarray(v, dtype=np.int8)  # [i,j,k]
+        self._pose = np.asarray(v, dtype=np.int32)  # [i,j,k]
 
     @property
     def cube_array(self):

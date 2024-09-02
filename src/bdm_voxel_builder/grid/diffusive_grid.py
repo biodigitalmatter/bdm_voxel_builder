@@ -42,7 +42,7 @@ class DiffusiveGrid(Grid):
         voxel_crop_range=(0, 1),
     ):
         if isinstance(grid_size, int):
-            grid_size = np.array([grid_size] * 3, dtype=np.int64)
+            grid_size = np.array([grid_size] * 3, dtype=np.int32)
 
         super().__init__(
             grid_size,

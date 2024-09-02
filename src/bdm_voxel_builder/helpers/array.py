@@ -148,7 +148,7 @@ def get_mask_zone_xxyyzz(
 
     x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz
 
-    mask = np.zeros(grid_size, dtype=np.int8)
+    mask = np.zeros(grid_size, dtype=np.int32)
     mask[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = 1
     if return_bool:
         return mask.astype(np.bool_)
@@ -180,7 +180,7 @@ def get_array_density_from_zone_xxyyzz(
     x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz
     vol = (abs(x_min - x_max) + 1) * (abs(y_min - y_max) + 1) * (abs(z_min - z_max) + 1)
     # print("vol", vol)
-    mask = np.zeros(shape, dtype=np.int8)
+    mask = np.zeros(shape, dtype=np.int32)
     mask[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = 1
     v = np.where(mask == 1, array, 0)
     print(f"v_sum {np.sum(v)}")
@@ -215,7 +215,7 @@ def index_map_cube(radius, min_radius=None):
     r2 = radius
     r2x, r2y, r2z = [np.floor(r2)] * 3
     x, y, z = x - r2x, y - r2y, z - r2z
-    index_map = np.array([x, y, z], dtype=np.int64)
+    index_map = np.array([x, y, z], dtype=np.int32)
     x, y, z = index_map
     # print(f'base map: {x,y,z}')
     abs_x, abs_y, abs_z = np.absolute(index_map)
@@ -239,7 +239,7 @@ def index_map_box(box_size, box_min_size=None):
     x, y, z = np.indices(d)
     rx, ry, rz = np.floor(radius)
     x, y, z = [x - rx, y - ry, z - rz]
-    index_map = np.array([x, y, z], dtype=np.int64)
+    index_map = np.array([x, y, z], dtype=np.int32)
     x, y, z = index_map
     # print(f'base map: {x,y,z}')
     abs_x, abs_y, abs_z = np.absolute(index_map)
@@ -270,7 +270,7 @@ def index_map_sphere(radius=1.5, min_radius=None):
     x = indices[0][mask]
     y = indices[1][mask]
     z = indices[2][mask]
-    sphere_array = np.array([x, y, z], dtype=np.int64)
+    sphere_array = np.array([x, y, z], dtype=np.int32)
     return sphere_array.transpose()
 
 
@@ -297,7 +297,7 @@ def index_map_cylinder(radius=3, h=2, min_radius=None):
     x = indices[0][mask]
     y = indices[1][mask]
     z = indices[2][mask]
-    index_map = np.array([x, y, z], dtype=np.int64)
+    index_map = np.array([x, y, z], dtype=np.int32)
     return index_map.transpose()
 
 
@@ -335,7 +335,7 @@ def index_map_sphere_scale_NU(
     y = indices_real[1][mask]
     z = indices_real[2][mask]
 
-    arr = np.array([x, y, z], dtype=np.int64)
+    arr = np.array([x, y, z], dtype=np.int32)
     return arr.transpose()
 
 
@@ -361,11 +361,11 @@ def get_value_by_index_map(
     """
     # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
     index_map = index_map_.copy()
-    index_map += np.array(origin, dtype=np.int64)
-    # array = np.array(array, dtype=np.int64)
+    index_map += np.array(origin, dtype=np.int32)
+    # array = np.array(array, dtype=np.int32)
     index_map = np.unique(
         np.clip(
-            index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]), dtype=np.int64
+            index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]), dtype=np.int32
         ),
         axis=0,
     )
@@ -390,7 +390,7 @@ def set_value_by_index_map(array, index_map_, origin, value=1):
     """
     # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
     index_map = index_map_.copy()
-    index_map += np.array(origin, dtype=np.int64)
+    index_map += np.array(origin, dtype=np.int32)
     index_map = np.unique(
         (np.clip(index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]))), axis=0
     )
@@ -745,7 +745,7 @@ def get_index_steps_along_vector(
         # print(d)
         d = np.round(d)
         index_steps.append(d)
-    return np.unique(np.array(index_steps, dtype=np.int64), axis=0)
+    return np.unique(np.array(index_steps, dtype=np.int32), axis=0)
 
 
 def get_normal_vector(

@@ -124,6 +124,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         returns: grids
         """
         iterations = kwargs.get("iterations")
+        print(self.grid_size)
         ground = DiffusiveGrid(
             name="ground",
             grid_size=self.grid_size,
