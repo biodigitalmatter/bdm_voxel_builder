@@ -3,6 +3,7 @@ from math import ceil, trunc
 
 import numpy as np
 import numpy.typing as npt
+from compas.geometry import Vector
 
 from bdm_voxel_builder.agent_algorithms.common import (
     get_any_free_voxel_above_array,
@@ -24,8 +25,6 @@ from bdm_voxel_builder.helpers.array import (
     index_map_cylinder,
     index_map_sphere,
 )
-
-from compas.geometry import Vector
 
 
 class Agent:
@@ -73,6 +72,10 @@ class Agent:
         self.print_limit_1 = 0.5
         self.print_limit_2 = 0.5
         self.print_limit_3 = 0.5
+
+        self.move_mod_z = 0
+        self.move_mod_random = 0.1
+        self.move_mod_follow = 1
 
         self.build_limit = 1
         self.erase_limit = 1
