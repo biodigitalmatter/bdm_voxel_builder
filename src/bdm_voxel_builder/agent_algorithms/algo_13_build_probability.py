@@ -23,7 +23,7 @@ def make_ground_mockup(grid_size):
     box_3 = [0, 12, 0, 10, 4, 5]
     box_4 = [0, 18, 0, 15, 15, 40]
 
-    base_layer = [a * 0.25, a * 0.75, b * 0.25, b * 0.75, 0, 3]
+    base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4]
     base_layer = np.array(base_layer, dtype=np.int32)
     mockup_ground = np.zeros(grid_size)
     # ground_zones = [box_1, box_2, box_3, box_4, base_layer]
@@ -81,7 +81,7 @@ class Algo13_Build_Prob(AgentAlgorithm):
 
     # settings
     agent_settings_A = {
-        "build_probability": 0.45,
+        "build_probability": 0.6,
         "walk_radius": 2,
         "min_walk_radius": 1,
         "build_radius": 1.2,
@@ -89,13 +89,13 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
-        "min_build_density": 0.7,
+        "min_build_density": 0.3,
         "max_build_density": 1,
-        "density_mods": [-0.35, 0.5, -0.35],
+        "density_mods": [+0.35, -0.2, +0.35],
         "build_by_density": True,
     }
     agent_settings_B = {
-        "build_probability": 0.45,
+        "build_probability": 0.6,
         "walk_radius": 6,
         "min_walk_radius": 3,
         "build_radius": 3.5,
@@ -103,9 +103,9 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
-        "min_build_density": 0.7,
+        "min_build_density": 0.3,
         "max_build_density": 1,
-        "density_mods": [-0.35, 0.5, -0.35],
+        "density_mods": [+0.35, -0.1, +0.35],
         "build_by_density": True,
     }
     settings_split = 0.75  # A/B
