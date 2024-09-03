@@ -15,9 +15,5 @@ class AgentAlgorithm(abc.ABC):
         self.name = name
 
     @abc.abstractmethod
-    def move_agent(self):
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def setup_agents(self):
         raise NotImplementedError

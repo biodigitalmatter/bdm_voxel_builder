@@ -1,3 +1,4 @@
+import random as r
 from dataclasses import dataclass
 
 import numpy as np
@@ -7,6 +8,7 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers.array import (
     get_mask_zone_xxyyzz,
+    get_surrounding_offset_region,
     get_values_by_index_map,
     index_map_cylinder,
     index_map_move_and_clip,
@@ -36,20 +38,27 @@ def make_ground_mockup(grid_size):
 
 
 @dataclass
-class Algo12_Random_builder(AgentAlgorithm):
+class Algo13_Build_Prob(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo_12 just go and build:
 
     ## Summary
 
     random walk
-    gain random chance
+    probability is not gained, but flat
     build in shape
 
-    multiple agents types act paralell
-        build probability
-        build radius
-        walk radius
+    multiple agents types act paralell. for example:
+
+    agent_settings_B = {
+        "build_prob_rand_range": [0, 0.2],
+        "walk_radius": 6,
+        "min_walk_radius": 3,
+        "build_radius": 3.5,
+        "inactive_step_count_limit": None,
+        "reset_after_build": False,
+        "move_mod_z": 0.05,
+        "move_mod_random": 0.5,
     """
 
     agent_count: int
@@ -66,28 +75,32 @@ class Algo12_Random_builder(AgentAlgorithm):
     print_dot_counter = 0
     legal_move_region = None
 
+    walk_region_thickness = 1
+
     # agent settings
 
     # settings
     agent_settings_A = {
-        "build_prob_rand_range": [1, 1],
+        "build_probability": 0.25,
         "walk_radius": 2,
         "min_walk_radius": 1,
         "build_radius": 1.2,
-        "inactive_step_count_limit": 20,
+        "inactive_step_count_limit": None,
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
     }
     agent_settings_B = {
-        "build_prob_rand_range": [0, 0.2],
+        "build_probability": 0.95,
         "walk_radius": 6,
         "min_walk_radius": 3,
         "build_radius": 3.5,
-        "inactive_step_count_limit": 100,
+        "inactive_step_count_limit": None,
         "reset_after_build": False,
+        "move_mod_z": 0.05,
+        "move_mod_random": 0.5,
     }
-    settings_split = 0.75  # A/B
+    settings_split = 0.5  # A/B
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -154,9 +167,9 @@ class Algo12_Random_builder(AgentAlgorithm):
         ground.array = mockup_ground
 
         # init legal_move_mask
-        walk_on_array = np.clip(ground.array + built_volume.array, 0, 1)
-        walk_on_array_offset = offset_array_radial(walk_on_array, 2)
-        self.region_legal_move = walk_on_array_offset - walk_on_array
+        self.region_legal_move = get_surrounding_offset_region(
+            [ground.array], self.walk_region_thickness
+        )
 
         # WRAP ENVIRONMENT
         grids = {
@@ -199,7 +212,7 @@ class Algo12_Random_builder(AgentAlgorithm):
             else:
                 d = self.agent_settings_B
 
-            agent.build_prob_rand_range = d["build_prob_rand_range"]
+            agent.build_probability = d["build_probability"]
             agent.walk_radius = d["walk_radius"]
             agent.min_walk_radius = d["min_walk_radius"]
             agent.build_radius = d["build_radius"]
@@ -218,211 +231,84 @@ class Algo12_Random_builder(AgentAlgorithm):
             agents.append(agent)
         return agents
 
-    # def reset_agent(self, agent: Agent):
-    #     agent.deploy_in_region(self.region_legal_move)
-
-    def move_agent_simple(self, agent: Agent, state: Environment):
+    def calculate_move_values_r_z(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
         """
-        move_map_in_place = index_map_move_and_clip(
-            agent.move_shape_map, agent.pose, agent.space_grid.grid_size
-        )
-        ground = state.grids["ground"]
-        # follow_grid = state.grids["follow_grid"]
-        # check solid volume inclusionarray
-        gv = agent.get_grid_value_at_pose(
-            ground,
-        )
-        if gv != 0:
-            return False
-
-        # legal move mask
-        filter = get_values_by_index_map(
-            self.region_legal_move, agent.move_shape_map, agent.pose, dtype=np.float64
-        )
-        legal_move_mask = filter == 1
+        move_map_in_place = agent.move_map_in_place
 
         # random map
         map_size = len(move_map_in_place)
         random_map_values = np.random.random(map_size) + 0.5
 
         # global direction preference
-        dir_map = index_map_move_and_clip(
-            agent.move_shape_map, agent.pose, agent.space_grid.grid_size
+        move_z_coordinate = (
+            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
         )
-
-        # follow_map = get_values_by_index_map(
-        #     follow_grid, agent.move_shape_map, agent.pose
-        # )
-        follow_map = []
-
-        # follow pheromones
-
-        # print(dir_map)
-        move_z_coordinate = np.array(dir_map, dtype=np.float64)[:, 2] - agent.pose[2]
 
         # MOVE PREFERENCE SETTINGS
         move_z_coordinate *= agent.move_mod_z
         random_map_values *= agent.move_mod_random
-        follow_map *= agent.move_mod_follow
         move_values = move_z_coordinate + random_map_values  # + follow_map
+        return move_values
 
-        # filter legal moves
-        move_values_masked = move_values[legal_move_mask]
-        move_map_in_place_masked = move_map_in_place[legal_move_mask]
-
-        ############################################################################
-
-        moved = agent.move_by_index_map(
-            index_map_in_place=move_map_in_place_masked,
-            move_values=move_values_masked,
-            random_batch_size=1,
-        )
-
-        agent.step_counter += 1
-
-        return moved
-
-    def move_agent(self, agent: Agent, state: Environment):
+    def calculate_move_values_r_z_f(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
         """
-        move_map_in_place = index_map_move_and_clip(
-            agent.move_shape_map, agent.pose, agent.space_grid.grid_size
-        )
-        pheromon_grid_move = state.grids["pheromon_grid_move"]
-        ground = state.grids["ground"]
-        design = state.grids["design"]
-        built_volume = state.grids["built_volume"]
-        pheromon_build_flags = state.grids["pheromon_build_flags"]
-        # check solid volume inclusionarray
-        gv = agent.get_grid_value_at_pose(
-            ground,
-        )
-        if gv != 0:
-            return False
+        move_map_in_place = agent.move_map_in_place
 
-        # ph attraction towards design
-        pheromon_grid_map = get_values_by_index_map(
-            pheromon_grid_move.array,
-            agent.move_shape_map,
-            agent.pose,
-        )
-        # ph attraction toward build track start
-        build_track_flag_map = get_values_by_index_map(
-            pheromon_build_flags.array,
-            agent.move_shape_map,
-            agent.pose,
-        )
-        # legal move mask
-        legal_move_region = self.region_legal_move
-        legal_move_region_map = get_values_by_index_map(
-            legal_move_region, agent.move_shape_map, agent.pose, dtype=np.float64
-        )
-        legal_move_mask = legal_move_region_map == 1
         # random map
-        map_size = len(pheromon_grid_map)
-        random_map_values = np.random.random(map_size) + 0.5
-        # global direction preference
-        dir_map = index_map_move_and_clip(
-            agent.move_shape_map, agent.pose, agent.space_grid.grid_size
-        )
-        # print(dir_map)
-        move_z_coordinate = np.array(dir_map, dtype=np.float64)[:, 2] - agent.pose[2]
-        # print(f"move_z_coordinate {move_z_coordinate}")
+        random_map_values = np.random.random(len(move_map_in_place)) + 0.5
 
-        density_in_move_map = agent.get_array_density_by_index_map(
-            design.array, agent.move_shape_map, nonzero=True
+        # global direction preference
+        move_z_coordinate = (
+            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
+        )
+
+        # follow pheromones
+        follow_map = get_values_by_index_map(
+            state.grids["follow_grid"].array, agent.move_shape_map, agent.pose
         )
 
         # MOVE PREFERENCE SETTINGS
+        move_z_coordinate *= agent.move_mod_z
+        random_map_values *= agent.move_mod_random
+        follow_map *= agent.move_mod_follow
 
-        # outside design boundary - direction toward design
-        if density_in_move_map < 0.2:
-            random_mod = 1
-            move_values = pheromon_grid_map * 1 + move_z_coordinate * -0
+        move_values = move_z_coordinate + random_map_values + follow_map
 
-        # inside design space >> direction down
-        else:
-            random_mod = 3
-            move_z_coordinate *= -1
-            random_map_values *= 0.1
-            pheromon_grid_map *= 0
-            build_track_flag_map *= 10
-            move_values = (
-                move_z_coordinate
-                + random_map_values
-                + pheromon_grid_map
-                + build_track_flag_map
-            )
+        return move_values
 
-        # filter legal moves
-        legal_move_mask = legal_move_region_map == 1
-        move_values_masked = move_values[legal_move_mask]
-        move_map_in_place = move_map_in_place[legal_move_mask]
+    def get_legal_move_mask(self, agent: Agent, state: Environment):
+        """moves agents in a calculated direction
+        calculate weigthed sum of slices of grids makes the direction_cube
+        check and excludes illegal moves by replace values to -1
+        move agent
+        return True if moved, False if not or in ground
+        """
 
-        ############################################################################
-
-        moved = agent.move_by_index_map(
-            index_map_in_place=move_map_in_place,
-            move_values=move_values_masked,
-            random_batch_size=random_mod,
+        # legal move mask
+        filter = get_values_by_index_map(
+            self.region_legal_move, agent.move_shape_map, agent.pose, dtype=np.float64
         )
+        legal_move_mask = filter == 1
+        return legal_move_mask
 
-        # doublecheck if in bounds
-        if any(np.array(agent.pose) < 0) or any(
-            np.array(agent.pose) >= np.array(self.grid_size)
-        ):
-            moved = False
-            print(f"not in bounds at{agent.pose}")
-
-        agent.step_counter += 1
-
-        return moved
-
-    def check_print_chance_gain_flat_rate(
-        self, agent: Agent, state: Environment, rate=0.6
-    ):
-        agent.build_chance += rate
-
-    def check_print_chance_gain_flat_rate_check_above(
-        self, agent: Agent, state: Environment, rate=0.6
-    ):
-        built_volume = state.grids["built_volume"]
-        ground = state.grids["ground"]
-        printed_and_ground = np.clip((built_volume.array + ground.array), 0, 1)
-        check_above = index_map_cylinder(self.build_radius, 15)
-        printed_density_above = agent.get_array_density_by_index_map(
-            printed_and_ground,
-            check_above,
-            agent.pose + [0, 0, +1],
-            nonzero=True,
-        )
-        print(f"printed_density_above {printed_density_above}")
-        if printed_density_above > 0.1:
-            agent.build_chance = 0
-        else:
-            agent.build_chance += rate
-
-    def build_simple(self, agent: Agent, state: Environment):
-        """add index the print_dot list, and fill either:
-        - one_voxel
-        - voxels in cross shape
-        - or voxels in 3x3 square
-        of the built_volume grid"""
+    def build(self, agent: Agent, state: Environment, build_limit=0.5):
+        """fill built volume in built_shape if agent.build_probability >= build_limit"""
         built = False
         built_volume = state.grids["built_volume"]
         built_centroids = state.grids["built_centroids"]
 
         # build
-        if agent.build_chance >= agent.build_limit:
+        if agent.build_probability >= build_limit:
             # get pose
             x, y, z = agent.pose
 
@@ -438,46 +324,56 @@ class Algo12_Random_builder(AgentAlgorithm):
         else:
             built = False
         if built:
-            self.update_legal_move_region(state, self.legal_move_region_thickness)
-            agent.build_chance = 0
+            print(f"built at: {agent.pose}")
         return built
-
-    def update_legal_move_region(self, state: Environment, offset_steps=2):
-        """returns offsetted shell next to the union of ground and built_volume grids"""
-        ground = state.grids["ground"]
-        built_volume = state.grids["built_volume"]
-        walk_on_array = np.clip(ground.array + built_volume.array, 0, 1)
-        walk_on_array_offset = offset_array_radial(walk_on_array, offset_steps)
-        self.region_legal_move = walk_on_array_offset - walk_on_array
 
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
         """
-        check print chance
         BUILD
         MOVE
         *RESET
         """
 
-        agent.update_build_chance_random()
-
-        # build
-        built = self.build_simple(agent, state)
+        # BUILD
+        build_limit = r.random()
+        built = self.build(agent, state, build_limit)
 
         if built:
-            print(f"built {agent.pose}")
+            # update
+            self.region_legal_move = get_surrounding_offset_region(
+                [state.grids["ground"].array, state.grids["built_volume"].array],
+                self.walk_region_thickness,
+            )
+            agent.step_counter = 0
             if agent.reset_after_build:
-                # self.reset_agent(agent)
                 agent.deploy_in_region(self.region_legal_move)
-            else:
-                agent.step_counter = 0
-        # MOVE
-        moved = self.move_agent_simple(agent, state)
 
-        # RESET IF STUCK
-        if not moved:
-            # self.reset_agent(agent, state.grids)
+        # MOVE
+        # check collision
+        collision = agent.check_solid_collision(
+            [state.grids["built_volume"].array, state.grids["ground"].array]
+        )
+        # move
+        if not collision:
+            move_values = self.calculate_move_values_r_z(agent, state)
+            move_map_in_place = agent.move_map_in_place
+
+            legal_move_mask = self.get_legal_move_mask(agent, state)
+
+            agent.move_by_index_map(
+                index_map_in_place=move_map_in_place[legal_move_mask],
+                move_values=move_values[legal_move_mask],
+                random_batch_size=1,
+            )
+            agent.step_counter += 1
+
+        # RESET
+        else:
+            # reset if stuck
             agent.deploy_in_region(self.region_legal_move)
 
-        # if agent.step_counter >= agent.inactive_step_count_limit:
-        #     agent.deploy_in_region(self.region_legal_move)
+        # reset if inactive
+        if agent.inactive_step_count_limit:  # noqa: SIM102
+            if agent.step_counter >= agent.inactive_step_count_limit:
+                agent.deploy_in_region(self.region_legal_move)

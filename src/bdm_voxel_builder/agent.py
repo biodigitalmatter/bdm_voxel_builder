@@ -23,6 +23,7 @@ from bdm_voxel_builder.helpers.array import (
     get_cube_array_indices,
     get_values_by_index_map,
     index_map_cylinder,
+    index_map_move_and_clip,
     index_map_sphere,
 )
 
@@ -51,7 +52,6 @@ class Agent:
         self.ground_grid = ground_grid
         self.move_history = []
         self.save_move_history = save_move_history
-        self.build_probability = 0
         self.track_flag = None
         self.step_counter = 0
         self.passive_counter = 0
@@ -69,6 +69,7 @@ class Agent:
         self.build_radius = 1
         self.move_shape_map = None
         self.built_shape_map = None
+        self._move_map_in_place = None
         self.print_limit_1 = 0.5
         self.print_limit_2 = 0.5
         self.print_limit_3 = 0.5
@@ -82,6 +83,7 @@ class Agent:
         self.reset_after_build = False
         self.reset_after_erase = False
 
+        self.build_probability = 0.5
         self.build_prob_rand_range = [0.25, 0.75]
         self.erase_gain_random_range = [0.25, 0.75]
 
@@ -106,6 +108,11 @@ class Agent:
 
         if self.leave_trace:
             self.space_grid.set_value_at_index(self._pose, 1)
+
+    @property
+    def move_map_in_place(self):
+        self._move_map_in_place = self.get_move_map_in_place()
+        return self._move_map_in_place
 
     @property
     def cube_array(self):
@@ -1299,3 +1306,15 @@ class Agent:
             else:
                 mask.append(True)
         return np.array(mask, dtype=np.bool)
+
+    def check_solid_collision(self, solid_arrays: list):
+        "returns True if collision"
+        array = np.clip(np.sum(solid_arrays, axis=0), 0, 1)
+        v = array[*self._pose]
+        return v != 0
+
+    def get_move_map_in_place(self):
+        map = index_map_move_and_clip(
+            self.move_shape_map, self.pose, self.space_grid.grid_size
+        )
+        return map

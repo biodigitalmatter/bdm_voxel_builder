@@ -756,35 +756,10 @@ def get_normal_vector(
     return v_hat
 
 
-# index_steps = get_index_steps_along_vector(vector, length)
-# print(index_steps)
-
-
-# # """test offset_array_from_corner"""
-# # array = np.zeros([6, 6, 6])
-# # array[2, 2, 2] = 1
-
-# # print(f"original array: \n{array}")
-# # offset = 100
-# # index = [2, 3, 4]
-
-# # array = offset_array_from_index(array, index, offset, clip_array=True)
-
-# # print(f"offsetted_array: \n{array}")
-
-# # print(f"offsetted_array sum: \n{np.sum(array)}")
-
-# """test extrude_array_linear"""
-# array = np.zeros([7, 7, 7])
-# # array[2:3, 2:4, 2:4] = 1
-# array[2, 2, 2] = 1
-
-# print(f"original array: \n{array}")
-# length = 3
-# vector = [0, 1, 0]
-
-# array = extrude_array_along_vector(array, vector, length)
-
-# # array = offset_array_radial(array, 1)
-
-# print(f"extruded_array: \n{array}")
+def get_surrounding_offset_region(arrays, offset_thickness=1):
+    """returns surrounding volumetric region of several volumes in given thickness"""
+    arrays = np.array(arrays)
+    walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
+    walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)
+    offset_region = walk_on_array_offset - walk_on_array
+    return offset_region

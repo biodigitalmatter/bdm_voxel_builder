@@ -7,6 +7,9 @@ from bdm_voxel_builder.agent_algorithms.algo_10_a_slicer_agents import (
 from bdm_voxel_builder.agent_algorithms.algo_12_just_go_and_build import (
     Algo12_Random_builder,
 )
+from bdm_voxel_builder.agent_algorithms.algo_13_build_probability import (
+    Algo13_Build_Prob,
+)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
@@ -15,12 +18,12 @@ grid_size = [80, 80, 60]
 iterations = 800
 agent_count = 1
 interval = 200
-name = f"algo_12_random_builder_noresetifinactive_i{iterations}a{agent_count}"
+name = f"algo_13_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo12_Random_builder(
+    algo=Algo13_Build_Prob(
         agent_count=agent_count,
         grid_size=grid_size,
         name=name,
