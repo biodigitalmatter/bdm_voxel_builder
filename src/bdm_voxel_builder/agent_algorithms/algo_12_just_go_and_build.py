@@ -73,6 +73,25 @@ class Algo12_Random_builder(AgentAlgorithm):
     print_dot_counter = 0
     legal_move_region = None
 
+    # agent settings
+
+    # settings
+    agent_settings_A = {
+        "build_probability": [0.4, 0.45],
+        "walk_radius": 2,
+        "min_walk_radius": 1,
+        "bullet_radius": 0,
+        "inactive_step_count_limit": 20,
+    }
+    agent_settings_B = {
+        "build_probability": [0, 0.2],
+        "walk_radius": 5,
+        "min_walk_radius": 2,
+        "bullet_radius": 3,
+        "inactive_step_count_limit": 100,
+    }
+    settings_split = 0.85  # A/B
+
     def __post_init__(self):
         """Initialize values held in parent class.
 
@@ -190,28 +209,27 @@ class Algo12_Random_builder(AgentAlgorithm):
                 save_move_history=True,
             )
 
-            build_gain_random_range = [0.1, 0.3]
-            agent.build_gain_random_range = build_gain_random_range
+            build_probability = [0.1, 0.3]
+            agent.build_probability = build_probability
 
             # deploy agent
             agent.deploy_in_region(self.region_legal_move)
+
             # agent settings
-            if i < self.agent_count * 0.5:
-                build_gain_random_range = [0.1, 0.3]
-                walk_radius = 2
-                min_walk_radius = 1
-                bullet_radius = 1
-                max_steps = 20
+            if i < self.agent_count * self.setting_split:
+                d = self.agent_settings_A
             else:
-                build_gain_random_range = [0, 0.2]
-                walk_radius = 5
-                min_walk_radius = 2
-                bullet_radius = 3
-                max_steps = 100
+                d = self.agent_settings_B
+
+            build_probability = d["build_probability"]
+            walk_radius = d["walk_radius"]
+            min_walk_radius = d["min_walk_radius"]
+            bullet_radius = d["bullet_radius"]
+            inactive_step_count_limit = d["inactive_step_count_limit"]
 
             agent.move_shape_map = index_map_sphere(walk_radius, min_walk_radius)
             agent.built_shape_map = index_map_sphere(bullet_radius)
-            agent.max_steps = max_steps
+            agent.inactive_step_count_limit = inactive_step_count_limit
 
             agent.reset_after_build = False
             agent.reset_after_erased = False
@@ -474,6 +492,6 @@ class Algo12_Random_builder(AgentAlgorithm):
         moved = self.move_agent_simple(agent, state)
 
         # RESET IF STUCK
-        if not moved or agent.step_counter >= agent.max_steps:
+        if not moved or agent.step_counter >= agent.inactive_step_count_limit:
             # self.reset_agent(agent, state.grids)
             agent.deploy_in_region(self.region_legal_move)

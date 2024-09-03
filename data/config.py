@@ -11,10 +11,10 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
-grid_size = [200, 100, 40]
+grid_size = [100, 200, 80]
 iterations = 100
-agent_count = 10
-interval = 20
+agent_count = 40
+interval = 50
 name = f"algo_12_random_builder_i{iterations}a{agent_count}"
 
 config = Config(
