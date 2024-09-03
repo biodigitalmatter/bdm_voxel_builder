@@ -10,10 +10,7 @@ from bdm_voxel_builder.helpers.array import (
     get_mask_zone_xxyyzz,
     get_surrounding_offset_region,
     get_values_by_index_map,
-    index_map_cylinder,
-    index_map_move_and_clip,
     index_map_sphere,
-    offset_array_radial,
     set_value_by_index_map,
 )
 from compas.colors import Color
@@ -77,11 +74,14 @@ class Algo13_Build_Prob(AgentAlgorithm):
 
     walk_region_thickness = 1
 
+    build_by_density = True
+    build_by_density_mod = 1.2
+
     # agent settings
 
     # settings
     agent_settings_A = {
-        "build_probability": 0.25,
+        "build_probability": 0.45,
         "walk_radius": 2,
         "min_walk_radius": 1,
         "build_radius": 1.2,
@@ -89,9 +89,13 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
+        "min_build_density": 0.7,
+        "max_build_density": 1,
+        "density_mods": [-0.35, 0.5, -0.35],
+        "build_by_density": True,
     }
     agent_settings_B = {
-        "build_probability": 0.95,
+        "build_probability": 0.45,
         "walk_radius": 6,
         "min_walk_radius": 3,
         "build_radius": 3.5,
@@ -99,8 +103,12 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
+        "min_build_density": 0.7,
+        "max_build_density": 1,
+        "density_mods": [-0.35, 0.5, -0.35],
+        "build_by_density": True,
     }
-    settings_split = 0.5  # A/B
+    settings_split = 0.75  # A/B
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -222,6 +230,11 @@ class Algo13_Build_Prob(AgentAlgorithm):
             agent.move_mod_z = d["move_mod_z"]
             agent.move_mod_random = d["move_mod_random"]
 
+            agent.min_build_density = d["min_build_density"]
+            agent.max_build_density = d["max_build_density"]
+            agent.density_mods = d["density_mods"]
+            agent.build_by_density = d["build_by_density"]
+
             # create shape maps
             agent.move_shape_map = index_map_sphere(
                 agent.walk_radius, agent.min_walk_radius
@@ -303,29 +316,24 @@ class Algo13_Build_Prob(AgentAlgorithm):
 
     def build(self, agent: Agent, state: Environment, build_limit=0.5):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
-        built = False
+
         built_volume = state.grids["built_volume"]
         built_centroids = state.grids["built_centroids"]
 
         # build
-        if agent.build_probability >= build_limit:
-            # get pose
-            x, y, z = agent.pose
+        # get pose
+        x, y, z = agent.pose
 
-            # update print dot array
-            built_centroids.array[x, y, z] = 1
-            self.print_dot_counter += 1
+        # update print dot array
+        built_centroids.array[x, y, z] = 1
+        self.print_dot_counter += 1
 
-            # update built_volume_volume_array
-            built_volume.array = set_value_by_index_map(
-                built_volume.array, agent.built_shape_map, agent.pose
-            )
-            built = True
-        else:
-            built = False
-        if built:
-            print(f"built at: {agent.pose}")
-        return built
+        # update built_volume_volume_array
+        built_volume.array = set_value_by_index_map(
+            built_volume.array, agent.built_shape_map, agent.pose
+        )
+
+        print(f"built at: {agent.pose}")
 
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
@@ -336,15 +344,30 @@ class Algo13_Build_Prob(AgentAlgorithm):
         """
 
         # BUILD
-        build_limit = r.random()
-        built = self.build(agent, state, build_limit)
+        if agent.build_by_density:
+            build_limit = agent.modify_probability_in_density_range(
+                array=state.grids["built_volume"].array,
+                radius=agent.build_radius,
+                min_density=agent.min_build_density,
+                max_density=agent.max_build_density,
+                mod_below_range=agent.density_mods[0],
+                mod_in_range=agent.density_mods[1],
+                mod_above_range=agent.density_mods[2],
+                nonzero=True,
+            )
+        else:
+            build_limit = r.random()
 
-        if built:
-            # update
+        if agent.build_probability >= build_limit:
+            # build
+            self.build(agent, state, build_limit)
+
+            # update walk region
             self.region_legal_move = get_surrounding_offset_region(
                 [state.grids["ground"].array, state.grids["built_volume"].array],
                 self.walk_region_thickness,
             )
+            # reset if
             agent.step_counter = 0
             if agent.reset_after_build:
                 agent.deploy_in_region(self.region_legal_move)

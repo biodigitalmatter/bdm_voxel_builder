@@ -1318,3 +1318,24 @@ class Agent:
             self.move_shape_map, self.pose, self.space_grid.grid_size
         )
         return map
+
+    def modify_probability_in_density_range(
+        self,
+        array,
+        radius=4,
+        min_density=0.2,
+        max_density=0.75,
+        mod_below_range=-0.1,
+        mod_in_range=0.5,
+        mod_above_range=-0.1,
+        nonzero=True,
+    ):
+        surr_map = index_map_sphere(radius)
+        d = self.get_array_density_by_index_map(array, surr_map, nonzero=nonzero)
+        a, b, p = [min_density, max_density, self.build_probability]
+        if d < a:
+            return p + mod_below_range
+        elif d < b:
+            return p + mod_in_range
+        else:
+            return p + mod_above_range
