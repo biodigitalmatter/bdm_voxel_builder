@@ -17,6 +17,24 @@ from bdm_voxel_builder.helpers.array import (
 from compas.colors import Color
 
 
+def make_ground_mockup(grid_size):
+    a, b, c = grid_size
+    box_1 = [10, 25, 10, 40, 1, 4]
+    box_2 = [15, 20, 15, 18, 1, 40]
+    box_3 = [0, 12, 0, 10, 4, 5]
+    box_4 = [0, 18, 0, 15, 15, 40]
+
+    base_layer = [0, int(a * 0.75), 0, int(b * 0.75), 0, 0]
+
+    mockup_ground = np.zeros(grid_size)
+    # ground_zones = [box_1, box_2, box_3, box_4, base_layer]
+    ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = 1
+    return mockup_ground
+
+
 @dataclass
 class Algo12_Random_builder(AgentAlgorithm):
     """
@@ -28,35 +46,10 @@ class Algo12_Random_builder(AgentAlgorithm):
     gain random chance
     build in shape
 
-
-    # several settings became agent properties
-
-
-    ## Agent behaviour
-
-    1. find the built clay
-    2. climb <up> on it
-    3. build after a while of climbing
-    4. reset or not
-
-    ## Features
-
-    - move on solid array
-    - move direction is controlled with the mix of the pheromon environment and
-      a global direction preference
-    - move randomness controlled by setting the number of best directions for
-      the random choice
-    - build on existing volume
-    - build and erase is controlled by gaining rewards
-    - move and build both is regulated differently at different levels of
-      environment grid density
-
-    ## NEW in 8_d
-    agents aim more towards the freshly built volumes.
-    the clay array values slowly decay
-
-    ## Observations:
-
+    multiple agents types act paralell
+        build probability
+        build radius
+        walk radius
     """
 
     agent_count: int
@@ -77,20 +70,22 @@ class Algo12_Random_builder(AgentAlgorithm):
 
     # settings
     agent_settings_A = {
-        "build_probability": [0.4, 0.45],
+        "build_prob_rand_range": [1.2, 1.2],
         "walk_radius": 2,
         "min_walk_radius": 1,
-        "bullet_radius": 0,
+        "build_radius": 2,
         "inactive_step_count_limit": 20,
+        "reset_after_build": False,
     }
     agent_settings_B = {
-        "build_probability": [0, 0.2],
-        "walk_radius": 5,
-        "min_walk_radius": 2,
-        "bullet_radius": 3,
+        "build_prob_rand_range": [0, 0.2],
+        "walk_radius": 6,
+        "min_walk_radius": 3,
+        "build_radius": 3.5,
         "inactive_step_count_limit": 100,
+        "reset_after_build": True,
     }
-    settings_split = 0.85  # A/B
+    settings_split = 0.75  # A/B
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -151,7 +146,7 @@ class Algo12_Random_builder(AgentAlgorithm):
         )
 
         # CREATE MOCK UP VOLUME
-        mockup_ground = self.make_ground_mockup(self.grid_size)
+        mockup_ground = make_ground_mockup(self.grid_size)
 
         # imported design TEMP
         ground.array = mockup_ground
@@ -172,20 +167,6 @@ class Algo12_Random_builder(AgentAlgorithm):
         }
         return grids
 
-    def make_ground_mockup(self, grid_size):
-        a, b, c = grid_size
-        box_1 = [10, 25, 10, 40, 1, 4]
-        box_2 = [15, 20, 15, 18, 1, 40]
-        box_3 = [0, 12, 0, 10, 4, 5]
-        box_4 = [0, 18, 0, 15, 15, 40]
-        base_layer = [0, a, 0, int(b * 0.75), 0, 0]
-        mockup_ground = np.zeros(grid_size)  # noqa: F821
-        ground_zones = [box_1, box_2, box_3, box_4, base_layer]
-        for zone in ground_zones:
-            mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
-            mockup_ground[mask] = 1
-        return mockup_ground
-
     def update_environment(self, state: Environment):
         grids = state.grids
         grids["built_centroids"].decay()
@@ -194,7 +175,6 @@ class Algo12_Random_builder(AgentAlgorithm):
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
         agent_space = grids["agent"]
-        ground = grids["ground"]
         track = grids["track"]
 
         agents: list[Agent] = []
@@ -203,36 +183,33 @@ class Algo12_Random_builder(AgentAlgorithm):
             # create object
             agent = Agent(
                 space_grid=agent_space,
-                ground_grid=ground,
                 track_grid=track,
                 leave_trace=True,
                 save_move_history=True,
             )
 
-            build_probability = [0.1, 0.3]
-            agent.build_probability = build_probability
-
             # deploy agent
             agent.deploy_in_region(self.region_legal_move)
 
             # agent settings
-            if i < self.agent_count * self.setting_split:
+            if i < self.agent_count * self.settings_split:
                 d = self.agent_settings_A
             else:
                 d = self.agent_settings_B
 
-            build_probability = d["build_probability"]
-            walk_radius = d["walk_radius"]
-            min_walk_radius = d["min_walk_radius"]
-            bullet_radius = d["bullet_radius"]
-            inactive_step_count_limit = d["inactive_step_count_limit"]
+            agent.build_prob_rand_range = d["build_prob_rand_range"]
+            agent.walk_radius = d["walk_radius"]
+            agent.min_walk_radius = d["min_walk_radius"]
+            agent.build_radius = d["build_radius"]
+            agent.inactive_step_count_limit = d["inactive_step_count_limit"]
+            agent.reset_after_build = d["reset_after_build"]
+            agent.reset_after_erase = False
 
-            agent.move_shape_map = index_map_sphere(walk_radius, min_walk_radius)
-            agent.built_shape_map = index_map_sphere(bullet_radius)
-            agent.inactive_step_count_limit = inactive_step_count_limit
-
-            agent.reset_after_build = False
-            agent.reset_after_erased = False
+            # create shape maps
+            agent.move_shape_map = index_map_sphere(
+                agent.walk_radius, agent.min_walk_radius
+            )
+            agent.built_shape_map = index_map_sphere(agent.build_radius)
 
             agents.append(agent)
         return agents
@@ -415,7 +392,7 @@ class Algo12_Random_builder(AgentAlgorithm):
         built_volume = state.grids["built_volume"]
         ground = state.grids["ground"]
         printed_and_ground = np.clip((built_volume.array + ground.array), 0, 1)
-        check_above = index_map_cylinder(self.bullet_radius, 15)
+        check_above = index_map_cylinder(self.build_radius, 15)
         printed_density_above = agent.get_array_density_by_index_map(
             printed_and_ground,
             check_above,

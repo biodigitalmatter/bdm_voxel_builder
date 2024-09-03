@@ -25,6 +25,8 @@ from bdm_voxel_builder.helpers.array import (
     index_map_sphere,
 )
 
+from compas.geometry import Vector
+
 
 class Agent:
     """Object based voxel walker"""
@@ -44,7 +46,6 @@ class Agent:
         else:
             self._pose = np.asarray(pose, dtype=np.int32)  # [i,j,k]
         self.compass_array = compass_array
-        # self.limited_to_ground = limited_to_ground
         self.leave_trace: bool = leave_trace
         self.space_grid = space_grid
         self.track_grid = track_grid
@@ -64,6 +65,9 @@ class Agent:
         self._build_limit = 1
         self._erase_limit = 1
 
+        self.walk_radius = 2
+        self.min_walk_radius = 0
+        self.build_radius = 1
         self.move_shape_map = None
         self.built_shape_map = None
         self.print_limit_1 = 0.5
@@ -75,10 +79,13 @@ class Agent:
         self.reset_after_build = False
         self.reset_after_erase = False
 
-        self.build_gain_random_range = [0.25, 0.75]
+        self.build_prob_rand_range = [0.25, 0.75]
         self.erase_gain_random_range = [0.25, 0.75]
 
-        self.max_steps = None
+        self.inactive_step_count_limit = None
+
+        self.last_move_vector = []
+        self.move_turn_degree = None
 
     @property
     def pose(self):
@@ -869,8 +876,8 @@ class Agent:
             return False
 
         # best option, relative
-        move_vector = index_map_in_place[i]
-        new_pose = self.pose + move_vector
+        last_move_vector = index_map_in_place[i]
+        new_pose = self.pose + last_move_vector
         # best option, absolute
         new_pose = index_map_in_place[i]
         # print(f"new_pose {new_pose}")
@@ -1220,7 +1227,7 @@ class Agent:
             self.step_counter = 0
 
     def update_build_chance_random(self):
-        a, b = self.build_gain_random_range
+        a, b = self.build_prob_rand_range
         random_gain = r.random() * (b - a) + a
         self.build_chance += random_gain
 
@@ -1268,3 +1275,24 @@ class Agent:
                 self.build_chance = 0
             else:
                 self.build_chance += penalty
+
+    def calculate_last_move_vector(self):
+        last_pose = self.move_history[-1]
+        pose = self._pose
+        self.last_move_vector = pose - last_pose
+        return self.last_move_vector
+
+    def limit_move_mask_by_turn_degree(self):
+        angle_limit = self.move_turn_degree
+        last_move_v = Vector(self.calculate_last_move_vector())
+        map = self.move_shape_map
+        mask = []
+        for i in range(len(map)):
+            v = map[i]
+            map_vector = Vector(v)
+            angle = map_vector.angle(last_move_v, degrees=True)
+            if angle > angle_limit:
+                mask.append(False)
+            else:
+                mask.append(True)
+        return np.array(mask, dtype=np.bool)
