@@ -1319,7 +1319,7 @@ class Agent:
         )
         return map
 
-    def modify_probability_in_density_range(
+    def modify_limit_in_density_range(
         self,
         array,
         radius=4,
@@ -1334,8 +1334,8 @@ class Agent:
         d = self.get_array_density_by_index_map(array, surr_map, nonzero=nonzero)
         a, b, p = [min_density, max_density, self.build_probability]
         if d < a:
-            return p + mod_below_range
+            return mod_below_range
         elif d < b:
-            return p + mod_in_range
+            return mod_in_range
         else:
-            return p + mod_above_range
+            return mod_above_range

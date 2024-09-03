@@ -81,7 +81,7 @@ class Algo13_Build_Prob(AgentAlgorithm):
 
     # settings
     agent_settings_A = {
-        "build_probability": 0.6,
+        "build_probability": 0.5,
         "walk_radius": 2,
         "min_walk_radius": 1,
         "build_radius": 1.2,
@@ -89,13 +89,13 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
-        "min_build_density": 0.3,
+        "min_build_density": 0.4,
         "max_build_density": 1,
-        "density_mods": [+0.35, -0.2, +0.35],
+        "build_limit_mod_by_density": [0.25, -0.2, 0.5],
         "build_by_density": True,
     }
     agent_settings_B = {
-        "build_probability": 0.6,
+        "build_probability": 0.5,
         "walk_radius": 6,
         "min_walk_radius": 3,
         "build_radius": 3.5,
@@ -103,12 +103,12 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
-        "min_build_density": 0.3,
+        "min_build_density": 0.2,
         "max_build_density": 1,
-        "density_mods": [+0.35, -0.1, +0.35],
-        "build_by_density": True,
+        "build_limit_mod_by_density": [0.45, -0.2, 0.35],
+        "build_by_density": False,
     }
-    settings_split = 0.75  # A/B
+    settings_split = 1  # A/B
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -232,7 +232,7 @@ class Algo13_Build_Prob(AgentAlgorithm):
 
             agent.min_build_density = d["min_build_density"]
             agent.max_build_density = d["max_build_density"]
-            agent.density_mods = d["density_mods"]
+            agent.build_limit_mod_by_density = d["build_limit_mod_by_density"]
             agent.build_by_density = d["build_by_density"]
 
             # create shape maps
@@ -345,16 +345,17 @@ class Algo13_Build_Prob(AgentAlgorithm):
 
         # BUILD
         if agent.build_by_density:
-            build_limit = agent.modify_probability_in_density_range(
+            mod = agent.modify_limit_in_density_range(
                 array=state.grids["built_volume"].array,
                 radius=agent.build_radius,
                 min_density=agent.min_build_density,
                 max_density=agent.max_build_density,
-                mod_below_range=agent.density_mods[0],
-                mod_in_range=agent.density_mods[1],
-                mod_above_range=agent.density_mods[2],
+                mod_below_range=agent.build_limit_mod_by_density[0],
+                mod_in_range=agent.build_limit_mod_by_density[1],
+                mod_above_range=agent.build_limit_mod_by_density[2],
                 nonzero=True,
             )
+            build_limit = r.random() + mod
         else:
             build_limit = r.random()
 
