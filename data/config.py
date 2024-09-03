@@ -10,15 +10,18 @@ from bdm_voxel_builder.agent_algorithms.algo_12_just_go_and_build import (
 from bdm_voxel_builder.agent_algorithms.algo_13_build_probability import (
     Algo13_Build_Prob,
 )
+from bdm_voxel_builder.agent_algorithms.algo_14_build_density import (
+    Algo14_Build_DensRange,
+)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
-grid_size = [80, 80, 40]
-iterations = 800
+grid_size = [200, 300, 200]
+iterations = 5000
 agent_count = 15
 interval = 200
-name = f"algo_13_density_i{iterations}a{agent_count}"
+name = f"algo_13_build_prob_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,

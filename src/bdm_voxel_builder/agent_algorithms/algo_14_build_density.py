@@ -35,7 +35,7 @@ def make_ground_mockup(grid_size):
 
 
 @dataclass
-class Algo13_Build_Prob(AgentAlgorithm):
+class Algo14_Build_DensRange(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo_12 just go and build:
 
@@ -90,12 +90,12 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
         "min_build_density": 0.4,
-        "max_build_density": 1,
-        "build_limit_mod_by_density": [0.25, -0.2, 0.5],
-        "build_by_density": False,
+        "max_build_density": 0.8,
+        "build_limit_mod_by_density": [0.25, -0.25, 0.25],
+        "build_by_density": True,
     }
     agent_settings_B = {
-        "build_probability": 0.5,
+        "build_probability": 0.25,
         "walk_radius": 6,
         "min_walk_radius": 3,
         "build_radius": 3.5,
@@ -103,9 +103,12 @@ class Algo13_Build_Prob(AgentAlgorithm):
         "reset_after_build": False,
         "move_mod_z": 0.05,
         "move_mod_random": 0.5,
-        "build_by_density": False,
+        "min_build_density": 0.4,
+        "max_build_density": 0.6,
+        "build_limit_mod_by_density": [0.25, -0.2, 0.5],
+        "build_by_density": True,
     }
-    settings_split = 1  # A/B
+    settings_split = 0.7  # A/B
 
     def __post_init__(self):
         """Initialize values held in parent class.

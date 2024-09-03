@@ -74,6 +74,11 @@ class Agent:
         self.print_limit_2 = 0.5
         self.print_limit_3 = 0.5
 
+        self.min_build_density = 0
+        self.max_build_density = 1
+        self.build_limit_mod_by_density = [0.5, -0.5, 0.5]
+        self.build_by_density = False
+
         self.move_mod_z = 0
         self.move_mod_random = 0.1
         self.move_mod_follow = 1
