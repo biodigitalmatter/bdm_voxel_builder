@@ -1,3 +1,4 @@
+from math import sin, cos
 import os
 from collections.abc import Sequence
 
@@ -130,8 +131,15 @@ def pointcloud_to_grid_array(
         grid_array[i, j, k] = value
     return grid_array.astype(dtype)
 
+def gyroid_array(
+        grid_size,
+        thickness = 1,
+        scale = 1
+    ):
+    x,y,z = np.indices(grid_size) * scale
 
-def tpms_gyroid(grid_size, scale=1, thickness_out=1, thickness_in=0):
+
+def gyroid_array(grid_size, scale=1, thickness_out=1, thickness_in=0):
     x, y, z = np.indices(grid_size) * scale
 
     isovalue = np.cos(x) * np.sin(y) + np.cos(y) * np.sin(z) + np.cos(z) * np.sin(z)
@@ -141,8 +149,20 @@ def tpms_gyroid(grid_size, scale=1, thickness_out=1, thickness_in=0):
     return gyriod
 
 
-def tpms_gyroid_isovalues(grid_size, scale=1):
-    x, y, z = np.indices(grid_size) * scale
+def lidinoid_array(
+        grid_size,
+        thickness = 1,
+        scale = 1
+    ):
+    x,y,z = np.indices(grid_size) * scale
+    isovalue = 0.5 * (
+        sin(2*x)* np.cos(y) * np.sin(z) + np.sin(2*y) * np.cos( z) * np.sin(x) + np.sin(2*z)* np.cos(x) * np.sin(y))
+    - 0.5*(np.cos(2*x)*np.cos(2*y) + np.cos(2*y) * np.cos(2*z) + np.cos(2*z) * np.cos(2*x)
+           ) + 0.15
 
-    isovalue = np.cos(x) * np.sin(y) + np.cos(y) * np.sin(z) + np.cos(z) * np.sin(z)
-    return isovalue
+    isovalue = thickness - isovalue
+    mask = isovalue  >= 0
+    gyriod = np.where(mask == True, 1, 0)
+    # gyriod = np.zeros_like(mask)[mask] = 1
+    # gyriod = np.array(gyriod, dtype=np.int32)
+    return gyriod
