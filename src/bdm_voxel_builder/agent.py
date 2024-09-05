@@ -1271,7 +1271,7 @@ class Agent:
         volume_array,
         density_range,
         radius=2,
-        offset_vector=[0, 0, 0],
+        offset_vector=(0, 0, 0),
         gain=0.5,
         penalty=-0.5,
     ):
