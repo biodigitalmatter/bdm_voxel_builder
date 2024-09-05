@@ -582,7 +582,7 @@ class Agent:
         """return ground directions as bools
         checks nbs of the nb cells
         if value > 0: return True"""
-        # get nb cell indicies
+        # get nb cell indices
         nb_cells = self.get_nb_indices_6(self.pose)
         cells_to_check = list(nb_cells)
 
@@ -612,7 +612,7 @@ class Agent:
 
         if fly == True, cells do not have to be neighbors of solid
         """
-        # get nb cell indicies
+        # get nb cell indices
         # nb_cells = self.get_nb_indices_6(self.pose)
         nb_cells = self.get_nb_indices_26(self.pose)
         cells_to_check = list(nb_cells)
@@ -657,7 +657,7 @@ class Agent:
 
         if fly == True, cells do not have to be neighbors of solid
         """
-        # get nb cell indicies
+        # get nb cell indices
         # nb_cells = self.get_nb_indices_6(self.pose)
         nb_cells = self.get_nb_indices_26(self.pose)
         cells_to_check = list(nb_cells)
@@ -708,7 +708,7 @@ class Agent:
         2. self collision
         3. any solid closeby (so agent doesnt fly, if fly false)
         """
-        # get nb cell indicies
+        # get nb cell indices
         # nb_cells = self.get_nb_indices_6(self.pose)
 
         # # filter indices within solid
