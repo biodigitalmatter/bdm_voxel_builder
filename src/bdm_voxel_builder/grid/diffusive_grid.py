@@ -5,7 +5,7 @@ import numpy.typing as npt
 from compas.colors import Color
 from compas.geometry import Box
 
-from bdm_voxel_builder.grid import Grid
+from bdm_voxel_builder.grid.numpy_grid import NumpyGrid
 from bdm_voxel_builder.helpers import (
     crop_array,
     get_mask_zone_xxyyzz,
@@ -22,7 +22,7 @@ class GravityDir(enum.Enum):
     UP = 5
 
 
-class DiffusiveGrid(Grid):
+class DiffusiveGrid(NumpyGrid):
     def __init__(
         self,
         grid_size: int | tuple[int, int, int] | Box = None,
@@ -249,7 +249,7 @@ class DiffusiveGrid(Grid):
         else:  # absolut
             self.array = np.where(external_emission_array != 0, factor, self.array)
 
-    def block_grids(self, other_grids: list[Grid]):
+    def block_grids(self, other_grids: list[NumpyGrid]):
         """acts as a solid obstacle, stopping diffusion of other grid
         input list of grids"""
         for grid in other_grids:

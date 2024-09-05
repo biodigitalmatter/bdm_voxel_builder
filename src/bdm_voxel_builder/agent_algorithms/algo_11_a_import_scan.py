@@ -8,7 +8,7 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid, Grid
+from bdm_voxel_builder.grid import DiffusiveGrid, NumpyGrid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
 from bdm_voxel_builder.helpers.file import save_ndarray
 
@@ -71,7 +71,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
         file = get_nth_newest_file_in_folder(
             self.scan_ply_folder_path, self.file_index_to_load
         )
-        imported_grid = Grid.from_ply(file, self.grid_size, name=file.name)
+        imported_grid = NumpyGrid.from_ply(file, self.grid_size, name=file.name)
 
         print(f"imported file: {file}")
         save_ndarray(imported_grid.array, note="", folder_path=self.dir_save_scan_npy)

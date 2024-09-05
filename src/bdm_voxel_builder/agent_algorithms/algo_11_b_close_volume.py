@@ -6,7 +6,7 @@ from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid, Grid
+from bdm_voxel_builder.grid import DiffusiveGrid, NumpyGrid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
 from bdm_voxel_builder.helpers.file import save_ndarray
 
@@ -72,7 +72,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         # self.grid_size = shape
         # load npy
         file_path = get_nth_newest_file_in_folder(self.dir_scan_import_npy)
-        loaded_grid = Grid.from_npy(file_path)
+        loaded_grid = NumpyGrid.from_npy(file_path)
 
         # shape = loaded_grid.pad_array(
         #     pad_width=5, values=0

@@ -9,7 +9,7 @@ from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.grid.base import Grid
+from bdm_voxel_builder.grid.base import NumpyGrid
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 
 
@@ -96,7 +96,7 @@ class Algo8eRidge(AgentAlgorithm):
         # create ground from npy import
         if self.import_ground_from_scan:
             file_path = get_nth_newest_file_in_folder(self.dir_import_solid_npy)
-            imported_grid = Grid.from_npy(file_path)
+            imported_grid = NumpyGrid.from_npy(file_path)
             print(f"imported grid from {file_path}")
             ground = DiffusiveGrid(
                 name="ground",
