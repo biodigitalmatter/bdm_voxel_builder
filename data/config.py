@@ -12,7 +12,7 @@ grid_size = [40, 40, 40]
 iterations = 100
 agent_count = 10
 interval = 100
-name = f"test_8_d_i{iterations}a{agent_count}"
+name = f"test_8_e_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,

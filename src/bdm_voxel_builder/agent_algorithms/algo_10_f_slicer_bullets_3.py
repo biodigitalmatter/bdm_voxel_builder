@@ -72,15 +72,15 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
     # PRINT SETTINGS
     minimum_design_density_around = 0.5
-    maximum_printed_density_around = 1
-    minimum_printed_density_below = 0.3
+    maximum_printed_density_around = 0.8
+    minimum_printed_density_below = 0.8
     overhang_limit = 0.4
     maximum_printed_density_above = 0.01
 
     # MOVE SETTINGS
     walk_in_region_thickness = 1
 
-    walk_radius = 7
+    walk_radius = 4
     min_walk_radius = 3
     move_index_map = index_map_sphere(walk_radius, min_walk_radius)
     bullet_radius = 2.5
@@ -92,7 +92,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
     reach_to_build: int = 1
     reach_to_erase: int = 1
 
-    reset_after_build: bool = True
+    reset_after_build: bool = False
     reset_after_erased: bool = False
 
     # Agent deployment
@@ -278,14 +278,15 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent, grids):
-
-        self.update_walk_in_region(grids, self.walk_in_region_thickness)
-        mod = np.random.random(self.grid_size)
-        print(f'mod shape: {np.shape(mod)}')
-        mod = self.walk_in_region * mod
-        
-        pose = np.argwhere(mod == np.amax(mod))[0]
-
+        pose = get_random_index_in_zone_xxyy_on_Z_level(
+            self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        )
+        printed_clay = grids["printed_clay"]
+        ground = grids["ground"]
+        design = grids["design"]
+        array_on = printed_clay.array + ground.array
+        # pose = get_lowest_free_voxel_above_array(array_on, design.array)
+        # pose = get_any_free_voxel_above_array(array_on, design.array)
         agent.space_grid.set_value_at_index(agent.pose, 0)
         print(f"RESET POSE pose: {pose}")
         agent.pose = pose
@@ -366,7 +367,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             move_z_coordinate *= -1
             random_map_values *= 0.1
             pheromon_grid_map *= 0
-            build_track_flag_map *= 0
+            build_track_flag_map *= 10
             pheromon_map = (
                 move_z_coordinate
                 + random_map_values
@@ -513,12 +514,12 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         else:
             built = False
         if built:
-            self.update_walk_in_region(state.grids, self.walk_in_region_thickness)
+            self.update_walk_in_region(state, self.walk_in_region_thickness)
         return built
 
-    def update_walk_in_region(self, grids, offset_steps=2):
-        ground = grids["ground"]
-        printed_clay = grids["printed_clay"]
+    def update_walk_in_region(self, state: Environment, offset_steps=2):
+        ground = state.grids["ground"]
+        printed_clay = state.grids["printed_clay"]
         walk_on_array = np.clip(ground.array + printed_clay.array, 0, 1)
         walk_on_array_offset = offset_array_radial(walk_on_array, offset_steps)
         self.walk_in_region = walk_on_array_offset - walk_on_array
