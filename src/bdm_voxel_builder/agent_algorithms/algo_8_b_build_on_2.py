@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 import numpy as np
+from compas.colors import Color
+
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
@@ -9,7 +11,6 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
-from compas.colors import Color
 
 """
 Algorithm structure overview:

@@ -2,13 +2,14 @@ import functools
 
 import matplotlib.pyplot as plt
 import numpy as np
+from compas.geometry import Box
+from matplotlib.animation import FuncAnimation
+
 from bdm_voxel_builder import TEMP_DIR
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.helpers import convert_grid_array_to_pts, get_savepath
 from bdm_voxel_builder.visualizer.base import Visualizer
-from compas.geometry import Box
-from matplotlib.animation import FuncAnimation
 
 
 class MPLVisualizer(Visualizer):

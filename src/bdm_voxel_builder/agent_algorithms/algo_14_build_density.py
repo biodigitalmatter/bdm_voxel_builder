@@ -2,6 +2,8 @@ import random as r
 from dataclasses import dataclass
 
 import numpy as np
+from compas.colors import Color
+
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.environment import Environment
@@ -13,7 +15,6 @@ from bdm_voxel_builder.helpers.array import (
     index_map_sphere,
     set_value_by_index_map,
 )
-from compas.colors import Color
 
 
 def make_ground_mockup(grid_size):

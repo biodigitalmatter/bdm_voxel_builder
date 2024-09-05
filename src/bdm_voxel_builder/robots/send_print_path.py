@@ -1,5 +1,4 @@
 import compas_rrc as rrc
-from bdm_voxel_builder import DATA_DIR
 
 # from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 from compas import json_load
@@ -7,6 +6,8 @@ from compas.geometry import Frame
 from compas.geometry.transformation import Transformation as T
 from compas_fab.backends.ros import RosClient
 from compas_rrc import AbbClient
+
+from bdm_voxel_builder import DATA_DIR
 
 RUN_EXTRUDER_DO = "Local_IO_0_DO5"
 DIR_EXTRUDER_DO = "Local_IO_0_DO6"
