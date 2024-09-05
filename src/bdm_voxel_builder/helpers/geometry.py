@@ -131,13 +131,18 @@ def pointcloud_to_grid_array(
     return grid_array.astype(dtype)
 
 
-def tpms_gyroid(grid_size, thickness=1, scale=1):
+def tpms_gyroid(grid_size, scale=1, thickness_out=1, thickness_in=0):
     x, y, z = np.indices(grid_size) * scale
 
     isovalue = np.cos(x) * np.sin(y) + np.cos(y) * np.sin(z) + np.cos(z) * np.sin(z)
-    isovalue = thickness - isovalue
-    mask = isovalue >= 0
-    gyriod = np.where(mask is True, 1, 0)
-    # gyriod = np.zeros_like(mask)[mask] = 1
-    # gyriod = np.array(gyriod, dtype=np.int32)
+    isovalue *= scale
+    gyriod = np.where(isovalue <= thickness_out, 1, 0)
+    # gyriod = np.where(thickness_in <= isovalue <= thickness_out, 1, 0)
     return gyriod
+
+
+def tpms_gyroid_isovalues(grid_size, scale=1):
+    x, y, z = np.indices(grid_size) * scale
+
+    isovalue = np.cos(x) * np.sin(y) + np.cos(y) * np.sin(z) + np.cos(z) * np.sin(z)
+    return isovalue

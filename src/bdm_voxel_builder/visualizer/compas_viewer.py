@@ -9,7 +9,7 @@ from compas_viewer import Viewer
 class CompasViewerVisualizer(Visualizer):
     FILE_SUFFIX = ".json"
 
-    def __init__(self, save_file=False, skip_grids: tuple[str] = None):
+    def __init__(self, save_file=False, skip_grids: tuple[str] = [None]):
         super().__init__(save_file, skip_grids=skip_grids)
 
         self.viewer = Viewer()
