@@ -127,13 +127,13 @@ class Grid:
         return self.array[i][j][k]
 
     def get_active_voxels(self):
-        """returns indicies of nonzero values
+        """returns indices of nonzero values
         list of coordinates
             shape = [3,n]"""
         return np.nonzero(self.array)
 
     def get_number_of_active_voxels(self):
-        """returns indicies of nonzero values
+        """returns indices of nonzero values
         list of coordinates
             shape = [3,n]"""
         return len(self.array[self.get_active_voxels()])

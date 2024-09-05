@@ -15,11 +15,11 @@ NB_INDEX_DICT = {
 
 def sort_pts_by_values(arr: npt.NDArray, multiply=1):
     """returns sortedpts, values"""
-    indicies = np.indices(arr.shape)
+    indices = np.indices(arr.shape)
     pt_location = np.logical_not(arr == 0)
     coordinates = []
     for i in range(3):
-        c = indicies[i][pt_location]
+        c = indices[i][pt_location]
         coordinates.append(c)
     pts = np.vstack(coordinates).transpose().tolist()
     values = arr[pt_location].tolist()
@@ -47,7 +47,7 @@ def create_random_array(shape: int | tuple[int]):
 
 
 def get_cube_array_indices(self_contain=False):
-    """26 nb indicies, ordered: top-middle-bottom"""
+    """26 nb indices, ordered: top-middle-bottom"""
     # horizontal
     f = NB_INDEX_DICT["front"]
     b = NB_INDEX_DICT["back"]

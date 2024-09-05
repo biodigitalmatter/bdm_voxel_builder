@@ -20,12 +20,12 @@ def box_from_corner_frame(frame: cg.Frame, xsize: float, ysize: float, zsize: fl
 
 
 def convert_grid_array_to_pts(arr: npt.NDArray) -> npt.NDArray:
-    indicies = np.indices(arr.shape)
+    indices = np.indices(arr.shape)
     pt_location = np.logical_not(arr == 0)
 
     coordinates = []
     for i in range(3):
-        c = indicies[i][pt_location]
+        c = indices[i][pt_location]
         coordinates.append(c)
 
     return np.vstack(coordinates).transpose()
