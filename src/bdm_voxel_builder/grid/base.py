@@ -304,7 +304,7 @@ class Grid:
 
         pts = [cg.Point(*pt[:3]) for pt in pc.numpy()]
         pointcloud = cg.Pointcloud(pts)
-        
+
         pointcloud.scale(1000)
 
         return cls.from_pointcloud(

@@ -22,7 +22,9 @@ def get(file_name: str, force_redownload=False):
     filepath = DATA_DIR / "examples" / file_name
 
     if url is None and not filepath.exists():
-        raise ValueError(f"File {file_name} not found in the data directory, and no url scheme is available")
+        raise ValueError(
+            f"File {file_name} not found in the data directory, and no url scheme is available"
+        )
 
     if not filepath.exists() or force_redownload:
         r = requests.get(url)
