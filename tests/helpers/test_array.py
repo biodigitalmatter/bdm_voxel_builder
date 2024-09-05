@@ -24,7 +24,7 @@ def test_get_mask_zone_xxyyzz():
 
     mask = get_mask_zone_xxyyzz(grid_size, zone_xxyyzz, return_bool=False)
     assert isinstance(mask, np.ndarray)
-    assert mask.dtype == np.int8
+    assert mask.dtype == np.int32
 
 
 def test_get_any_voxel_in_region():
