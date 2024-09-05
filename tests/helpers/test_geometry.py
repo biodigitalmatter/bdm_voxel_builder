@@ -346,6 +346,7 @@ class TestGetScalingBox2Grid:
 
         assert scaling == expected_scaling
 
+
 def test_tpms_gyroid():
-    values = tpms_gyroid([8,8,8], thickness = 0.05, scale= 0.01)
+    values = tpms_gyroid([8, 8, 8], thickness=0.05, scale=0.01)
     assert 1 == 1

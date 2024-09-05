@@ -1,7 +1,6 @@
 import compas.geometry as cg
 import numpy as np
 import pyopenvdb as vdb
-import pytest
 from bdm_voxel_builder import get
 from bdm_voxel_builder.grid import Grid
 
