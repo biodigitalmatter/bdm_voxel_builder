@@ -2,7 +2,6 @@ import compas.geometry as cg
 import numpy as np
 import pyopenvdb as vdb
 import pytest
-
 from bdm_voxel_builder import get
 from bdm_voxel_builder.grid import Grid
 
@@ -38,9 +37,12 @@ def test_get_local_bbox():
 
 
 def test_get_local_bbox_with_non_square_grid_size():
-    with pytest.raises(NotImplementedError):
-        grid = Grid(grid_size=(5, 10, 15))
-        grid.get_local_bbox()
+    grid = Grid(grid_size=(5, 10, 15))
+    local_bbox = grid.get_local_bbox()
+
+    assert local_bbox.xsize == cg.Box(xsize=5, ysize=10, zsize=15).xsize
+    assert local_bbox.ysize == cg.Box(xsize=5, ysize=10, zsize=15).ysize
+    assert local_bbox.zsize == cg.Box(xsize=5, ysize=10, zsize=15).zsize
 
 
 def test_get_world_bbox():

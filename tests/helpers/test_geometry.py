@@ -3,7 +3,6 @@ import math
 import compas.geometry as cg
 import numpy as np
 import pytest
-
 from bdm_voxel_builder import get
 from bdm_voxel_builder.helpers.geometry import (
     box_from_corner_frame,
@@ -257,10 +256,7 @@ class TestPointCloudToGridArray:
         pointcloud = cg.Pointcloud(random_pts(1000, random_generator))
         grid_size = (3, 3, 3)
 
-        with pytest.raises(
-            ValueError,
-            match="Pointcloud contains negative values, needs to be transformed to index grid",  # noqa: E501
-        ):
+        with pytest.raises(IndexError, match="Index out of bounds"):
             pointcloud_to_grid_array(pointcloud, grid_size)
 
 

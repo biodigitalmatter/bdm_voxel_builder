@@ -1,9 +1,8 @@
 import abc
 import contextlib
 
-from compas.geometry import Box
-
 from bdm_voxel_builder.grid import Grid
+from compas.geometry import Box
 
 
 class Visualizer(abc.ABC):

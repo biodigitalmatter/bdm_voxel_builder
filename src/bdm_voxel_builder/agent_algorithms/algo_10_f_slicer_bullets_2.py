@@ -5,7 +5,7 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
     diffuse_diffusive_grid,
-    get_any_free_voxel_above_array,
+    get_any_voxel_in_region,
     get_lowest_free_voxel_above_array,
     get_random_index_in_zone_xxyy_on_Z_level,
 )
@@ -13,7 +13,7 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers.array import (
     get_mask_zone_xxyyzz,
-    get_value_by_index_map,
+    get_values_by_index_map,
     index_map_cylinder,
     index_map_move_and_clip,
     index_map_sphere,
@@ -71,18 +71,17 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
     seed_iterations: int = 10
 
     # PRINT SETTINGS
-    minimum_design_density_around = 0.5
-    maximum_printed_density_around = 1
-    minimum_printed_density_below = 0.3
-    overhang_limit = 0.4
+    minimum_design_density_around = 0.6
+    minimum_printed_density_below = 0.2
+    overhang_limit = 0.1
     maximum_printed_density_above = 0.01
 
     # MOVE SETTINGS
-    walk_in_region_thickness = 1
+    walk_in_region_thickness = 2
 
-    walk_radius = 7
-    min_walk_radius = 3
-    move_index_map = index_map_sphere(walk_radius, min_walk_radius)
+    walk_radius = 4
+    min_walk_radius = 2
+    move_shape_map = index_map_sphere(walk_radius, min_walk_radius)
     bullet_radius = 2.5
     bullet_h = 1
     bullet_index_map = index_map_cylinder(bullet_radius, bullet_h)
@@ -125,6 +124,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         returns: grids
         """
         iterations = kwargs.get("iterations")
+        print(self.grid_size)
         ground = DiffusiveGrid(
             name="ground",
             grid_size=self.grid_size,
@@ -278,14 +278,16 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         return agents
 
     def reset_agent(self, agent: Agent, grids):
-
-        self.update_walk_in_region(grids, self.walk_in_region_thickness)
-        mod = np.random.random(self.grid_size)
-        print(f'mod shape: {np.shape(mod)}')
-        mod = self.walk_in_region * mod
-        
-        pose = np.argwhere(mod == np.amax(mod))[0]
-
+        # pose = get_random_index_in_zone_xxyy_on_Z_level(
+        #     self.deployment_zone_xxyy, agent.space_grid.grid_size, self.ground_level_Z
+        # )
+        # printed_clay = grids["printed_clay"]
+        # ground = grids["ground"]
+        # design = grids["design"]
+        # array_on = printed_clay.array + ground.array
+        arr = self.walk_in_region
+        pose = get_any_voxel_in_region(arr)
+        # pose = get_any_free_voxel_above_array(array_on, design.array)
         agent.space_grid.set_value_at_index(agent.pose, 0)
         print(f"RESET POSE pose: {pose}")
         agent.pose = pose
@@ -302,7 +304,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         return True if moved, False if not or in ground
         """
         move_map_oriented = index_map_move_and_clip(
-            self.move_index_map, agent.pose, agent.space_grid.grid_size
+            self.move_shape_map, agent.pose, agent.space_grid.grid_size
         )
         pheromon_grid_move = state.grids["pheromon_grid_move"]
         ground = state.grids["ground"]
@@ -322,35 +324,35 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             return False
 
         # ph attraction towards design
-        pheromon_grid_map = get_value_by_index_map(
+        pheromon_grid_map = get_values_by_index_map(
             pheromon_grid_move.array,
-            self.move_index_map,
+            self.move_shape_map,
             agent.pose,
         )
         # ph attraction toward build track start
-        build_track_flag_map = get_value_by_index_map(
+        build_track_flag_map = get_values_by_index_map(
             pheromon_build_flags.array,
-            self.move_index_map,
+            self.move_shape_map,
             agent.pose,
         )
         # legal move mask
-        walk_in_region_map = get_value_by_index_map(
-            walk_in_region, self.move_index_map, agent.pose, dtype=np.float64
+        walk_in_region_map = get_values_by_index_map(
+            walk_in_region, self.move_shape_map, agent.pose, dtype=np.float64
         )
-        walk_in_region_mask = walk_in_region_map == 1
+        legal_move_mask = walk_in_region_map == 1
         # random map
         map_size = len(pheromon_grid_map)
         random_map_values = np.random.random(map_size) + 0.5
         # global direction preference
         dir_map = index_map_move_and_clip(
-            self.move_index_map, agent.pose, agent.space_grid.grid_size
+            self.move_shape_map, agent.pose, agent.space_grid.grid_size
         )
         # print(dir_map)
         move_z_coordinate = np.array(dir_map, dtype=np.float64)[:, 2] - agent.pose[2]
         # print(f"move_z_coordinate {move_z_coordinate}")
 
         density_in_move_map = agent.get_array_density_by_index_map(
-            design.array, self.move_index_map, nonzero=True
+            design.array, self.move_shape_map, nonzero=True
         )
 
         # MOVE PREFERENCE SETTINGS
@@ -375,15 +377,15 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
             )
 
         # filter legal moves
-        walk_in_region_mask = walk_in_region_map == 1
-        pheromons_masked = pheromon_map[walk_in_region_mask]
-        move_map_oriented = move_map_oriented[walk_in_region_mask]
+        legal_move_mask = walk_in_region_map == 1
+        pheromons_masked = pheromon_map[legal_move_mask]
+        move_map_oriented = move_map_oriented[legal_move_mask]
 
         ############################################################################
 
         moved = agent.move_by_index_map(
-            oriented_index_map=move_map_oriented,
-            pheromon_values=pheromons_masked,
+            index_map_in_place=move_map_oriented,
+            move_values=pheromons_masked,
             random_batch_size=random_mod,
         )
 
@@ -513,12 +515,12 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
         else:
             built = False
         if built:
-            self.update_walk_in_region(state.grids, self.walk_in_region_thickness)
+            self.update_legal_move_region(state, self.walk_in_region_thickness)
         return built
 
-    def update_walk_in_region(self, grids, offset_steps=2):
-        ground = grids["ground"]
-        printed_clay = grids["printed_clay"]
+    def update_legal_move_region(self, state: Environment, offset_steps=2):
+        ground = state.grids["ground"]
+        printed_clay = state.grids["printed_clay"]
         walk_on_array = np.clip(ground.array + printed_clay.array, 0, 1)
         walk_on_array_offset = offset_array_radial(walk_on_array, offset_steps)
         self.walk_in_region = walk_on_array_offset - walk_on_array

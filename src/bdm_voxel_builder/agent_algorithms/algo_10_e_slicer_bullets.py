@@ -10,13 +10,11 @@ from bdm_voxel_builder.agent_algorithms.common import (
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers.array import (
-    extrude_array_linear,
     get_mask_zone_xxyyzz,
-    get_value_by_index_map,
+    get_values_by_index_map,
     index_map_cylinder,
     index_map_move_and_clip,
     index_map_sphere,
-    index_map_sphere_scale_NU,
     offset_array_radial,
     set_value_by_index_map,
 )
@@ -78,12 +76,12 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
 
     walk_in_region_thickness = 1
 
-    # move_index_map = index_map_sphere_scale_NU(
+    # move_shape_map = index_map_sphere_scale_NU(
     #     radius=3.8, min_radius=2, scale_NU=[1, 1, 0.5]
     # )
     radius = 10
     min_radius = 6
-    move_index_map = index_map_sphere(radius, min_radius)
+    move_shape_map = index_map_sphere(radius, min_radius)
     bullet_radius = 2.5
     bullet_h = 1
     bullet_index_map = index_map_cylinder(bullet_radius, bullet_h)
@@ -335,9 +333,9 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         move agent
         return True if moved, False if not or in ground
         """
-        move_index_map = self.move_index_map
-        move_index_map_clipped_oriented = index_map_move_and_clip(
-            move_index_map, agent.pose, agent.space_grid.grid_size
+        move_shape_map = self.move_shape_map
+        move_shape_map_clipped_oriented = index_map_move_and_clip(
+            move_shape_map, agent.pose, agent.space_grid.grid_size
         )
         pheromon_grid_move = state.grids["pheromon_move"]
         ground = state.grids["ground"]
@@ -358,22 +356,22 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
 
         # move by pheromon_grid_move
 
-        move_pheromon_map = get_value_by_index_map(
+        move_pheromon_map = get_values_by_index_map(
             pheromon_grid_move.array,
-            self.move_index_map,
+            self.move_shape_map,
             agent.pose,
         )
-        walk_in_region_map = get_value_by_index_map(
-            walk_in_region, self.move_index_map, agent.pose, dtype=np.float64
+        walk_in_region_map = get_values_by_index_map(
+            walk_in_region, self.move_shape_map, agent.pose, dtype=np.float64
         )
 
         print(f"INDEX: {agent.pose}")
 
-        l = len(move_pheromon_map)
-        random_map_values = np.random.random(l) + 0.5
+        map_len = len(move_pheromon_map)
+        random_map_values = np.random.random(map_len) + 0.5
         # print(f"random_map_values_shape {random_map_values.shape}")
         dir_map = index_map_move_and_clip(
-            self.move_index_map, agent.pose, agent.space_grid.grid_size
+            self.move_shape_map, agent.pose, agent.space_grid.grid_size
         )
         directional_bias_map = np.array(dir_map, dtype=np.float64)[:, 2] - agent.pose[2]
         # print(f"directional_bias_map.shape {directional_bias_map.shape}")
@@ -382,14 +380,14 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         # CHANGE MOVE BEHAVIOUR ####################################################
         ############################################################################
         clay_density_filled = agent.get_array_density_by_index_map(
-            design.array, self.move_index_map, nonzero=True
+            design.array, self.move_shape_map, nonzero=True
         )
         if clay_density_filled < 0.25:
             random_mod = 2
             pheromon_map = random_map_values * 0.1
             mask = walk_in_region_map == 1
             pheromon_map = pheromon_map[mask]
-            move_index_map_clipped_oriented = move_index_map_clipped_oriented[mask]
+            move_shape_map_clipped_oriented = move_shape_map_clipped_oriented[mask]
         else:
             directional_bias_map *= -0.5
             random_map_values *= 0.001
@@ -398,14 +396,14 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
 
             mask = walk_in_region_map == 1
             pheromon_map = pheromon_map[mask]
-            move_index_map_clipped_oriented = move_index_map_clipped_oriented[mask]
+            move_shape_map_clipped_oriented = move_shape_map_clipped_oriented[mask]
             random_mod = 1
 
         ############################################################################
 
         moved = agent.move_by_index_map(
-            move_index_map_absolute_locations=move_index_map_clipped_oriented,
-            pheromon_values_map=pheromon_map,
+            move_shape_map_absolute_locations=move_shape_map_clipped_oriented,
+            move_values_map=pheromon_map,
             random_batch_size=random_mod,
         )
 
@@ -553,10 +551,10 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
         else:
             built = False
         if built:
-            self.update_walk_in_region(state, self.walk_in_region_thickness)
+            self.update_legal_move_region(state, self.walk_in_region_thickness)
         return built
 
-    def update_walk_in_region(self, state: Environment, offset_steps=2):
+    def update_legal_move_region(self, state: Environment, offset_steps=2):
         ground = state.grids["ground"]
         printed_clay = state.grids["printed_clay"]
         walk_on_array = np.clip(ground.array + printed_clay.array, 0, 1)

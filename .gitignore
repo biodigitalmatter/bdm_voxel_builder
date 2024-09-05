@@ -199,3 +199,4 @@ pyrightconfig.json
 /temp/*
 /data/examples/*.vdb
 /data/live/*
+/.history/*

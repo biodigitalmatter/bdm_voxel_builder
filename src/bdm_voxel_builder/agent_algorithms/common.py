@@ -63,6 +63,23 @@ def diffuse_diffusive_grid(
             grid.grade()
 
 
+def get_any_voxel_in_region(index_map_array, non_zero=True):
+    """returns a random index where...
+    nonzero:
+        index_map_array != 0
+    else:
+        index_map_array == 1
+    """
+
+    if non_zero:
+        indices = np.argwhere(index_map_array != 0)
+    else:
+        indices = np.argwhere(index_map_array == 1)
+    map_len = len(indices)
+    i = np.random.choice(map_len)
+    return indices[i]
+
+
 def get_lowest_free_voxel_above_array(array_to_search_on, search_boundary):
     """finds the lowest index of a free voxel on an array along Z vector(axis = 2)
     in the boundary. Search where boundary = 1 and where array = 0.
@@ -150,34 +167,3 @@ def get_random_index_in_zone_xxyy_on_Z_level(
     z = ground_level + 1
 
     return np.array([x, y, z])
-
-
-# def get_random_index_above_array(array_to_search_on, search_boundary):
-#     """finds the lowest index of a free voxel on an array along Z vector(axis = 2)
-#     in the boundary. Search where boundary = 1 and where array = 0.
-
-#     input:
-#         array_to_search_on : int array'
-#         search_boundary : int array
-
-#     returns the index np.ndarray([x, y, z])"""
-#     printed = array_to_search_on.copy()
-#     printed = np.ceil(printed)
-#     design = search_boundary.copy()
-#     design = np.ceil(design)
-#     not_design = np.ones_like(printed) - design
-#     printed = np.pad(printed, (1, 1), "constant", constant_values=-1)
-#     shifted = np.roll(printed, 1, 2)
-#     options_array = printed - shifted
-#     options_array = options_array[1:-1, 1:-1, 1:-1] + not_design
-#     sum_per_layer = np.sum(np.clip(options_array, -1, 0), axis=1)
-#     nonzeros_per_layer = np.count_nonzero(sum_per_layer, axis=0)
-#     if sum(nonzeros_per_layer) > 0:
-#         layer_index = np.argwhere(nonzeros_per_layer != 0)[0][0]
-#         layer = options_array[:, :, layer_index]
-#         x, y = np.argwhere(layer == -1)[0]
-#         z = layer_index
-#         place = x, y, z
-#         return np.array(place)
-#     else:
-#         return None

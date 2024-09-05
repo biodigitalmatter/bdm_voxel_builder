@@ -69,15 +69,11 @@ class Grid:
     @grid_size.setter
     def grid_size(self, value):
         if isinstance(value, int | float):
-            value = np.array([value, value, value], dtype=np.int8)
+            value = np.array([value, value, value], dtype=np.int32)
         elif isinstance(value, list | tuple):
-            value = np.array(value, dtype=np.int8)
-        # print(value)
+            value = np.array(value, dtype=np.int32)
         if np.min(value) < 1:
             raise ValueError("grid_size must be nonzero and positive")
-        # if np.unique(value).size != 1: # TODO check. perhaps its already implemented.
-        #     raise NotImplementedError("Non square grid not supported yet")
-
         self._grid_size = value.tolist()
 
     def get_local_bbox(self) -> cg.Box:

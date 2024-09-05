@@ -1,5 +1,4 @@
 import pytest
-
 from bdm_voxel_builder.helpers.math import remap
 
 
