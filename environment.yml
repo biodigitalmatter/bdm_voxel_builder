@@ -7,7 +7,7 @@ channels:
 
 dependencies:
   - click
-  - compas=>2.3.0
+  - compas=>2.4.1
   - compas_fab
   - compas_viewer
   - compas_rrc
