@@ -7,6 +7,7 @@ import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 import pyopenvdb as vdb
+import pypcd4
 from compas.colors import Color
 
 from bdm_voxel_builder import TEMP_DIR
@@ -138,7 +139,9 @@ class Grid:
         return len(self.array[self.get_active_voxels()])
 
     def get_index_pts(self) -> list[list[float]]:
-        return convert_grid_array_to_pts(self.array)
+        pts = convert_grid_array_to_pts(self.array).tolist()
+        pts.sort(key=lambda x: (x[0], x[1], x[2]))
+        return pts
 
     def get_index_pointcloud(self):
         return cg.Pointcloud(self.get_index_pts())
@@ -237,6 +240,7 @@ class Grid:
         pointcloud: cg.Pointcloud | os.PathLike,
         grid_size: list[int, int, int] | int = None,
         voxel_edge_length: int = None,
+        xform=None,
         name: str = None,
     ):
         if grid_size is None and voxel_edge_length is None:
@@ -263,7 +267,9 @@ class Grid:
 
         array = pointcloud_to_grid_array(pointcloud_transformed, grid_size)
 
-        return cls(grid_size=grid_size, name=name, xform=Tl * R * Sc, array=array)
+        new_xform = xform * Tl * R * Sc if xform else Tl * R * Sc
+
+        return cls(grid_size=grid_size, name=name, xform=new_xform, array=array)
 
     @classmethod
     def from_ply(
@@ -279,4 +285,32 @@ class Grid:
             grid_size=grid_size,
             voxel_edge_length=voxel_edge_length,
             name=name,
+        )
+
+    @classmethod
+    def from_pcd(
+        cls,
+        pcd_path: os.PathLike,
+        grid_size: list[int, int, int] | int = None,
+        voxel_edge_length: int = None,
+        name: str = None,
+    ):
+        pc = pypcd4.PointCloud.from_path(pcd_path)
+        xyz = pc.metadata.viewpoint[:3]
+        Tl = cg.Translation.from_vector(xyz)
+
+        q = pc.metadata.viewpoint[3:]
+        R = cg.Rotation.from_quaternion(q)
+
+        pts = [cg.Point(*pt[:3]) for pt in pc.numpy()]
+        pointcloud = cg.Pointcloud(pts)
+        
+        pointcloud.scale(1000)
+
+        return cls.from_pointcloud(
+            pointcloud,
+            grid_size=grid_size,
+            voxel_edge_length=voxel_edge_length,
+            name=name,
+            xform=Tl * R,
         )

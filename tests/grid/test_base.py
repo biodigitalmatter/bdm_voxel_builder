@@ -1,7 +1,10 @@
 import compas.geometry as cg
 import numpy as np
 import pyopenvdb as vdb
-from bdm_voxel_builder import get
+import pytest
+from numpy.testing import assert_allclose
+
+from bdm_voxel_builder import DATA_DIR, get
 from bdm_voxel_builder.grid import Grid
 
 
@@ -164,3 +167,47 @@ def test_from_pointcloud_large(random_pts, random_generator):
     pointcloud = cg.Pointcloud(random_pts(1000, random_generator))
     grid = Grid.from_pointcloud(pointcloud, grid_size=25)
     assert grid.get_number_of_active_voxels() == 967  # rounding loses us some points
+
+
+# TODO: Revisit after vdb backed grid is implemented
+@pytest.mark.skip("Need to look into transform.")
+class TestFromPcd:
+    @pytest.fixture
+    def ascii_pcd(self):
+        return get("ascii.pcd")
+
+    @pytest.fixture
+    def binary_pcd(self):
+        return get("binary.pcd")
+
+    @pytest.fixture
+    def binary_compressed_pcd(self):
+        return get("binary_compressed.pcd")
+
+    @pytest.fixture
+    def parsed_ascii_pcd(self, ascii_pcd):
+        pt_lines = ascii_pcd.read_text().splitlines()[11:]
+        parts = (line.split(" ") for line in pt_lines)
+
+        pts = [[float(p) * 1000 for p in part[:3]] for part in parts]
+        pts.sort(key=lambda x: (x[0], x[1], x[2]))
+        return pts
+
+    def test_from_pcd_ascii(self, ascii_pcd, parsed_ascii_pcd):
+        grid = Grid.from_pcd(ascii_pcd, grid_size=100)
+
+        assert grid.array.shape == (100, 100, 100)
+
+        assert_allclose(grid.get_world_pts(), parsed_ascii_pcd)
+
+    def test_from_pcd_binary(self, binary_pcd, parsed_ascii_pcd):
+        grid = Grid.from_pcd(binary_pcd, grid_size=100)
+
+        assert grid.array.shape == (100, 100, 100)
+        assert_allclose(grid.get_world_pts(), parsed_ascii_pcd)
+
+    def test_from_pcd_binary_compressed(self, binary_compressed_pcd, parsed_ascii_pcd):
+        grid = Grid.from_pcd(binary_compressed_pcd, grid_size=100)
+
+        assert grid.array.shape == (100, 100, 100)
+        assert_allclose(grid.get_world_pts(), parsed_ascii_pcd)
