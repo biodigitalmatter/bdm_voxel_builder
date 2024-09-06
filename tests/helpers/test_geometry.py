@@ -348,5 +348,4 @@ class TestGetScalingBox2Grid:
         assert scaling == expected_scaling
 
 def test_gyroid_array():
-    values = gyroid_array([8,8,8], thickness = 0.05, scale= 0.01)
-    assert 1 == 1
+    gyroid_array([8,8,8], thickness_out = 0.05, scale= 0.01)
