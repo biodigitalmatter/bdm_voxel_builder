@@ -78,6 +78,7 @@ class Agent:
         self.max_build_density = 1
         self.build_limit_mod_by_density = [0.5, -0.5, 0.5]
         self.build_by_density = False
+        self.build_by_density_random_factor = 0
 
         self.move_mod_z = 0
         self.move_mod_random = 0.1
@@ -1344,3 +1345,18 @@ class Agent:
             return mod_in_range
         else:
             return mod_above_range
+
+    def get_build_limit_by_density_range(self, array, radius, nonzero):
+        """return build"""
+        # check density
+
+        surr_map = index_map_sphere(radius)
+        d = self.get_array_density_by_index_map(array, surr_map, nonzero=nonzero)
+        if self.build_by_density_random_factor != 0:
+            r_mod = self.build_by_density_random_factor * r.random()
+
+        if self.min_build_density <= d <= self.max_build_density:
+            build_limit = 0 + r_mod
+        else:
+            build_limit = 1 - r_mod
+        return build_limit

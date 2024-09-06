@@ -74,9 +74,6 @@ class Algo14_Build_DensRange(AgentAlgorithm):
 
     walk_region_thickness = 1
 
-    build_by_density = True
-    build_by_density_mod = 1.2
-
     # agent settings
 
     # settings
