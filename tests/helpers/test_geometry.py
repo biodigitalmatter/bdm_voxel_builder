@@ -12,11 +12,11 @@ from bdm_voxel_builder.helpers.geometry import (
     get_scaling_box2grid,
     get_translation_box2grid,
     get_xform_box2grid,
+    gyroid_array,
     ply_to_array,
     ply_to_compas,
     pointcloud_from_grid_array,
     pointcloud_to_grid_array,
-    gyroid_array,
 )
 
 
@@ -347,5 +347,6 @@ class TestGetScalingBox2Grid:
 
         assert scaling == expected_scaling
 
+
 def test_gyroid_array():
-    gyroid_array([8,8,8], thickness_out = 0.05, scale= 0.01)
+    gyroid_array([8, 8, 8], thickness_out=0.05, scale=0.01)
