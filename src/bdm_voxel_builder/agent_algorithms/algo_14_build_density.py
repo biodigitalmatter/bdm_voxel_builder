@@ -238,7 +238,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
 
             # create shape maps
             agent.move_shape_map = index_map_sphere(
-                agent.walk_radius, agent.min_walk_radius
+                agent.walk_radius, min_radius=agent.min_walk_radius
             )
             agent.built_shape_map = index_map_sphere(agent.build_radius)
 

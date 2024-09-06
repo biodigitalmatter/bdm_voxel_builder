@@ -254,16 +254,16 @@ def index_map_box(box_size, box_min_size=None):
     return filtered_index_map
 
 
-def index_map_sphere(radius=1.5, min_radius=None):
+def index_map_sphere(radius: float, min_radius: float = None) -> np.ndarray[np.int64]:
     d = int(np.ceil(radius) * 2) + 1
     x, y, z = np.indices([d, d, d])
     r2 = np.ceil(radius)
     indices = [x - r2, y - r2, z - r2]
-    l = np.linalg.norm(indices, axis=0)
+    norm = np.linalg.norm(indices, axis=0)
     # print(l)
-    mask = l <= radius
+    mask = norm <= radius
     if min_radius:
-        mask2 = l >= min_radius
+        mask2 = norm >= min_radius
         mask = np.logical_and(mask, mask2)
     # print(mask)
     # print(indices)
@@ -323,12 +323,12 @@ def index_map_sphere_scale_NU(
     indices = np.array([x2 * sx, y2 * sy, z2 * sz])
     indices_real = np.array([x2, y2, z2])
 
-    l = np.linalg.norm(indices, axis=0)
+    norm = np.linalg.norm(indices, axis=0)
     # print(l)
     if min_radius:
-        mask = np.logical_and(min_radius < l, l <= original_radius)
+        mask = np.logical_and(min_radius < norm, norm <= original_radius)
     else:
-        mask = l <= original_radius
+        mask = norm <= original_radius
     # print(mask)
 
     x = indices_real[0][mask]

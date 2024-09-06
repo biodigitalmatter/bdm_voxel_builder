@@ -16,15 +16,13 @@ from bdm_voxel_builder.helpers import (
     NB_INDEX_DICT,
     clip_indices_to_grid_size,
     get_array_density_from_zone_xxyyzz,
-    get_sub_array,
-    random_choice_index_from_best_n,
-)
-from bdm_voxel_builder.helpers.array import (
     get_cube_array_indices,
+    get_sub_array,
     get_values_by_index_map,
     index_map_cylinder,
     index_map_move_and_clip,
     index_map_sphere,
+    random_choice_index_from_best_n,
 )
 
 
@@ -717,7 +715,7 @@ class Agent:
         cells_to_check = list(index_map_oriented)
 
         # exclude = []  # FALSE if agent can move there, True if cannot
-        agent_size_index_map = index_map_sphere(agent_size, 0.1)
+        agent_size_index_map = index_map_sphere(agent_size, min_radius=0.1)
 
         # iterate through nb cells
         move_options = []

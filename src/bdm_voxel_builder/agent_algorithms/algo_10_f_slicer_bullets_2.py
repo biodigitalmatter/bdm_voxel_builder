@@ -80,7 +80,7 @@ class Algo10f_VoxelSlicer(AgentAlgorithm):
 
     walk_radius = 4
     min_walk_radius = 2
-    move_shape_map = index_map_sphere(walk_radius, min_walk_radius)
+    move_shape_map = index_map_sphere(walk_radius, min_radius=min_walk_radius)
     bullet_radius = 2.5
     bullet_h = 1
     bullet_index_map = index_map_cylinder(bullet_radius, bullet_h)
