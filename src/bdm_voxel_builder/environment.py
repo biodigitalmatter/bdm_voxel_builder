@@ -1,15 +1,20 @@
+import compas.geometry as cg
 from compas.geometry import oriented_bounding_box_numpy
 
 from bdm_voxel_builder.agent import Agent
-from bdm_voxel_builder.grid import DiffusiveGrid
+from bdm_voxel_builder.grid import Grid
 
 
 class Environment:
     def __init__(self, config):
+        self.clipping_box = config.clipping_box
+        self.xform = config.xform or cg.Transformation()
         self.iteration_count: int = 0
         self.end_state: bool = False
-        self.grids: list[DiffusiveGrid] = config.algo.initialization(
-            iterations=config.iterations
+        self.grids: list[Grid] = config.algo.initialization(
+            iterations=config.iterations,
+            clipping_box=self.clipping_box,
+            xform=self.xform,
         )
 
         # prediffuse

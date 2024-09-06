@@ -165,7 +165,7 @@ def lidinoid_array(grid_size, thickness=1, scale=1):
 
     isovalue = thickness - isovalue
     mask = isovalue >= 0
-    gyriod = np.where(mask == True, 1, 0)
+    gyriod = np.where(mask is True, 1, 0)
     # gyriod = np.zeros_like(mask)[mask] = 1
     # gyriod = np.array(gyriod, dtype=np.int32)
     return gyriod

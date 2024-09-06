@@ -1,4 +1,6 @@
 # ruff: noqa: F401
+import compas.geometry as cg
+
 from bdm_voxel_builder.agent_algorithms.algo_8_d_build_fresh import Algo8d
 from bdm_voxel_builder.agent_algorithms.algo_8_e_build_ridge import Algo8eRidge
 from bdm_voxel_builder.agent_algorithms.algo_10_a_slicer_agents import (
@@ -26,10 +28,9 @@ name = f"algo_13_build_prob_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
-    grid_size=grid_size,
+    clipping_box=cg.Box.from_diagonal(([0, 0, 0], grid_size)),
     algo=Algo13_Build_Prob(
         agent_count=agent_count,
-        grid_size=grid_size,
         name=name,
     ),
     visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("pheromon_move")),

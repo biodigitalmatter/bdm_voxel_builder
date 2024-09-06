@@ -1,36 +1,36 @@
 import random as r
 from dataclasses import dataclass
 
+import compas.geometry as cg
 import numpy as np
 from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid
+from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers.array import (
     get_mask_zone_xxyyzz,
     get_surrounding_offset_region,
     get_values_by_index_map,
     index_map_sphere,
-    set_value_by_index_map,
 )
 
 
-def make_ground_mockup(grid_size):
-    a, b, c = grid_size
+def make_ground_mockup(box: cg.Box):
+    xs, ys, zs = (int(s) for s in box.dimensions)
     box_1 = [10, 25, 10, 40, 1, 4]
     box_2 = [15, 20, 15, 18, 1, 40]
     box_3 = [0, 12, 0, 10, 4, 5]
     box_4 = [0, 18, 0, 15, 15, 40]
 
-    base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4]
+    base_layer = [xs * 0.35, xs * 0.75, ys * 0.35, ys * 0.65, 0, 4]
     base_layer = np.array(base_layer, dtype=np.int32)
-    mockup_ground = np.zeros(grid_size)
+    mockup_ground = np.zeros((xs, ys, zs))
     # ground_zones = [box_1, box_2, box_3, box_4, base_layer]
     ground_zones = [base_layer]
     for zone in ground_zones:
-        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mask = get_mask_zone_xxyyzz((xs, ys, zs), zone, return_bool=True)
         mockup_ground[mask] = 1
     return mockup_ground
 
@@ -60,7 +60,6 @@ class Algo13_Build_Prob(AgentAlgorithm):
     """
 
     agent_count: int
-    grid_size: int | tuple[int, int, int]
     name: str = "algo_12_random_builder"
     relevant_data_grids: str = "built_volume"
     grid_to_dump: str = "built_volume"
@@ -114,7 +113,6 @@ class Algo13_Build_Prob(AgentAlgorithm):
         Run in __post_init__ since @dataclass creates __init__ method"""
         super().__init__(
             agent_count=self.agent_count,
-            grid_size=self.grid_size,
             grid_to_dump=self.grid_to_dump,
             name=self.name,
         )
@@ -127,25 +125,36 @@ class Algo13_Build_Prob(AgentAlgorithm):
         returns: grids
         """
         iterations = kwargs.get("iterations")
-        ground = DiffusiveGrid(
+        clipping_box = kwargs.get("clipping_box")
+        xform = kwargs.get("xform")
+
+        # CREATE MOCK UP VOLUME
+        mockup_ground = make_ground_mockup(clipping_box)
+
+        ground = Grid.from_numpy(
+            mockup_ground,
             name="ground",
-            grid_size=self.grid_size,
+            xform=xform,
             color=Color.from_rgb255(97, 92, 97),
         )
-        agent_space = DiffusiveGrid(
+
+        agent_space = Grid(
             name="agent_space",
-            grid_size=self.grid_size,
+            clipping_box=clipping_box,
+            xform=xform,
             color=Color.from_rgb255(34, 116, 240),
         )
         track = DiffusiveGrid(
             name="track",
-            grid_size=self.grid_size,
+            clipping_box=clipping_box,
+            xform=xform,
             color=Color.from_rgb255(34, 116, 240),
             decay_ratio=1 / 10000,
         )
         built_centroids = DiffusiveGrid(
             name="built_centroids",
-            grid_size=self.grid_size,
+            clipping_box=clipping_box,
+            xform=xform,
             color=Color.from_rgb255(252, 25, 0),
             flip_colors=True,
             decay_ratio=1 / 10000,
@@ -153,32 +162,27 @@ class Algo13_Build_Prob(AgentAlgorithm):
         )
         built_volume = DiffusiveGrid(
             name="built_volume",
-            grid_size=self.grid_size,
+            clipping_box=clipping_box,
+            xform=xform,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
             decay_ratio=1 / 10000,
         )
         follow_grid = DiffusiveGrid(
             name="follow_grid",
-            grid_size=self.grid_size,
+            clipping_box=clipping_box,
+            xform=xform,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
             decay_ratio=1 / 10000,
         )
 
-        # CREATE MOCK UP VOLUME
-        mockup_ground = make_ground_mockup(self.grid_size)
-
-        # imported design TEMP
-        ground.array = mockup_ground
-
         # init legal_move_mask
         self.region_legal_move = get_surrounding_offset_region(
-            [ground.array], self.walk_region_thickness
+            [ground.to_numpy()], self.walk_region_thickness
         )
 
-        # WRAP ENVIRONMENT
-        grids = {
+        return {
             "agent": agent_space,
             "ground": ground,
             "track": track,
@@ -186,7 +190,6 @@ class Algo13_Build_Prob(AgentAlgorithm):
             "built_volume": built_volume,
             "follow_grid": follow_grid,
         }
-        return grids
 
     def update_environment(self, state: Environment):
         grids = state.grids
@@ -319,22 +322,17 @@ class Algo13_Build_Prob(AgentAlgorithm):
         built_centroids = state.grids["built_centroids"]
 
         # build
-        # get pose
-        x, y, z = agent.pose
-
         # update print dot array
-        built_centroids.array[x, y, z] = 1
+        built_centroids.set_value(agent.pose, 1)
         self.print_dot_counter += 1
 
         # update built_volume_volume_array
-        built_volume.array = set_value_by_index_map(
-            built_volume.array, agent.built_shape_map, agent.pose
-        )
+        built_volume.set_value_by_index_map(agent.built_shape_map, agent.pose, value=1)
 
         print(f"built at: {agent.pose}")
 
     # ACTION FUNCTION
-    def agent_action(self, agent, state: Environment):
+    def agent_action(self, agent: Agent, state: Environment):
         """
         BUILD
         MOVE

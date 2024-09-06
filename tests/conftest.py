@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.typing as npt
+import pyopenvdb as vdb
 import pytest
 
 
@@ -24,17 +25,23 @@ def random_pts():
     return _random_pts
 
 
-def _activate_random_indices(
-    array: npt.NDArray, random_generator: np.random.Generator
+def _activate_random_voxels(
+    vdb: vdb.GridBase, random_generator: np.random.Generator, value: float = 1.0
 ) -> tuple[npt.NDArray, int]:
-    """Activate random voxels in the grid, return number activated."""
-    random_array = random_generator.integers(0, high=2, size=array.shape).astype(
-        array.dtype
-    )
+    """Activate random voxels in the grid, return their indices."""
 
-    return random_array, len(np.flatnonzero(random_array))
+    to_activate = random_generator.integers(0, 100)
+
+    random_indices = random_generator.integers(0, high=300, size=(to_activate, 3))
+
+    accessor = vdb.getAccessor()
+
+    for index in random_indices:
+        accessor.setValueOn(index, value)
+
+    return random_indices
 
 
 @pytest.fixture
-def activate_random_indices():
-    return _activate_random_indices
+def activate_random_voxels():
+    return _activate_random_voxels

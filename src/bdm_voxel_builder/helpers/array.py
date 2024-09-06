@@ -254,24 +254,31 @@ def index_map_box(box_size, box_min_size=None):
     return filtered_index_map
 
 
-def index_map_sphere(radius: float, min_radius: float = None) -> np.ndarray[np.int64]:
+def index_map_sphere(
+    radius: float = 1.5, min_radius: float = None
+) -> np.ndarray[np.int64]:
+    """
+    The index_map_sphere function generates a 3D array of indices that represent
+    the coordinates within a sphere of a given radius. Optionally, it can also
+    filter out indices that fall within a minimum radius, creating a hollow
+    sphere effect.
+    """
     d = int(np.ceil(radius) * 2) + 1
-    x, y, z = np.indices([d, d, d])
+    x, y, z = xyz = np.indices([d, d, d])
     r2 = np.ceil(radius)
-    indices = [x - r2, y - r2, z - r2]
-    norm = np.linalg.norm(indices, axis=0)
-    # print(l)
-    mask = norm <= radius
+    indices = xyz - r2
+    norm_indices = np.linalg.norm(indices, axis=0)
+
+    mask = norm_indices <= radius
     if min_radius:
-        mask2 = norm >= min_radius
+        mask2 = norm_indices >= min_radius
         mask = np.logical_and(mask, mask2)
-    # print(mask)
-    # print(indices)
+
     x = indices[0][mask]
     y = indices[1][mask]
     z = indices[2][mask]
-    sphere_array = np.array([x, y, z], dtype=np.int32)
-    return sphere_array.transpose()
+    sphere_array = np.array([x, y, z], dtype=np.int64).transpose()
+    return sphere_array
 
 
 def index_map_cylinder(radius=3, h=2, min_radius=None):

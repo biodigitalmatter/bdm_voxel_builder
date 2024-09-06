@@ -10,200 +10,137 @@ import pyopenvdb as vdb
 import pypcd4
 from compas.colors import Color
 
-from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers import (
-    convert_grid_array_to_pts,
-    get_savepath,
-    pointcloud_to_grid_array,
-    xform_to_compas,
-    xform_to_vdb,
-)
-from bdm_voxel_builder.helpers.array import (
-    extrude_array_along_vector,
-    extrude_array_from_point,
-    extrude_array_in_direction_expanding,
-    extrude_array_linear,
-    offset_array_radial,
-)
-from bdm_voxel_builder.helpers.geometry import (
-    _get_xform_box2grid,
-)
-
 
 class Grid:
     def __init__(
         self,
-        grid_size: int | tuple[int, int, int],
         name: str = None,
-        color: Color = None,
-        array: npt.NDArray = None,
+        clipping_box: cg.Box = None,
         xform: cg.Transformation = None,
+        color: Color = None,
+        grid: vdb.GridBase = None,
     ):
+        self.clipping_box = clipping_box
         self.name = name
-
-        if isinstance(grid_size, int):
-            grid_size = [grid_size] * 3
-
-        self.grid_size = grid_size
-
+        self.xform = xform or cg.Transformation()
         self.color = color or Color.black()
 
-        if array is None:
-            self.array = np.zeros(self.grid_size)
-        else:
-            self.array = array
+        self.vdb = grid or vdb.FloatGrid()
 
-        if not xform:
-            self.xform = cg.Transformation()
-        else:
-            self.xform = xform
+        if self.name:
+            self.vdb.name = self.name
 
     @property
-    def grid_size(self):
-        value = self._grid_size
+    def clipping_box(self):
+        if not self._clipping_box:
+            diagonal = self.vdb.evalActiveVoxelBoundingBox()
+            self._clipping_box = cg.Box.from_diagonal(diagonal)
+        return self._clipping_box
 
-        if not isinstance(value, Sequence):
-            return (value, value, value)
+    @clipping_box.setter
+    def clipping_box(self, value):
+        if value is None or isinstance(value, cg.Box):
+            self._clipping_box = value
+        else:
+            if isinstance(value, Sequence):
+                diagonal = ([0, 0, 0], [v - 1 for v in value])
+            elif isinstance(value, int | float):
+                diagonal = ([0, 0, 0], [value - 1] * 3)
+            else:
+                raise ValueError("Invalid clipping box value")
 
-        return value
+            self._clipping_box = cg.Box.from_diagonal(diagonal)
 
-    @grid_size.setter
-    def grid_size(self, value):
-        if isinstance(value, int | float):
-            value = np.array([value, value, value], dtype=np.int32)
-        elif isinstance(value, list | tuple):
-            value = np.array(value, dtype=np.int32)
-        if np.min(value) < 1:
-            raise ValueError("grid_size must be nonzero and positive")
-        self._grid_size = value.tolist()
+    def get_value(self, ijk: tuple[int, int, int]):
+        return self.vdb.getConstAccessor().getValue(ijk)
 
-    def get_local_bbox(self) -> cg.Box:
-        """Returns a bounding box containing the grid, 0, 0, 0 to ijk"""
-        xsize, ysize, zsize = self.grid_size
-        return cg.Box.from_diagonal(cg.Line((0, 0, 0), (xsize, ysize, zsize)))
+    def set_value(self, ijk: tuple[int, int, int], value: float):
+        self.vdb.getAccessor().setValueOn(ijk, value)
 
-    def get_world_bbox(self) -> cg.Box:
-        return self.get_local_bbox().transformed(self.xform)
+    def set_values(self, indices: npt.NDArray, values: float | npt.NDArray):
+        accessor = self.vdb.getAccessor()
 
-    def to_vdb_grid(self):
-        grid = vdb.FloatGrid()
-        # f_array = np.float_(self.array)
-        grid.copyFromArray(self.array)
+        if not isinstance(values, Sequence):
+            values = np.full(len(indices), values)
 
-        name = self.name or "None"
-        try:
-            grid.name = name
-        except TypeError:
-            grid.__setitem__("name", name)
+        for index, value in zip(indices, values, strict=True):
+            accessor.setValueOn(index, value)
 
-        grid.transform = xform_to_vdb(self.xform)
-
-        return grid
-
-    def save_vdb(self, dir: os.PathLike = TEMP_DIR):
-        path = get_savepath(dir, ".vdb", note=f"grid_{self.name}")
-
-        grid = self.to_vdb_grid()
-
-        # rotate the grid to make Y up for vdb_view and houdini
-        grid.transform.rotate(-math.pi / 2, vdb.Axis.X)
-        vdb.write(str(path), grids=[grid])
-
-        return path
-
-    def set_value_at_index(
-        self, index=(0, 0, 0), value=1, wrapping: bool = True, clipping: bool = False
+    def set_value_by_index_map(
+        self, index_map: np.ndarray, origin: npt.ArrayLike, value=1
     ):
-        if wrapping:
-            index = np.mod(index, self.grid_size)
-        elif clipping:
-            index = np.clip(index, [0, 0, 0], self.array.shape - np.asarray([1, 1, 1]))
-        i, j, k = index
-        self.array[i][j][k] = value
-        return self.array
+        # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
+        index_map = index_map.copy()
+        index_map += origin  # shift the index_map to the origin
+        a_max = [d - 1 for d in self.clipping_box.dimensions]
 
-    def get_value_at_index(self, index=(0, 0, 0)):
-        i, j, k = index
-        return self.array[i][j][k]
+        clipped_index_map = np.unique(index_map.clip([0, 0, 0], a_max), axis=0)
 
-    def get_active_voxels(self):
+        indices = clipped_index_map.transpose()
+
+        self.set_values(indices, value)
+
+    def get_active_voxels(self) -> npt.NDArray:
         """returns indices of nonzero values
         list of coordinates
             shape = [3,n]"""
-        return np.nonzero(self.array)
+        return np.array([item.min for item in self.vdb.citerOnValues()], dtype=np.int64)
 
-    def get_number_of_active_voxels(self):
-        """returns indices of nonzero values
-        list of coordinates
-            shape = [3,n]"""
-        return len(self.array[self.get_active_voxels()])
+    def get_number_of_active_voxels(self) -> int:
+        return self.vdb.activeVoxelCount()
 
-    def get_index_pts(self) -> list[list[float]]:
-        pts = convert_grid_array_to_pts(self.array).tolist()
-        pts.sort(key=lambda x: (x[0], x[1], x[2]))
-        return pts
-
-    def get_index_pointcloud(self):
-        return cg.Pointcloud(self.get_index_pts())
+    def get_pointcloud(self):
+        return cg.Pointcloud(self.get_active_voxels())
 
     def get_world_pts(self) -> list[list[float]]:
-        return cg.transform_points_numpy(self.get_index_pts(), self.xform).tolist()
+        return cg.transform_points_numpy(self.get_active_voxels(), self.xform)
 
     def get_world_pointcloud(self) -> cg.Pointcloud:
-        return self.get_index_pointcloud().transformed(self.xform)
+        return cg.Pointcloud(self.get_world_pts())
 
-    def get_merged_array_with(self, grid: Self):
-        a1 = self.array
-        a2 = grid.array
-        return a1 + a2
+    def merge_with(self, grid: Self):
+        grid = grid.deepCopy()
+        self.vdb.combine(grid, lambda a, b: max(a, b))
 
-    def pad_array(self, pad_width: int, values=0):
-        """pad self.array uniform
-        updates self.grid_size = array.shape
-        return self.grid_size"""
+    def to_numpy(self):
+        arr = np.zeros([int(s) for s in self.clipping_box.dimensions])
 
-        array = np.pad(
-            self.array,
-            [[pad_width, pad_width], [pad_width, pad_width], [pad_width, pad_width]],
-            "constant",
-            constant_values=values,
-        )
-        print(array.shape)
-        self.array = array
-        self.grid_size = list(array.shape)
-        return self.grid_size
+        self.vdb.copyToArray(arr)
 
-    def shrink_array(self, width: int):
-        pad = width
-        self.array = self.array[pad:-pad, pad:-pad, pad:-pad]
+        return arr
 
-    def offset_radial(self, radius: int):
-        self.array = offset_array_radial(self.array, radius, True)
+    @classmethod
+    def from_numpy(
+        cls,
+        arr: npt.NDArray | os.PathLike,
+        clipping_box: cg.Box = None,
+        **kwargs,
+    ):
+        if isinstance(arr, os.PathLike):
+            arr = np.load(arr)
 
-    def offset_along_axes(self, direction, steps):
-        self.array = extrude_array_linear(self.array, direction, steps, True)
+        indices = np.array(np.nonzero(arr)).transpose()
 
-    def extrude_along_vector(self, vector: tuple[float, float, float], length: int):
-        self.array = extrude_array_along_vector(self.array, vector, length, True)
+        grid = vdb.FloatGrid()
+        accessor = grid.getAccessor()
 
-    def extrude_unit(self, vector: tuple[int, int, int], steps: int):
-        self.array = extrude_array_linear(self.array, vector, steps, True)
+        for ijk in indices:
+            accessor.setValueOn(ijk, 1)
 
-    def extrude_from_point(self, point: tuple[int, int, int], steps: int):
-        self.array = extrude_array_from_point(self.array, point, steps, True)
-
-    def extrude_tapered(self, direction: tuple[int, int, int], steps: int):
-        self.array = extrude_array_in_direction_expanding(
-            self.array, direction, steps, True
+        return cls(
+            clipping_box=clipping_box or cg.Box.from_diagonal(([0, 0, 0], arr.shape)),
+            grid=grid,
+            **kwargs,
         )
 
     @classmethod
-    def from_npy(cls, path: os.PathLike, name: str = None):
-        arr = np.load(path)
-        return cls(name=name, array=arr, grid_size=arr.shape)
-
-    @classmethod
-    def from_vdb(cls, grid: os.PathLike | vdb.GridBase, name: str = None):
+    def from_vdb(
+        cls,
+        grid: os.PathLike | vdb.GridBase,
+        name: str = None,
+        xform: cg.Transformation = None,
+        **kwargs,
+    ):
         if isinstance(grid, os.PathLike):
             grids = vdb.readAllGridMetadata(str(grid))
 
@@ -216,84 +153,42 @@ class Grid:
             name = name or grids[0].name
             grid = vdb.read(str(grid), name)
 
-        bbox_min = grid.metadata["file_bbox_min"]
-        bbox_max = grid.metadata["file_bbox_max"]
-
-        shape = np.array(bbox_max) - np.array(bbox_min)
-        arr = np.zeros(shape)
-
         # rotate the grid to make Z up
         grid.transform.rotate(math.pi / 2, vdb.Axis.X)
 
-        grid.copyToArray(arr, ijk=bbox_min)
-
-        return cls(
-            grid_size=arr.shape,
-            name=name or grid.name,
-            array=arr,
-            xform=xform_to_compas(grid.transform),
-        )
+        return cls(grid=grid, name=name, xform=cg.Transformation() or xform, **kwargs)
 
     @classmethod
     def from_pointcloud(
         cls,
         pointcloud: cg.Pointcloud | os.PathLike,
-        grid_size: list[int, int, int] | int = None,
-        voxel_edge_length: int = None,
-        xform=None,
-        name: str = None,
+        **kwargs,
     ):
-        if grid_size is None and voxel_edge_length is None:
-            raise ValueError("Either grid_size or unit_in_mm must be provided")
-
         if isinstance(pointcloud, os.PathLike):
             pointcloud = cg.Pointcloud.from_json(pointcloud)
 
-        if not grid_size:
-            grid_size = int(max(pointcloud.aabb.dimensions)) // voxel_edge_length + 1
-        # print(f"pointcloud.aabb.dimensions{pointcloud.aabb.dimensions}")
-        if isinstance(grid_size, int):
-            grid_size = [grid_size] * 3
-        # print(f"grid_size in from pointcloud{grid_size}")
+        cls = cls(**kwargs)
 
-        # TODO: Replace with multiplied version
-        Sc, R, Tl = _get_xform_box2grid(pointcloud.aabb, grid_size=grid_size)
+        for pt in pointcloud.points:
+            ijk = tuple(map(round, pt))
+            cls.set_value(ijk, 1)
 
-        pointcloud_transformed = pointcloud.copy()
-
-        pointcloud_transformed.transform(Tl)
-        pointcloud_transformed.transform(R)
-        pointcloud_transformed.transform(Sc)
-
-        array = pointcloud_to_grid_array(pointcloud_transformed, grid_size)
-
-        new_xform = xform * Tl * R * Sc if xform else Tl * R * Sc
-
-        return cls(grid_size=grid_size, name=name, xform=new_xform, array=array)
+        return cls
 
     @classmethod
     def from_ply(
         cls,
         ply_path: os.PathLike,
-        grid_size: list[int, int, int] | int = None,
-        voxel_edge_length: int = None,
-        name: str = None,
+        **kwargs,
     ):
         pointcloud = cg.Pointcloud.from_ply(ply_path)
-        return cls.from_pointcloud(
-            pointcloud,
-            grid_size=grid_size,
-            voxel_edge_length=voxel_edge_length,
-            name=name,
-        )
+        return cls.from_pointcloud(pointcloud, **kwargs)
 
     @classmethod
     def from_pcd(
         cls,
         pcd_path: os.PathLike,
-        grid_size: list[int, int, int] | int = None,
-        voxel_edge_length: int = None,
-        name: str = None,
+        **kwargs,
     ):
         pc = pypcd4.PointCloud.from_path(pcd_path)
         xyz = pc.metadata.viewpoint[:3]
@@ -307,10 +202,4 @@ class Grid:
 
         pointcloud.scale(1000)
 
-        return cls.from_pointcloud(
-            pointcloud,
-            grid_size=grid_size,
-            voxel_edge_length=voxel_edge_length,
-            name=name,
-            xform=Tl * R,
-        )
+        return cls.from_pointcloud(pointcloud, xform=Tl * R, **kwargs)

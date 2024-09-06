@@ -1,9 +1,9 @@
 from compas.data import json_dump
-from compas.geometry import Point, Pointcloud
+from compas.geometry import Point
 from compas_viewer import Viewer
 
 from bdm_voxel_builder import TEMP_DIR
-from bdm_voxel_builder.helpers import convert_grid_array_to_pts, get_savepath
+from bdm_voxel_builder.helpers import get_savepath
 from bdm_voxel_builder.visualizer.base import Visualizer
 
 
@@ -46,13 +46,11 @@ class CompasViewerVisualizer(Visualizer):
                 continue
             parent = self.scene.get_node_by_name(grid.name)
 
-            pts = convert_grid_array_to_pts(grid.array)
+            pc = grid.get_world_pointcloud()
 
             iteration = iteration_count or len(parent.children)
             name = f"{grid.name}_{iteration}"
-            self.scene.add(
-                Pointcloud(pts), name=name, pointcolor=grid.color, parent=parent
-            )
+            self.scene.add(pc, name=name, pointcolor=grid.color, parent=parent)
 
     def show(self):
         self.viewer.show()

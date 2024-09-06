@@ -31,7 +31,7 @@ class Agent:
 
     def __init__(
         self,
-        pose: npt.NDArray[np.int8] = None,
+        pose: npt.NDArray[np.int64] = (0, 0, 0),
         compass_array: dict[str, npt.NDArray[np.int8]] = NB_INDEX_DICT,
         ground_grid: Grid = None,
         space_grid: Grid = None,
@@ -39,10 +39,7 @@ class Agent:
         leave_trace: bool = False,
         save_move_history: bool = True,
     ):
-        if pose is None:
-            self._pose = np.asarray([0, 0, 0], dtype=np.int32)
-        else:
-            self._pose = np.asarray(pose, dtype=np.int32)  # [i,j,k]
+        self._pose = np.array(pose, dtype=np.int64)  # initialize without trace
         self.compass_array = compass_array
         self.leave_trace: bool = leave_trace
         self.space_grid = space_grid
@@ -97,20 +94,16 @@ class Agent:
 
     @property
     def pose(self):
-        return np.asarray(self._pose, dtype=np.int32)
+        return self._pose
 
     @pose.setter
-    def pose(self, v):
-        if not isinstance(v, list | np.ndarray):
-            raise ValueError("pose must be a list or an array")
-
-        if self.leave_trace and isinstance(self._pose, list | np.ndarray):
-            self.space_grid.set_value_at_index(self._pose, 0)
-
-        self._pose = np.asarray(v, dtype=np.int32)  # [i,j,k]
-
+    def pose(self, new_pose):
         if self.leave_trace:
-            self.space_grid.set_value_at_index(self._pose, 1)
+            old_pose = self.pose
+            self.space_grid.set_value(old_pose, 0)
+            self.space_grid.set_value(new_pose, 1)
+
+        self._pose = new_pose
 
     @property
     def move_map_in_place(self):

@@ -1,16 +1,14 @@
 import enum
 
+import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
+import pyopenvdb as vdb
 from compas.colors import Color
 from compas.geometry import Box
 
 from bdm_voxel_builder.grid import Grid
-from bdm_voxel_builder.helpers import (
-    crop_array,
-    get_mask_zone_xxyyzz,
-)
-from bdm_voxel_builder.helpers.math import remap
+from bdm_voxel_builder.helpers import crop_array, get_mask_zone_xxyyzz, remap
 
 
 class GravityDir(enum.Enum):
@@ -25,9 +23,11 @@ class GravityDir(enum.Enum):
 class DiffusiveGrid(Grid):
     def __init__(
         self,
-        grid_size: int | tuple[int, int, int] | Box = None,
-        name: str = None,
+        name: str,
+        clipping_box: Box,
+        xform: cg.Transformation = None,
         color: Color = None,
+        grid: vdb.GridBase = None,
         diffusion_ratio: float = 0.12,
         diffusion_random_factor: float = 0.0,
         decay_random_factor: float = 0.0,
@@ -41,13 +41,12 @@ class DiffusiveGrid(Grid):
         gravity_ratio: float = 0.0,
         voxel_crop_range=(0, 1),
     ):
-        if isinstance(grid_size, int):
-            grid_size = np.array([grid_size] * 3, dtype=np.int32)
-
         super().__init__(
-            grid_size,
             name=name,
+            clipping_box=clipping_box,
+            xform=xform,
             color=color,
+            grid=grid,
         )
         self.diffusion_ratio = diffusion_ratio
         self.diffusion_random_factor = diffusion_random_factor
@@ -256,7 +255,10 @@ class DiffusiveGrid(Grid):
             grid.array = np.where(self.array == 1, 0 * grid.array, 1 * grid.array)
 
     def decay(self):
-        self.array -= self.array * self.decay_ratio
+        def decay_voxel(value):
+            return value - value * self.decay_ratio
+
+        self.vdb.mapOn(decay_voxel)
 
     def decay_linear(self):
         s, e = self.voxel_crop_range
