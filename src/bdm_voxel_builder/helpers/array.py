@@ -758,6 +758,8 @@ def get_normal_vector(
 
 def get_surrounding_offset_region(arrays, offset_thickness=1):
     """returns surrounding volumetric region of several volumes in given thickness"""
+    print(f"array input len(): {len(arrays)}")
+    print(f"""array gridsizes{[np.shape(i) for i in arrays]}""")
     arrays = np.array(arrays)
     walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
     walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)

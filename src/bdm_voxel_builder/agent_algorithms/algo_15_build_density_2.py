@@ -2,10 +2,12 @@ import random as r
 from dataclasses import dataclass
 
 import numpy as np
+from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
+from bdm_voxel_builder.grid.base import Grid
 from bdm_voxel_builder.helpers.array import (
     get_mask_zone_xxyyzz,
     get_surrounding_offset_region,
@@ -14,6 +16,7 @@ from bdm_voxel_builder.helpers.array import (
     index_map_sphere,
     set_value_by_index_map,
 )
+from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 from compas.colors import Color
 
 
@@ -52,6 +55,12 @@ class Algo15_Build(AgentAlgorithm):
 
     seed_iterations: int = 1
 
+    # directory import
+    dir_scan_import = REPO_DIR / "data/live/build_grid/01_scanned"
+    dir_scan_import_npy = REPO_DIR / "data/live/build_grid/01_scanned/npy"
+    dir_save_solid = REPO_DIR / "data/live/build_grid/02_solid"
+    dir_save_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
+
     # Agent deployment
     legal_move_region_thickness = 1
 
@@ -65,7 +74,7 @@ class Algo15_Build(AgentAlgorithm):
     # agent settings
 
     # settings
-    agent_settings_A = {
+    agent_type_A = {
         "build_probability": 0.7,
         "walk_radius": 4,
         "min_walk_radius": 0,
@@ -80,21 +89,8 @@ class Algo15_Build(AgentAlgorithm):
         "build_by_density_random_factor": 0.01,
         "build_by_density": True,
     }
-    # agent_settings_B = {
-    #     "build_probability": 0.25,
-    #     "walk_radius": 6,
-    #     "min_walk_radius": 3,
-    #     "build_radius": 3.5,
-    #     "inactive_step_count_limit": None,
-    #     "reset_after_build": False,
-    #     "move_mod_z": 0.05,
-    #     "move_mod_random": 0.5,
-    #     "min_build_density": 0.4,
-    #     "max_build_density": 0.6,
-    #     "build_limit_mod_by_density": [0.25, -0.2, 0.5],
-    #     "build_by_density": True,
-    # }
-    settings_split = 1  # A/B
+    agent_types = [agent_type_A, agent_type_A]
+    agent_type_dividors = [0, 0.5]
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -116,11 +112,33 @@ class Algo15_Build(AgentAlgorithm):
 
         """
         iterations = kwargs.get("iterations")
+
+        file_path = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
+        loaded_grid = Grid.from_npy(file_path).array
+        loaded_grid = np.array(
+            loaded_grid, dtype=np.float64
+        )  # TODO set dtype in algo_11_a_import_scan.py  # noqa: E501
+
+        scan = DiffusiveGrid(
+            name="scan",
+            grid_size=self.grid_size,
+        )
+
+        # we override grid.array with the import scan.
+        # the imported array is already cropped to the BBOX of interest
+        self.grid_size = np.shape(loaded_grid)
+        scan.array = loaded_grid
+
         ground = DiffusiveGrid(
             name="ground",
             grid_size=self.grid_size,
             color=Color.from_rgb255(97, 92, 97),
         )
+        # IMPORT SCAN -- wip
+        # scan.array = loaded_grid.array
+        ground.array = scan.array
+        print(f"ground grid_size = {ground.grid_size}")
+
         agent_space = DiffusiveGrid(
             name="agent_space",
             grid_size=self.grid_size,
@@ -155,11 +173,11 @@ class Algo15_Build(AgentAlgorithm):
             decay_ratio=1 / 10000,
         )
 
-        # CREATE MOCK UP VOLUME
-        mockup_ground = make_ground_mockup(self.grid_size)
+        # # CREATE MOCK UP VOLUME
+        # mockup_ground = make_ground_mockup(self.grid_size)
 
-        # imported design TEMP
-        ground.array = mockup_ground
+        # # imported design TEMP
+        # ground.array = mockup_ground
 
         # init legal_move_mask
         self.region_legal_move = get_surrounding_offset_region(
@@ -203,10 +221,11 @@ class Algo15_Build(AgentAlgorithm):
             agent.deploy_in_region(self.region_legal_move)
 
             # agent settings
-            if i < self.agent_count * self.settings_split:
-                d = self.agent_settings_A
-            else:
-                d = self.agent_settings_B
+            div = self.agent_type_dividors + [1]
+            for j in range(len(self.agent_types)):
+                u, v = div[j], div[j + 1]
+                if u <= i / self.agent_count < v:
+                    d = self.agent_types[j]
 
             agent.build_probability = d["build_probability"]
             agent.walk_radius = d["walk_radius"]
