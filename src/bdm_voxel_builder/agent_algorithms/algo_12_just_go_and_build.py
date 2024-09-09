@@ -214,7 +214,7 @@ class Algo12_Random_builder(AgentAlgorithm):
             agent.move_shape_map = index_map_sphere(
                 agent.walk_radius, agent.min_walk_radius
             )
-            agent.built_shape_map = index_map_sphere(agent.build_radius)
+            agent.build_shape_map = index_map_sphere(agent.build_radius)
 
             agents.append(agent)
         return agents
@@ -433,7 +433,7 @@ class Algo12_Random_builder(AgentAlgorithm):
 
             # update built_volume_volume_array
             built_volume.array = set_value_by_index_map(
-                built_volume.array, agent.built_shape_map, agent.pose
+                built_volume.array, agent.build_shape_map, agent.pose
             )
             built = True
         else:

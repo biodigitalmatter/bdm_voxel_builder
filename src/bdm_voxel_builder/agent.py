@@ -3,7 +3,7 @@ from math import ceil, trunc
 
 import numpy as np
 import numpy.typing as npt
-from compas.geometry import Vector
+from compas.geometry import Vector, vector_average
 
 from bdm_voxel_builder.agent_algorithms.common import (
     get_any_free_voxel_above_array,
@@ -24,6 +24,8 @@ from bdm_voxel_builder.helpers import (
     index_map_sphere,
     random_choice_index_from_best_n,
 )
+from bdm_voxel_builder.helpers.array import mask_index_map_by_nonzero
+from bdm_voxel_builder.helpers.geometry import transfrom_index_map_from_normal_plane
 
 
 class Agent:
@@ -62,11 +64,13 @@ class Agent:
         self._build_limit = 1
         self._erase_limit = 1
 
-        self.walk_radius = 2
+        self.walk_radius = 4
         self.min_walk_radius = 0
-        self.build_radius = 1
+        self.build_radius = 3
+        self.sense_radius = 5
         self.move_shape_map = None
-        self.built_shape_map = None
+        self.build_shape_map = None
+        self.sense_range_map = None
         self._move_map_in_place = None
         self.print_limit_1 = 0.5
         self.print_limit_2 = 0.5
@@ -95,6 +99,8 @@ class Agent:
 
         self.last_move_vector = []
         self.move_turn_degree = None
+
+        self.normal_vector_down = Vector(0, 0, 1)
 
     @property
     def pose(self):
@@ -1336,7 +1342,7 @@ class Agent:
     ):
         surr_map = index_map_sphere(radius)
         d = self.get_array_density_by_index_map(array, surr_map, nonzero=nonzero)
-        a, b, p = [min_density, max_density, self.build_probability]
+        a, b, _p = [min_density, max_density, self.build_probability]
         if d < a:
             return mod_below_range
         elif d < b:
@@ -1358,3 +1364,68 @@ class Agent:
         else:
             build_limit = 1 - r_mod
         return build_limit
+
+    def get_masked_sense_range_map_by_nonzero(self, ground_array=None, radius=None):
+        if not ground_array:
+            array = self.ground_grid.array
+        sense_range_map = (
+            self.sense_range_map.copy() if not radius else index_map_sphere(radius)
+        )
+        filled_surrounding_indices = mask_index_map_by_nonzero(
+            array, self.pose.tolist(), sense_range_map
+        )
+
+        return filled_surrounding_indices
+
+    def get_filled_vectors_in_sense_range_map(self, ground_array=None, radius=None):
+        filtered_nonzero_map = self.get_masked_sense_range_map_by_nonzero(
+            ground_array, radius
+        )
+        vectors = []
+        for x, y, z in filtered_nonzero_map:
+            vectors.append(Vector(x, y, z))
+        return vectors
+
+    def calculate_normal_vector(self, ground_array=None, radius=None):
+        """return self.normal_vector_down, self.normal_vector_up"""
+        vectors = self.get_masked_sense_range_map_by_nonzero(ground_array, radius)
+        average_vector = np.sum(vectors, axis=0) / len(vectors)
+        average_vector = Vector(*average_vector)
+        average_vector.unitize()
+        self.normal_vector_down = average_vector
+        average_vector.invert()
+        self.normal_vector_up = average_vector
+        print(f"belly normal: {self.normal_vector_down}, up: {self.normal_vector_up}")
+        return self.normal_vector_down, self.normal_vector_up
+
+    def calculate_mass_centroid_in_sense_range_map(
+        self, ground_array=None, radius=None
+    ):
+        vectors = self.get_filled_vectors_in_sense_range_map(ground_array, radius)
+        origin = Vector(*self.pose)
+        mass_centroid = np.array(vector_average(vectors) + origin, dtype=np.int64)
+        return mass_centroid
+
+    def orient_build_shape_map(self):
+        _, normal_vector_up = self.calculate_normal_vector()
+        print(f"type(self.normal_vector_up) {type(normal_vector_up)}")
+        self.build_shape_map = transfrom_index_map_from_normal_plane(
+            self.build_shape_map, normal_vector_up
+        )
+
+    def orient_sense_range_map(self):
+        normal_vector, _ = self.calculate_normal_vector()
+        self.sense_range_map = transfrom_index_map_from_normal_plane(
+            self.sense_range_map, normal_vector
+        )
+
+    def orient_move_shape_map(self):
+        normal_vector, _ = self.calculate_normal_vector()
+        self.move_shape_map = transfrom_index_map_from_normal_plane(
+            self.move_shape_map, normal_vector
+        )
+
+    def orient_all_shape_map(self):
+        self.orient_build_shape_map()
+        self.orient_sense_range_map()
+        self.orient_move_shape_map()

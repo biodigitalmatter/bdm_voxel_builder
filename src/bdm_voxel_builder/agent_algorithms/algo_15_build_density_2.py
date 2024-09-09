@@ -88,6 +88,7 @@ class Algo15_Build(AgentAlgorithm):
         "max_build_density": 0.5,
         "build_by_density_random_factor": 0.01,
         "build_by_density": True,
+        "sense_range_radius": 3,
     }
     agent_types = [agent_type_A, agent_type_A]
     agent_type_dividors = [0, 0.5]
@@ -205,6 +206,7 @@ class Algo15_Build(AgentAlgorithm):
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
         agent_space = grids["agent"]
         track = grids["track"]
+        ground_grid = grids["ground"]
 
         agents: list[Agent] = []
 
@@ -213,6 +215,7 @@ class Algo15_Build(AgentAlgorithm):
             agent = Agent(
                 space_grid=agent_space,
                 track_grid=track,
+                ground_grid=ground_grid,
                 leave_trace=True,
                 save_move_history=True,
             )
@@ -242,14 +245,16 @@ class Algo15_Build(AgentAlgorithm):
             agent.max_build_density = d["max_build_density"]
             agent.build_by_density = d["build_by_density"]
             agent.build_by_density_random_factor = d["build_by_density_random_factor"]
+            agent.sense_radius = d["sense_range_radius"]
 
             # create shape maps
             agent.move_shape_map = index_map_sphere(
                 agent.walk_radius, agent.min_walk_radius
             )
-            agent.built_shape_map = index_map_cylinder(
+            agent.build_shape_map = index_map_cylinder(
                 agent.build_radius, agent.build_h
             )
+            agent.sense_range_map = index_map_sphere(agent.sense_radius, 0)
 
             agents.append(agent)
         return agents
@@ -331,16 +336,26 @@ class Algo15_Build(AgentAlgorithm):
 
         density = state.grids["density"]
         built_centroids = state.grids["built_centroids"]
+        ground = state.grids["ground"]
 
         x, y, z = agent.pose
 
         # update print dot array
         built_centroids.array[x, y, z] = self.print_dot_counter
 
+        # orient shape map
+        agent.orient_build_shape_map()
         # update density_volume_array
         density.array = set_value_by_index_map(
             density.array,
-            agent.built_shape_map,
+            agent.build_shape_map,
+            agent.pose,
+            value=self.print_dot_counter,
+        )
+        # update ground_volume_array
+        ground.array = set_value_by_index_map(
+            ground.array,
+            agent.build_shape_map,
             agent.pose,
             value=self.print_dot_counter,
         )

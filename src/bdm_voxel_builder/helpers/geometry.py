@@ -6,6 +6,7 @@ import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 from compas.files import PLY
+from compas.geometry import Frame, Plane, Pointcloud, Transformation
 
 from bdm_voxel_builder.helpers import sort_pts_by_values
 
@@ -119,17 +120,39 @@ def pointcloud_to_grid_array(
     grid_array = np.zeros(grid_size)
 
     indices = np.array(pointcloud.points).round().astype(np.int8)
-    print(f"pointcloud bounds: {np.min(indices)}, {np.max(indices)}")
-    # if indices.min() < 0:
-    #     raise ValueError(
-    #         "Pointcloud contains negative values, needs to be transformed to index grid."
-    #     )  # noqa: E501
 
     for i, j, k in indices:
         if np.max((i, j, k)) >= np.max(grid_size) or np.min((i, j, k)) < 0:
             raise IndexError(f"Index out of bounds: {i,j,k} in {grid_size}")
         grid_array[i, j, k] = value
     return grid_array.astype(dtype)
+
+
+def transfrom_index_map_from_normal_plane(
+    index_map: np.array = None, normal_vector: tuple[float, float, float] = None
+):
+    """
+    transform an index map from a normal plane
+
+    index map: np.array [a 4D array representing a point list]
+    normal_vector: list of floats
+    """
+
+    if isinstance(index_map, np.ndarray):
+        index_map.tolist()
+    elif isinstance(index_map, list):
+        pass
+    else:
+        raise TypeError
+    index_map_pointcloud = Pointcloud(index_map)
+
+    p = Plane([0, 0, 0], normal_vector)
+    f = Frame.from_plane(p)
+    T = Transformation.from_frame(f)
+
+    index_map_pointcloud.transform(T)
+    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int64)
+    return index_map_oriented
 
 
 def gyroid_array(grid_size, thickness=1, scale=1):
