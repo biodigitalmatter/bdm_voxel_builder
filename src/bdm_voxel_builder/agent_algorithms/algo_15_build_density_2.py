@@ -113,6 +113,7 @@ class Algo15_Build(AgentAlgorithm):
         with preset values in the definition
 
         returns: grids
+
         """
         iterations = kwargs.get("iterations")
         ground = DiffusiveGrid(
