@@ -1395,7 +1395,7 @@ class Agent:
         self.normal_vector_down = average_vector
         average_vector.invert()
         self.normal_vector_up = average_vector
-        print(f"belly normal: {self.normal_vector_down}, up: {self.normal_vector_up}")
+        # print(f"belly normal: {self.normal_vector_down}, up: {self.normal_vector_up}")
         return self.normal_vector_down, self.normal_vector_up
 
     def calculate_mass_centroid_in_sense_range_map(
@@ -1408,7 +1408,6 @@ class Agent:
 
     def orient_build_shape_map(self):
         _, normal_vector_up = self.calculate_normal_vector()
-        print(f"type(self.normal_vector_up) {type(normal_vector_up)}")
         self.build_shape_map = transfrom_index_map_from_normal_plane(
             self.build_shape_map, normal_vector_up
         )

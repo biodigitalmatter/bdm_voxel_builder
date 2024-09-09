@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-from compas.colors import Color
-
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
@@ -11,6 +9,7 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
 from bdm_voxel_builder.helpers.file import save_ndarray
+from compas.colors import Color
 
 
 @dataclass
