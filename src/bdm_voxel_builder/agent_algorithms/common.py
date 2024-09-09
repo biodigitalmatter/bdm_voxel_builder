@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.typing as npt
+
 from bdm_voxel_builder.grid import DiffusiveGrid
 
 

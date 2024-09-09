@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
 import numpy as np
+from compas.colors import Color
+
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import (
@@ -9,7 +11,7 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.helpers.array import (
+from bdm_voxel_builder.helpers import (
     get_mask_zone_xxyyzz,
     get_values_by_index_map,
     index_map_cylinder,
@@ -18,7 +20,6 @@ from bdm_voxel_builder.helpers.array import (
     offset_array_radial,
     set_value_by_index_map,
 )
-from compas.colors import Color
 
 
 @dataclass
@@ -81,7 +82,7 @@ class Algo10e_VoxelSlicer(AgentAlgorithm):
     # )
     radius = 10
     min_radius = 6
-    move_shape_map = index_map_sphere(radius, min_radius)
+    move_shape_map = index_map_sphere(radius, min_radius=min_radius)
     bullet_radius = 2.5
     bullet_h = 1
     bullet_index_map = index_map_cylinder(bullet_radius, bullet_h)

@@ -1,4 +1,3 @@
-import numpy as np
 import pyopenvdb as vdb
 
 cube = vdb.FloatGrid()

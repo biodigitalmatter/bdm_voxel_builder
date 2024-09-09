@@ -1,8 +1,9 @@
 import click
 import compas.geometry as cg
-from bdm_voxel_builder import TEMP_DIR
 from compas.data import json_dump, json_load
 from compas_fab.backends import RosClient
+
+from bdm_voxel_builder import TEMP_DIR
 
 
 def transform_frame(frame: cg.Frame):

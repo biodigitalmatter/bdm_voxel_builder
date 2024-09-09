@@ -1,14 +1,13 @@
 import math
-import random as r
 from dataclasses import dataclass
 
-import numpy as np
+from compas.colors import Color
+
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers.geometry import tpms_gyroid
-from compas.colors import Color
 
 
 @dataclass
@@ -89,7 +88,7 @@ class Make_Gyroid(AgentAlgorithm):
 
         agents: list[Agent] = []
 
-        for i in range(self.agent_count):
+        for _i in range(self.agent_count):
             # create object
             agent = Agent(
                 space_grid=agent_space,

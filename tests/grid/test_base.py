@@ -2,9 +2,10 @@ import compas.geometry as cg
 import numpy as np
 import pyopenvdb as vdb
 import pytest
+from numpy.testing import assert_allclose
+
 from bdm_voxel_builder import get
 from bdm_voxel_builder.grid import Grid
-from numpy.testing import assert_allclose
 
 
 def test__activate_random_indices(activate_random_indices, random_generator):

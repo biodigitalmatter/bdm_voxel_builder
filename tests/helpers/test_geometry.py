@@ -3,6 +3,7 @@ import math
 import compas.geometry as cg
 import numpy as np
 import pytest
+
 from bdm_voxel_builder import get
 from bdm_voxel_builder.helpers.geometry import (
     box_from_corner_frame,
@@ -11,11 +12,11 @@ from bdm_voxel_builder.helpers.geometry import (
     get_scaling_box2grid,
     get_translation_box2grid,
     get_xform_box2grid,
+    gyroid_array,
     ply_to_array,
     ply_to_compas,
     pointcloud_from_grid_array,
     pointcloud_to_grid_array,
-    tpms_gyroid,
 )
 
 
@@ -347,6 +348,5 @@ class TestGetScalingBox2Grid:
         assert scaling == expected_scaling
 
 
-def test_tpms_gyroid():
-    values = tpms_gyroid([8, 8, 8], thickness=0.05, scale=0.01)
-    assert 1 == 1
+def test_gyroid_array():
+    gyroid_array([8, 8, 8], thickness_out=0.05, scale=0.01)
