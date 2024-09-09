@@ -1,19 +1,19 @@
 # ruff: noqa: F401
-from bdm_voxel_builder.agent_algorithms.algo_15_build_density_2 import Algo15_Build
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense import Algo20_Build
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
-grid_size = [200, 200, 80]
-iterations = 1
+grid_size = [100, 100, 80]
+iterations = 10
 agent_count = 10
-interval = 50
+interval = 5
 name = f"algo_15_test_load_scan_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo15_Build(
+    algo=Algo20_Build(
         agent_count=agent_count,
         grid_size=grid_size,
         name=name,

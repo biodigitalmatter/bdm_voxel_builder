@@ -19,19 +19,23 @@ from bdm_voxel_builder.helpers.array import (
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 from compas.colors import Color
 
+import_scan = False
+
 
 def make_ground_mockup(grid_size):
     a, b, c = grid_size
-    box_1 = [10, 25, 10, 40, 1, 4]
-    box_2 = [15, 20, 15, 18, 1, 40]
-    box_3 = [0, 12, 0, 10, 4, 5]
-    box_4 = [0, 18, 0, 15, 15, 40]
+    box_1 = [10, 13, 10, 60, 1, 30]
+    box_2 = [10, 60, 10, 30, 1, 30]
 
     base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4]
+    base_layer = [0, a, 0, b / 2, 0, 3]
+    base_layer_2 = [0, a, b / 2, b, 0, 6]
     base_layer = np.array(base_layer, dtype=np.int32)
+    base_layer_2 = np.array(base_layer_2, dtype=np.int32)
+
     mockup_ground = np.zeros(grid_size)
-    # ground_zones = [box_1, box_2, box_3, box_4, base_layer]
-    ground_zones = [base_layer]
+    ground_zones = [box_1, box_2, base_layer, base_layer_2]
+    # ground_zones = [base_layer]
     for zone in ground_zones:
         mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
         mockup_ground[mask] = 1
@@ -39,9 +43,9 @@ def make_ground_mockup(grid_size):
 
 
 @dataclass
-class Algo15_Build(AgentAlgorithm):
+class Algo20_Build(AgentAlgorithm):
     """
-    # Voxel Builder Algorithm: Algo 15
+    # Voxel Builder Algorithm: Algo 20
 
     the agents randomly build until a density is reached in a radius
 
@@ -49,7 +53,7 @@ class Algo15_Build(AgentAlgorithm):
 
     agent_count: int
     grid_size: int | tuple[int, int, int]
-    name: str = "algo_15"
+    name: str = "algo_20"
     relevant_data_grids: str = "density"
     grid_to_dump: str = "built_centroids"
 
@@ -74,6 +78,9 @@ class Algo15_Build(AgentAlgorithm):
     # agent settings
 
     # settings
+    inplane_radius, inplane_top, inplane_bottom = [3, 2, 1]
+    depth_radius, depth_top, depth_bottom = [1, 5, 1]
+
     agent_type_A = {
         "build_probability": 0.7,
         "walk_radius": 4,
@@ -89,6 +96,8 @@ class Algo15_Build(AgentAlgorithm):
         "build_by_density_random_factor": 0.01,
         "build_by_density": True,
         "sense_range_radius": 3,
+        "inplane_p": [inplane_radius, inplane_top, inplane_bottom],
+        "depth_p": [depth_radius, depth_top, depth_bottom],
     }
     agent_types = [agent_type_A, agent_type_A]
     agent_type_dividors = [0, 0.5]
@@ -113,30 +122,31 @@ class Algo15_Build(AgentAlgorithm):
 
         """
         iterations = kwargs.get("iterations")
-
-        file_path = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
-        loaded_grid = Grid.from_npy(file_path).array
-        loaded_grid = np.array(
-            loaded_grid, dtype=np.float64
-        )  # TODO set dtype in algo_11_a_import_scan.py  # noqa: E501
-
-        scan = DiffusiveGrid(
-            name="scan",
-            grid_size=self.grid_size,
-        )
-
-        # we override grid.array with the import scan.
-        # the imported array is already cropped to the BBOX of interest
-        self.grid_size = np.shape(loaded_grid)
-        scan.array = loaded_grid
-
         ground = DiffusiveGrid(
             name="ground",
             grid_size=self.grid_size,
             color=Color.from_rgb255(97, 92, 97),
         )
-        # IMPORT SCAN -- wip
-        # scan.array = loaded_grid.array
+        scan = DiffusiveGrid(
+            name="scan",
+            grid_size=self.grid_size,
+            color=Color.from_rgb255(10, 20, 30),
+        )
+        if import_scan:
+            file_path = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
+            loaded_grid = Grid.from_npy(file_path).array
+            loaded_grid = np.array(
+                loaded_grid, dtype=np.float64
+            )  # TODO set dtype in algo_11_a_import_scan.py  # noqa: E501
+
+            # the imported array is already cropped to the BBOX of interest
+
+            self.grid_size = np.shape(loaded_grid)
+            scan.array = loaded_grid
+        else:
+            scan.array = make_ground_mockup(self.grid_size)
+
+        # IMPORT SCAN
         ground.array = scan.array
         print(f"ground grid_size = {ground.grid_size}")
 
@@ -174,12 +184,6 @@ class Algo15_Build(AgentAlgorithm):
             decay_ratio=1 / 10000,
         )
 
-        # # CREATE MOCK UP VOLUME
-        # mockup_ground = make_ground_mockup(self.grid_size)
-
-        # # imported design TEMP
-        # ground.array = mockup_ground
-
         # init legal_move_mask
         self.region_legal_move = get_surrounding_offset_region(
             [ground.array], self.walk_region_thickness
@@ -193,6 +197,7 @@ class Algo15_Build(AgentAlgorithm):
             "built_centroids": built_centroids,
             "density": density,
             "follow_grid": follow_grid,
+            "scan": scan,
         }
         return grids
 
@@ -229,7 +234,7 @@ class Algo15_Build(AgentAlgorithm):
                 u, v = div[j], div[j + 1]
                 if u <= i / self.agent_count < v:
                     d = self.agent_types[j]
-
+            agent.id = i
             agent.build_probability = d["build_probability"]
             agent.walk_radius = d["walk_radius"]
             agent.min_walk_radius = d["min_walk_radius"]
@@ -252,14 +257,21 @@ class Algo15_Build(AgentAlgorithm):
                 agent.walk_radius, agent.min_walk_radius
             )
             agent.build_shape_map = index_map_cylinder(
-                agent.build_radius, agent.build_h
+                agent.build_radius, agent.build_h, z_bottom=-1 * agent.build_h
             )
             agent.sense_range_map = index_map_sphere(agent.sense_radius, 0)
-
+            inplane_radius, inplane_top, inplane_bottom = d["inplane_p"]
+            agent.inplane_map = index_map_cylinder(
+                inplane_radius, z_top=inplane_top, z_bottom=inplane_bottom
+            )
+            depth_radius, depth_top, depth_bottom = d["depth_p"]
+            agent.depth_map = index_map_cylinder(
+                depth_radius, z_top=depth_top, z_bottom=depth_bottom
+            )
             agents.append(agent)
         return agents
 
-    def calculate_move_values_r_z(self, agent: Agent, state: Environment):
+    def calculate_move_values_random_and_Z(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -283,7 +295,7 @@ class Algo15_Build(AgentAlgorithm):
         move_values = move_z_coordinate + random_map_values  # + follow_map
         return move_values
 
-    def calculate_move_values_r_z_f(self, agent: Agent, state: Environment):
+    def calculate_move_values_random_and_Z_f(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -329,14 +341,14 @@ class Algo15_Build(AgentAlgorithm):
         legal_move_mask = filter == 1
         return legal_move_mask
 
-    def build(self, agent: Agent, state: Environment, build_limit=0.5):
+    def build(self, agent: Agent, state: Environment):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
 
         self.print_dot_counter += 1
 
         density = state.grids["density"]
         built_centroids = state.grids["built_centroids"]
-        # ground = state.grids["ground"]
+        ground = state.grids["ground"]
 
         x, y, z = agent.pose
 
@@ -352,39 +364,111 @@ class Algo15_Build(AgentAlgorithm):
             agent.pose,
             value=self.print_dot_counter,
         )
-        # # update ground_volume_array
-        # ground.array = set_value_by_index_map(
-        #     ground.array,
-        #     agent.build_shape_map,
-        #     agent.pose,
-        #     value=self.print_dot_counter,
-        # )
+        ground.array = set_value_by_index_map(
+            ground.array,
+            agent.build_shape_map,
+            agent.pose,
+            value=self.print_dot_counter,
+        )
 
         print(f"built at: {agent.pose}")
+
+    def get_agent_build_probability(self, agent, state):
+        # BUILD CONSTRAINTS:
+        # cone_angle = 45
+        # cone_height = 100
+        # cone_division = 4
+
+        # nozzle_access_condition = agent.check_accessibility_in_cone_divisions(
+        #     cone_angle, cone_height, cone_division
+        # ) TODO
+        nozzle_access_condition = True
+        max_build_angle = 50
+        build_angle_condition = agent.normal_angle > max_build_angle
+
+        if not nozzle_access_condition and build_angle_condition:
+            build_probability = 0
+        else:
+            # RANDOM FACTOR
+            random_limit = 0.95
+            random_factor = 0.1
+            if random_limit < r.random():
+                bg_random = random_factor
+            else:
+                bg_random = 0
+
+            # NORMAL ANGLE PREFERENCE
+            angle1, angle2 = [0, 25]
+            angle_factor = 0
+            if angle1 <= agent.normal_angle <= angle2:
+                bg_angle_factor = 0
+            else:
+                bg_angle_factor = -angle_factor
+            # print(f"angle_gain {bg_angle_factor}")
+
+            # TOPOLOGY SENSATION:
+            agent.orient_topology_maps()
+            # topology gains
+            topology_gain_inplane = 0.75
+            topology_gain_edge = 0.75
+            # thick_wall_pain = -0.75
+            # thin_wall_gain = 0.75
+            # edge_gain = 0.75
+            # wall thickness and shell edge
+            density = state.grids["density"]
+            ground = state.grids["ground"]
+            depth_density = agent.get_arrays_density_by_index_map(
+                [density.array, ground.array], agent.depth_map, nonzero=True
+            )
+            inplane_density = agent.get_arrays_density_by_index_map(
+                [density.array, ground.array], agent.inplane_map, nonzero=True
+            )
+            # access topology type
+            # topology sensor values
+            d_wall_inplane = 0.4
+            d_wall_max_depth = 0.6
+            d_min_ridge_depth = 0.1
+            if inplane_density >= d_wall_inplane:  # walking on wall
+                if depth_density > d_wall_max_depth:
+                    # too thick wall
+                    bg_shell_topology = topology_gain_inplane * -1
+                    print("THICK SHELL")
+                elif depth_density <= d_wall_max_depth:
+                    # thin wall >> build
+                    bg_shell_topology = topology_gain_inplane
+                    print("THIN SHELL")
+            elif (
+                inplane_density < d_wall_inplane and depth_density >= d_min_ridge_depth
+            ):
+                # being on ridge edge of the shell
+                bg_shell_topology = topology_gain_edge
+                print("EDGE")
+            else:
+                bg_shell_topology = 0
+
+            build_probability = bg_random + bg_angle_factor + bg_shell_topology
+
+        return build_probability
 
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
         """
+        GET_PROPABILITY
         BUILD
         MOVE
         *RESET
         """
-
         # BUILD
+        build_probability = self.get_agent_build_probability(agent, state)
 
-        if agent.build_by_density:
-            # check density
-            arr = state.grids["density"].array
-            build_limit = agent.get_build_limit_by_density_range(
-                arr, self.density_check_radius, nonzero=True
-            )
+        if build_probability > 0:
+            print(f"""\n## agent_{agent.id} - {agent.pose} ##""")
+            print(f"build_probability = {build_probability}")
 
-        else:
-            build_limit = r.random()
+            print(f"angle {agent.normal_angle}")
 
-        if agent.build_probability >= build_limit:
             # build
-            self.build(agent, state, build_limit)
+            self.build(agent, state)
 
             # update walk region
             self.region_legal_move = get_surrounding_offset_region(
@@ -409,7 +493,7 @@ class Algo15_Build(AgentAlgorithm):
         )
         # move
         if not collision:
-            move_values = self.calculate_move_values_r_z(agent, state)
+            move_values = self.calculate_move_values_random_and_Z(agent, state)
             move_map_in_place = agent.move_map_in_place
 
             legal_move_mask = self.get_legal_move_mask(agent, state)

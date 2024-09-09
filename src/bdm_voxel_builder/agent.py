@@ -72,6 +72,8 @@ class Agent:
         self.build_shape_map = None
         self.sense_range_map = None
         self._move_map_in_place = None
+        self.inplane_map = None
+        self.depth_map = None
         self.print_limit_1 = 0.5
         self.print_limit_2 = 0.5
         self.print_limit_3 = 0.5
@@ -100,7 +102,8 @@ class Agent:
         self.last_move_vector = []
         self.move_turn_degree = None
 
-        self.normal_vector_down = Vector(0, 0, 1)
+        self._normal_vector_down = Vector(0, 0, -1)
+        self._normal_vector_up = Vector(0, 0, 1)
 
     @property
     def pose(self):
@@ -164,6 +167,19 @@ class Agent:
         if not isinstance(value, (float | int)):
             raise ValueError("Chance must be a number")
         self._die_chance = value
+
+    @property
+    def normal_vector_up(self):
+        return self.calculate_normal_vector_up()
+
+    @property
+    def normal_vector_down(self):
+        return self.calculate_normal_vector_down()
+
+    @property
+    def normal_angle(self):
+        v = self.get_normal_angle()
+        return v
 
     NB_INDEX_DICT = {
         "up": np.asarray([0, 0, 1]),
@@ -432,6 +448,36 @@ class Agent:
         if not isinstance(pose, np.ndarray | list):
             pose = self.pose
 
+        values = get_values_by_index_map(array, index_map, pose, return_list=True)
+        # nb_indices = self.get_nb_indices_26(self.pose)
+        # values = []
+        # for pose in nb_indices:
+        #     a, b, c = array.shape
+        #     pose_2 = np.clip(pose, [0, 0, 0], [a - 1, b - 1, c - 1])
+        #     if np.sum(pose - pose_2) == 0:
+        #         values.append(array[*pose])
+        if nonzero:
+            density = np.count_nonzero(values) / len(values)
+        else:
+            density = sum(values) / len(values)
+
+        if print_:
+            print(f"grid values:\n{values}\n")
+            print(f"grid_density:{density} in pose:{self.pose}")
+        return density
+
+    def get_arrays_density_by_index_map(
+        self,
+        arrays: tuple[np.ndarray],
+        index_map,
+        pose=None,
+        print_=False,
+        nonzero=True,
+    ):
+        """return clay density"""
+        if not isinstance(pose, np.ndarray | list):
+            pose = self.pose
+        array = np.sum(arrays, axis=0)
         values = get_values_by_index_map(array, index_map, pose, return_list=True)
         # nb_indices = self.get_nb_indices_26(self.pose)
         # values = []
@@ -1386,17 +1432,30 @@ class Agent:
             vectors.append(Vector(x, y, z))
         return vectors
 
-    def calculate_normal_vector(self, ground_array=None, radius=None):
-        """return self.normal_vector_down, self.normal_vector_up"""
+    def calculate_normal_vector_down(self, ground_array=None, radius=None):
+        """return self.normal_vector_down, self.normal_vector_up
+        compas.geometry.Vector"""
         vectors = self.get_masked_sense_range_map_by_nonzero(ground_array, radius)
-        average_vector = np.sum(vectors, axis=0) / len(vectors)
-        average_vector = Vector(*average_vector)
-        average_vector.unitize()
-        self.normal_vector_down = average_vector
-        average_vector.invert()
-        self.normal_vector_up = average_vector
-        # print(f"belly normal: {self.normal_vector_down}, up: {self.normal_vector_up}")
-        return self.normal_vector_down, self.normal_vector_up
+        if len(vectors) != 0:
+            average_vector = np.sum(vectors, axis=0) / len(vectors)
+            average_vector = Vector(*average_vector)
+            average_vector.unitize()
+            self._normal_vector_down = average_vector
+            return average_vector
+
+        else:
+            print(f"empty list error >> use previous normal. pose: {self.pose}")
+            self._normal_vector_down = self._normal_vector_down
+            return self._normal_vector_down
+
+    def calculate_normal_vector_up(self, ground_array=None, radius=None):
+        """return self.normal_vector_down, self.normal_vector_up
+        compas.geometry.Vector"""
+        self.calculate_normal_vector_down(ground_array, radius)
+        v = self._normal_vector_down
+        v.invert()
+        self._normal_vector_up = v
+        return v
 
     def calculate_mass_centroid_in_sense_range_map(
         self, ground_array=None, radius=None
@@ -1407,24 +1466,44 @@ class Agent:
         return mass_centroid
 
     def orient_build_shape_map(self):
-        _, normal_vector_up = self.calculate_normal_vector()
+        normal_vector_up = self.normal_vector_up
         self.build_shape_map = transfrom_index_map_from_normal_plane(
             self.build_shape_map, normal_vector_up
         )
 
     def orient_sense_range_map(self):
-        normal_vector, _ = self.calculate_normal_vector()
+        normal_vector = self.normal_vector_down
         self.sense_range_map = transfrom_index_map_from_normal_plane(
             self.sense_range_map, normal_vector
         )
 
     def orient_move_shape_map(self):
-        normal_vector, _ = self.calculate_normal_vector()
+        normal_vector = self.normal_vector_down
         self.move_shape_map = transfrom_index_map_from_normal_plane(
             self.move_shape_map, normal_vector
         )
 
-    def orient_all_shape_map(self):
+    def orient_depth_map(self):
+        vector = self.normal_vector_down
+        self.depth_map = transfrom_index_map_from_normal_plane(self.depth_map, vector)
+
+    def orient_inplane_map(self):
+        vector = self.normal_vector_down
+        self.depth_map = transfrom_index_map_from_normal_plane(self.depth_map, vector)
+
+    def orient_all_shape_maps(self):
         self.orient_build_shape_map()
         self.orient_sense_range_map()
         self.orient_move_shape_map()
+        self.orient_inplane_map()
+        self.orient_depth_map()
+
+    def orient_topology_maps(self):
+        self.orient_inplane_map()
+        self.orient_depth_map()
+
+    def get_normal_angle(self):
+        vector = self.normal_vector_up
+        angle = vector.angle(Vector.Zaxis(), degrees=True)
+        self._normal_angle = angle
+        return angle
