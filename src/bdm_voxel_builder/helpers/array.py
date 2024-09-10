@@ -387,13 +387,15 @@ def get_values_by_index_map(
         return filtered_values
 
 
-def set_value_by_index_map(array, index_map_, origin, value=1):
+def set_value_by_index_map(array, index_map_, origin=None, value=1):
     """
     Filters the values of a 3D NumPy array based on an index map.
         numpy.ndarray: A 1D array containing the filtered values.
     """
     # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
     index_map = index_map_.copy()
+    if not origin:
+        origin = [0, 0, 0]
     index_map += np.array(origin, dtype=np.int32)
     index_map = np.unique(
         (np.clip(index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]))), axis=0
