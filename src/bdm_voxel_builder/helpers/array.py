@@ -274,27 +274,18 @@ def index_map_sphere(radius: float, min_radius: float = None) -> np.ndarray[np.i
     return sphere_array.transpose()
 
 
-def index_map_cylinder(radius=3, z_top=2, min_radius=None, z_bottom=0):
+def index_map_cylinder(radius, height, min_radius=0, z_lift=0):
     d = int(np.ceil(radius) * 2) + 1
-    x, y, z = np.indices([d, d, z_top - z_bottom])
-    z += z_bottom
+    x, y, z = np.indices([d, d, height])
+    z += z_lift
     r2 = np.ceil(radius)
     x, y, z = [x - r2, y - r2, z]
     l1 = np.linalg.norm([x, y], axis=0)
-    # print(l1)
 
-    height_condition = z_bottom <= z
-    height_condition_2 = z < z_top
-    radius_condition = l1 <= radius
-
-    if min_radius:
-        radius_min_condition = l1 >= min_radius
-        r_mask = np.logical_and(radius_condition, radius_min_condition)
+    if min_radius > 0:
+        mask = np.logical_and(l1 <= radius, l1 >= min_radius)
     else:
-        r_mask = radius_condition
-    mask = np.logical_and(r_mask, height_condition)
-    if z_bottom != 0:
-        mask = np.logical_and(mask, height_condition_2)
+        mask = l1 <= radius
 
     # print(f"mask {mask}")
     indices = [x, y, z]

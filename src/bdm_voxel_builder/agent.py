@@ -3,7 +3,7 @@ from math import ceil, trunc
 
 import numpy as np
 import numpy.typing as npt
-from compas.geometry import Vector, vector_average
+from compas.geometry import Vector
 
 from bdm_voxel_builder.agent_algorithms.common import (
     get_any_free_voxel_above_array,
@@ -466,10 +466,7 @@ class Agent:
         self, array: np.ndarray, index_map, print_=False, nonzero=False
     ):
         """return clay density"""
-
-        values = get_values_by_index_map(
-            array, index_map, pose=[0, 0, 0], return_list=True
-        )
+        values = get_values_by_index_map(array, index_map, [0, 0, 0], return_list=True)
         if nonzero:
             density = np.count_nonzero(values) / len(values)
         else:
@@ -1395,6 +1392,8 @@ class Agent:
             build_limit = 1 - r_mod
         return build_limit
 
+    # topology sense methods
+
     def get_nonzero_map_in_sense_range(self, ground_array=None, radius=None):
         if not ground_array:
             array = self.ground_grid.array
@@ -1430,51 +1429,6 @@ class Agent:
             self._normal_vector = self._normal_vector
             return self._normal_vector
 
-    def calculate_mass_centroid_in_sense_range_map(
-        self, ground_array=None, radius=None
-    ):
-        vectors = self.get_filled_vectors_in_sense_range_map(ground_array, radius)
-        origin = Vector(*self.pose)
-        mass_centroid = np.array(vector_average(vectors) + origin, dtype=np.int64)
-        return mass_centroid
-
-    def orient_build_shape_map(self):
-        normal_vector = self.normal_vector
-        return self.orient_index_map(self.build_shape_map, normal_vector)
-
-    def orient_sense_range_map(self):
-        normal_vector = self.normal_vector
-        return self.orient_index_map(self.sense_range_map, normal_vector)
-
-    def orient_move_shape_map(self):
-        normal_vector = self.normal_vector
-        self.move_shape_map = self.orient_index_map(self.move_shape_map, normal_vector)
-
-    def orient_depth_map(self):
-        vector = self.normal_vector
-        return self.orient_index_map(self.depth_map, vector)
-
-    def orient_inplane_map(self):
-        vector = self.normal_vector
-        return self.orient_index_map(self.inplane_map, vector)
-
-    # def orient_all_shape_maps(self):
-    #     self.orient_build_shape_map()
-    #     self.orient_sense_range_map()
-    #     self.orient_move_shape_map()
-    #     self.orient_inplane_map()
-    #     self.orient_depth_map()
-
-    # def orient_topology_maps(self):
-    #     self.orient_inplane_map()
-    #     self.orient_depth_map()
-
-    def get_normal_angle(self):
-        vector = self.normal_vector
-        angle = vector.angle(Vector.Zaxis(), degrees=True)
-        self._normal_angle = angle
-        return angle
-
     def orient_index_map(self, index_map, new_origin=None, normal=None):
         """transforms shape map
         input:
@@ -1503,3 +1457,28 @@ class Agent:
             transformed_map = self.orient_index_map(index_map, new_origin, normal)
             maps.append(transformed_map)
         return maps
+
+    def orient_move_shape_map(self):
+        normal_vector = self.normal_vector
+        normal_vector.invert()
+        return self.orient_index_map(self.move_shape_map, normal=normal_vector)
+
+    def orient_build_shape_map(self):
+        normal_vector = self.normal_vector
+        normal_vector.invert()
+        return self.orient_index_map(self.build_shape_map, normal=normal_vector)
+
+    def orient_sense_range_map(self):
+        return self.orient_index_map(self.sense_range_map)
+
+    def orient_depth_map(self):
+        return self.orient_index_map(self.depth_map)
+
+    def orient_inplane_map(self):
+        return self.orient_index_map(self.inplane_map)
+
+    def get_normal_angle(self):
+        vector = self.normal_vector
+        angle = vector.angle(Vector.Zaxis(), degrees=True)
+        self._normal_angle = angle
+        return angle

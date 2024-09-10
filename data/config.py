@@ -6,8 +6,8 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # setup 2 test
 grid_size = [100, 100, 80]
 iterations = 20
-agent_count = 1
-interval = 2
+agent_count = 10
+interval = 20
 name = f"algo_15_test_load_scan_i{iterations}a{agent_count}"
 
 config = Config(
@@ -18,7 +18,9 @@ config = Config(
         grid_size=grid_size,
         name=name,
     ),
-    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("pheromon_move")),
+    visualizer=CompasViewerVisualizer(
+        save_file=True, skip_grids=("pheromon_move", "ground")
+    ),
     save_interval=interval,
     visualize_interval=interval,
 )
