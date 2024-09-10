@@ -130,7 +130,7 @@ class Algo20_Build(AgentAlgorithm):
         scan = DiffusiveGrid(
             name="scan",
             grid_size=self.grid_size,
-            color=Color.from_rgb255(10, 20, 30),
+            color=Color.from_rgb255(210, 220, 230),
         )
         if import_scan:
             file_path = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
@@ -356,18 +356,16 @@ class Algo20_Build(AgentAlgorithm):
         built_centroids.array[x, y, z] = self.print_dot_counter
 
         # orient shape map
-        agent.orient_build_shape_map()
+        build_map = agent.orient_build_shape_map()
         # update density_volume_array
         density.array = set_value_by_index_map(
             density.array,
-            agent.build_shape_map,
-            agent.pose,
+            build_map,
             value=self.print_dot_counter,
         )
         ground.array = set_value_by_index_map(
             ground.array,
-            agent.build_shape_map,
-            agent.pose,
+            build_map,
             value=self.print_dot_counter,
         )
 
@@ -390,38 +388,36 @@ class Algo20_Build(AgentAlgorithm):
             build_probability = 0
         else:
             # RANDOM FACTOR
-            random_limit = 0.95
             random_factor = 0.1
-            if random_limit < r.random():
-                bg_random = random_factor
-            else:
-                bg_random = 0
+            bg_random = (r.random() - 0.5) * random_factor
 
             # NORMAL ANGLE PREFERENCE
             angle1, angle2 = [0, 25]
-            angle_factor = 0
+            angle_factor = 0.05
             if angle1 <= agent.normal_angle <= angle2:
-                bg_angle_factor = 0
+                bg_angle_factor = angle_factor
             else:
-                bg_angle_factor = -angle_factor
+                bg_angle_factor = angle_factor * -2
             # print(f"angle_gain {bg_angle_factor}")
 
             # TOPOLOGY SENSATION:
-            agent.orient_topology_maps()
+            # agent.orient_topology_maps()
             # topology gains
-            topology_gain_inplane = 0.75
-            topology_gain_edge = 0.75
+            topology_gain_inplane = 0.9
+            topology_gain_edge = 0.9
             # thick_wall_pain = -0.75
             # thin_wall_gain = 0.75
             # edge_gain = 0.75
             # wall thickness and shell edge
             density = state.grids["density"]
             ground = state.grids["ground"]
-            depth_density = agent.get_arrays_density_by_index_map(
-                [density.array, ground.array], agent.depth_map, nonzero=True
+            depth_map = agent.orient_depth_map()
+            depth_density = agent.get_array_density_by_oriented_index_map(
+                density.array + ground.array, depth_map, nonzero=True
             )
-            inplane_density = agent.get_arrays_density_by_index_map(
-                [density.array, ground.array], agent.inplane_map, nonzero=True
+            inplane_map = agent.orient_inplane_map()
+            inplane_density = agent.get_array_density_by_oriented_index_map(
+                density.array, ground.array, inplane_map, nonzero=True
             )
             # access topology type
             # topology sensor values
@@ -461,7 +457,7 @@ class Algo20_Build(AgentAlgorithm):
         # BUILD
         build_probability = self.get_agent_build_probability(agent, state)
 
-        if build_probability > 0:
+        if build_probability > r.random():
             print(f"""\n## agent_{agent.id} - {agent.pose} ##""")
             print(f"build_probability = {build_probability}")
 

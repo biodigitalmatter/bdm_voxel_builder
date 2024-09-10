@@ -344,19 +344,17 @@ class Algo15_Build(AgentAlgorithm):
         built_centroids.array[x, y, z] = self.print_dot_counter
 
         # orient shape map
-        agent.orient_build_shape_map()
+        build_shape_map = agent.orient_build_shape_map()
         # update density_volume_array
         density.array = set_value_by_index_map(
             density.array,
-            agent.build_shape_map,
-            agent.pose,
+            build_shape_map,
             value=self.print_dot_counter,
         )
         # # update ground_volume_array
         # ground.array = set_value_by_index_map(
         #     ground.array,
-        #     agent.build_shape_map,
-        #     agent.pose,
+        #     build_shape_map,
         #     value=self.print_dot_counter,
         # )
 

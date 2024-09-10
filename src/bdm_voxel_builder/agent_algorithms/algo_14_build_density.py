@@ -327,9 +327,8 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         self.print_dot_counter += 1
 
         # update built_volume_volume_array
-        built_volume.array = set_value_by_index_map(
-            built_volume.array, agent.build_shape_map, agent.pose
-        )
+        build_shape_map = agent.orient_build_shape_map()
+        built_volume.array = set_value_by_index_map(built_volume.array, build_shape_map)
 
         print(f"built at: {agent.pose}")
 

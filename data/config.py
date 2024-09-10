@@ -5,9 +5,9 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
 grid_size = [100, 100, 80]
-iterations = 10
-agent_count = 10
-interval = 5
+iterations = 20
+agent_count = 1
+interval = 2
 name = f"algo_15_test_load_scan_i{iterations}a{agent_count}"
 
 config = Config(

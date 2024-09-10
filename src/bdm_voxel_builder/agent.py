@@ -25,7 +25,10 @@ from bdm_voxel_builder.helpers import (
     random_choice_index_from_best_n,
 )
 from bdm_voxel_builder.helpers.array import mask_index_map_by_nonzero
-from bdm_voxel_builder.helpers.geometry import transfrom_index_map_from_normal_plane
+from bdm_voxel_builder.helpers.geometry import (
+    transfrom_index_map_to_plane,
+    translate_index_map,
+)
 
 
 class Agent:
@@ -102,8 +105,8 @@ class Agent:
         self.last_move_vector = []
         self.move_turn_degree = None
 
-        self._normal_vector_down = Vector(0, 0, -1)
-        self._normal_vector_up = Vector(0, 0, 1)
+        self._normal_vector = Vector(0, 0, -1)
+        self._normal_vector = Vector(0, 0, -1)
 
     @property
     def pose(self):
@@ -169,12 +172,12 @@ class Agent:
         self._die_chance = value
 
     @property
-    def normal_vector_up(self):
-        return self.calculate_normal_vector_up()
+    def normal_vector(self):
+        return self.calculate_normal_vector()
 
     @property
-    def normal_vector_down(self):
-        return self.calculate_normal_vector_down()
+    def normal_vector(self):
+        return self.calculate_normal_vector()
 
     @property
     def normal_angle(self):
@@ -449,13 +452,6 @@ class Agent:
             pose = self.pose
 
         values = get_values_by_index_map(array, index_map, pose, return_list=True)
-        # nb_indices = self.get_nb_indices_26(self.pose)
-        # values = []
-        # for pose in nb_indices:
-        #     a, b, c = array.shape
-        #     pose_2 = np.clip(pose, [0, 0, 0], [a - 1, b - 1, c - 1])
-        #     if np.sum(pose - pose_2) == 0:
-        #         values.append(array[*pose])
         if nonzero:
             density = np.count_nonzero(values) / len(values)
         else:
@@ -466,26 +462,14 @@ class Agent:
             print(f"grid_density:{density} in pose:{self.pose}")
         return density
 
-    def get_arrays_density_by_index_map(
-        self,
-        arrays: tuple[np.ndarray],
-        index_map,
-        pose=None,
-        print_=False,
-        nonzero=True,
+    def get_array_density_by_oriented_index_map(
+        self, array: np.ndarray, index_map, print_=False, nonzero=False
     ):
         """return clay density"""
-        if not isinstance(pose, np.ndarray | list):
-            pose = self.pose
-        array = np.sum(arrays, axis=0)
-        values = get_values_by_index_map(array, index_map, pose, return_list=True)
-        # nb_indices = self.get_nb_indices_26(self.pose)
-        # values = []
-        # for pose in nb_indices:
-        #     a, b, c = array.shape
-        #     pose_2 = np.clip(pose, [0, 0, 0], [a - 1, b - 1, c - 1])
-        #     if np.sum(pose - pose_2) == 0:
-        #         values.append(array[*pose])
+
+        values = get_values_by_index_map(
+            array, index_map, pose=[0, 0, 0], return_list=True
+        )
         if nonzero:
             density = np.count_nonzero(values) / len(values)
         else:
@@ -1411,7 +1395,7 @@ class Agent:
             build_limit = 1 - r_mod
         return build_limit
 
-    def get_masked_sense_range_map_by_nonzero(self, ground_array=None, radius=None):
+    def get_nonzero_map_in_sense_range(self, ground_array=None, radius=None):
         if not ground_array:
             array = self.ground_grid.array
         sense_range_map = (
@@ -1424,38 +1408,27 @@ class Agent:
         return filled_surrounding_indices
 
     def get_filled_vectors_in_sense_range_map(self, ground_array=None, radius=None):
-        filtered_nonzero_map = self.get_masked_sense_range_map_by_nonzero(
-            ground_array, radius
-        )
+        filtered_nonzero_map = self.get_nonzero_map_in_sense_range(ground_array, radius)
         vectors = []
         for x, y, z in filtered_nonzero_map:
             vectors.append(Vector(x, y, z))
         return vectors
 
-    def calculate_normal_vector_down(self, ground_array=None, radius=None):
-        """return self.normal_vector_down, self.normal_vector_up
+    def calculate_normal_vector(self, ground_array=None, radius=None):
+        """return self.normal_vector, self.normal_vector
         compas.geometry.Vector"""
-        vectors = self.get_masked_sense_range_map_by_nonzero(ground_array, radius)
+        vectors = self.get_nonzero_map_in_sense_range(ground_array, radius)
         if len(vectors) != 0:
             average_vector = np.sum(vectors, axis=0) / len(vectors)
             average_vector = Vector(*average_vector)
             average_vector.unitize()
-            self._normal_vector_down = average_vector
+            average_vector.invert()
+            self._normal_vector = average_vector
             return average_vector
-
-        else:
+        else:  # bug. originated from somewhere else. I think its fixed
             print(f"empty list error >> use previous normal. pose: {self.pose}")
-            self._normal_vector_down = self._normal_vector_down
-            return self._normal_vector_down
-
-    def calculate_normal_vector_up(self, ground_array=None, radius=None):
-        """return self.normal_vector_down, self.normal_vector_up
-        compas.geometry.Vector"""
-        self.calculate_normal_vector_down(ground_array, radius)
-        v = self._normal_vector_down
-        v.invert()
-        self._normal_vector_up = v
-        return v
+            self._normal_vector = self._normal_vector
+            return self._normal_vector
 
     def calculate_mass_centroid_in_sense_range_map(
         self, ground_array=None, radius=None
@@ -1466,44 +1439,67 @@ class Agent:
         return mass_centroid
 
     def orient_build_shape_map(self):
-        normal_vector_up = self.normal_vector_up
-        self.build_shape_map = transfrom_index_map_from_normal_plane(
-            self.build_shape_map, normal_vector_up
-        )
+        normal_vector = self.normal_vector
+        return self.orient_index_map(self.build_shape_map, normal_vector)
 
     def orient_sense_range_map(self):
-        normal_vector = self.normal_vector_down
-        self.sense_range_map = transfrom_index_map_from_normal_plane(
-            self.sense_range_map, normal_vector
-        )
+        normal_vector = self.normal_vector
+        return self.orient_index_map(self.sense_range_map, normal_vector)
 
     def orient_move_shape_map(self):
-        normal_vector = self.normal_vector_down
-        self.move_shape_map = transfrom_index_map_from_normal_plane(
-            self.move_shape_map, normal_vector
-        )
+        normal_vector = self.normal_vector
+        self.move_shape_map = self.orient_index_map(self.move_shape_map, normal_vector)
 
     def orient_depth_map(self):
-        vector = self.normal_vector_down
-        self.depth_map = transfrom_index_map_from_normal_plane(self.depth_map, vector)
+        vector = self.normal_vector
+        return self.orient_index_map(self.depth_map, vector)
 
     def orient_inplane_map(self):
-        vector = self.normal_vector_down
-        self.depth_map = transfrom_index_map_from_normal_plane(self.depth_map, vector)
+        vector = self.normal_vector
+        return self.orient_index_map(self.inplane_map, vector)
 
-    def orient_all_shape_maps(self):
-        self.orient_build_shape_map()
-        self.orient_sense_range_map()
-        self.orient_move_shape_map()
-        self.orient_inplane_map()
-        self.orient_depth_map()
+    # def orient_all_shape_maps(self):
+    #     self.orient_build_shape_map()
+    #     self.orient_sense_range_map()
+    #     self.orient_move_shape_map()
+    #     self.orient_inplane_map()
+    #     self.orient_depth_map()
 
-    def orient_topology_maps(self):
-        self.orient_inplane_map()
-        self.orient_depth_map()
+    # def orient_topology_maps(self):
+    #     self.orient_inplane_map()
+    #     self.orient_depth_map()
 
     def get_normal_angle(self):
-        vector = self.normal_vector_up
+        vector = self.normal_vector
         angle = vector.angle(Vector.Zaxis(), degrees=True)
         self._normal_angle = angle
         return angle
+
+    def orient_index_map(self, index_map, new_origin=None, normal=None):
+        """transforms shape map
+        input:
+        index_maps: list
+        new_origins: None or Point
+        normals: None or Vector"""
+        if not new_origin:
+            new_origin = self.pose
+        if not normal:
+            normal = self.normal_vector
+        return transfrom_index_map_to_plane(index_map, new_origin, normal)
+
+    def orient_index_maps(self, index_maps, new_origins=None, normals=None):
+        """transforms shape maps
+        input:
+        index_maps: list
+        new_origins: None or list
+        normals: None or list"""
+        maps = []
+        for i in range(len(index_maps)):
+            new_origin = self.pose if not new_origins else new_origins[i]
+            normal = self.normal_vector if not normals else normals[i]
+
+            index_map = index_maps[i]
+
+            transformed_map = self.orient_index_map(index_map, new_origin, normal)
+            maps.append(transformed_map)
+        return maps

@@ -6,7 +6,7 @@ import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 from compas.files import PLY
-from compas.geometry import Frame, Plane, Pointcloud, Transformation
+from compas.geometry import Frame, Plane, Pointcloud, Transformation, Point, Vector
 
 from bdm_voxel_builder.helpers import sort_pts_by_values
 
@@ -128,14 +128,20 @@ def pointcloud_to_grid_array(
     return grid_array.astype(dtype)
 
 
-def transfrom_index_map_from_normal_plane(
-    index_map: np.array = None, normal_vector: tuple[float, float, float] = None
+### INDEX map transformations using compas.geometry.Transform
+
+
+def transfrom_index_map_to_plane(
+    index_map: np.array = None,
+    new_origin: tuple[float, float, float] = None,
+    normal_vector: tuple[float, float, float] = None,
 ):
     """
-    transform an index map from a normal plane
+    transform an index map from World_XY to Plane(new_origin, normal_vector)
 
     index map: np.array [a 4D array representing a point list]
-    normal_vector: list of floats
+    normal_vector: list of floats | compas.geometry.Vector
+    new_origin: list of floats | compas.geometry.Point
     """
 
     if isinstance(index_map, np.ndarray):
@@ -146,13 +152,71 @@ def transfrom_index_map_from_normal_plane(
         raise TypeError
     index_map_pointcloud = Pointcloud(index_map)
 
-    p = Plane([0, 0, 0], normal_vector)
+    p = Plane(new_origin, normal_vector)
     f = Frame.from_plane(p)
     T = Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
     index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int64)
     return index_map_oriented
+
+
+def transfrom_index_map_to_frame(
+    index_map: np.array = None,
+    frame: Frame = None,
+):
+    """
+    transform an index map from World_XY to Frame
+
+    index map: np.array [a 4D array representing a point list]
+    frame: compas.geometry.Frame
+    """
+
+    if isinstance(index_map, np.ndarray):
+        index_map.tolist()
+    elif isinstance(index_map, list):
+        pass
+    else:
+        raise TypeError
+    index_map_pointcloud = Pointcloud(index_map)
+
+    f = frame
+    T = Transformation.from_frame(f)
+
+    index_map_pointcloud.transform(T)
+    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int64)
+    return index_map_oriented
+
+
+def translate_index_map(
+    index_map: np.array = None,
+    vector: tuple[float, float, float] | Point | Vector = None,
+):
+    """
+    move index map to point
+    translate an index map from [0,0,0] to [x,y,z]
+
+    index map: np.array [a 4D array representing a point list]
+    point: compas.geometry.Point or compas.geometry.Vector
+    """
+
+    if isinstance(index_map, np.ndarray):
+        index_map.tolist()
+    elif isinstance(index_map, list):
+        pass
+    else:
+        raise TypeError
+    index_map_pointcloud = Pointcloud(index_map)
+
+    f = frame
+    T = Transformation.from_frame(f)
+
+    index_map_pointcloud.transform(T)
+    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int64)
+    return index_map_oriented
+
+
+### generate array fills by trigonometric functions
 
 
 def gyroid_array(grid_size, thickness=1, scale=1):
