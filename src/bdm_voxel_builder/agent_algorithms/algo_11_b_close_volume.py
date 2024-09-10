@@ -123,9 +123,6 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         agents = []
         return agents
 
-    def reset_agent(self, agent: Agent):
-        return False
-
     def move_agent(self, agent: Agent, state: Environment):
         moved = False
         return moved

@@ -12,7 +12,6 @@ from bdm_voxel_builder.helpers import (
     get_indices_from_map_and_origin,
     get_values_by_index_map_and_origin,
     index_map_cylinder,
-    index_map_move_and_clip,
     index_map_sphere,
     offset_array_radial,
 )
@@ -207,9 +206,6 @@ class Algo12_Random_builder(AgentAlgorithm):
             agents.append(agent)
         return agents
 
-    # def reset_agent(self, agent: Agent):
-    #     agent.deploy_in_region(self.region_legal_move)
-
     def move_agent_simple(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of grids makes the direction_cube
@@ -217,32 +213,23 @@ class Algo12_Random_builder(AgentAlgorithm):
         move agent
         return True if moved, False if not or in ground
         """
-        move_map_in_place = index_map_move_and_clip(
-            agent.move_shape_map, agent.pose, agent.space_grid.grid_size
-        )
+        move_map_in_place = agent.get_localized_move_map()
         ground = state.grids["ground"]
         # follow_grid = state.grids["follow_grid"]
-        # check solid volume inclusionarray
-        gv = agent.get_grid_value_at_pose(
-            ground,
-        )
+        # check solid volume inclusion
+        gv = ground.get_value(agent.pose)
         if gv != 0:
             return False
 
         # legal move mask
-        filter = get_values_by_index_map(
-            self.region_legal_move, agent.move_shape_map, agent.pose, dtype=np.float64
-        )
-        legal_move_mask = filter == 1
+        legal_move_mask = self.get_legal_move_mask(agent)
 
         # random map
         map_size = len(move_map_in_place)
         random_map_values = np.random.random(map_size) + 0.5
 
         # global direction preference
-        dir_map = index_map_move_and_clip(
-            agent.move_shape_map, agent.pose, agent.space_grid.grid_size
-        )
+        dir_map = agent.get_localized_move_map()
 
         # follow_map = get_values_by_index_map(
         #     follow_grid, agent.move_shape_map, agent.pose
@@ -283,7 +270,7 @@ class Algo12_Random_builder(AgentAlgorithm):
         move agent
         return True if moved, False if not or in ground
         """
-        move_map_in_place = index_map_move_and_clip(
+        move_map_in_place = get_indices_from_map_and_origin(
             agent.move_shape_map, agent.pose, agent.space_grid.grid_size
         )
         pheromon_grid_move = state.grids["pheromon_grid_move"]
@@ -292,35 +279,31 @@ class Algo12_Random_builder(AgentAlgorithm):
         built_volume = state.grids["built_volume"]
         pheromon_build_flags = state.grids["pheromon_build_flags"]
         # check solid volume inclusionarray
-        gv = agent.get_grid_value_at_pose(
-            ground,
-        )
+        gv = ground.get_value(agent.pose)
         if gv != 0:
             return False
 
         # ph attraction towards design
-        pheromon_grid_map = get_values_by_index_map(
-            pheromon_grid_move.array,
-            agent.move_shape_map,
-            agent.pose,
+        pheromon_grid_map = pheromon_grid_move.get_values_by_index_map(
+            agent.move_shape_map, agent.pose
         )
+
         # ph attraction toward build track start
-        build_track_flag_map = get_values_by_index_map(
-            pheromon_build_flags.array,
-            agent.move_shape_map,
-            agent.pose,
+        build_track_flag_map = pheromon_build_flags.get_values_by_index_map(
+            agent.move_shape_map, agent.pose
         )
+
         # legal move mask
-        legal_move_region = self.region_legal_move
-        legal_move_region_map = get_values_by_index_map(
-            legal_move_region, agent.move_shape_map, agent.pose, dtype=np.float64
+        legal_move_region_map = get_values_by_index_map_and_origin(
+            self.region_legal_move, agent.move_shape_map, agent.pose
         )
         legal_move_mask = legal_move_region_map == 1
+
         # random map
         map_size = len(pheromon_grid_map)
         random_map_values = np.random.random(map_size) + 0.5
         # global direction preference
-        dir_map = index_map_move_and_clip(
+        dir_map = get_indices_from_map_and_origin(
             agent.move_shape_map, agent.pose, agent.space_grid.grid_size
         )
         # print(dir_map)
@@ -451,7 +434,6 @@ class Algo12_Random_builder(AgentAlgorithm):
         if built:
             print(f"built {agent.pose}")
             if agent.reset_after_build:
-                # self.reset_agent(agent)
                 agent.deploy_in_region(self.region_legal_move)
             else:
                 agent.step_counter = 0
@@ -460,7 +442,6 @@ class Algo12_Random_builder(AgentAlgorithm):
 
         # RESET IF STUCK
         if not moved:
-            # self.reset_agent(agent, state.grids)
             agent.deploy_in_region(self.region_legal_move)
 
         # if agent.step_counter >= agent.inactive_step_count_limit:

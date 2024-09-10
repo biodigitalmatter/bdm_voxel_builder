@@ -234,7 +234,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
             agents.append(agent)
         return agents
 
-    def calculate_move_values_r_z(self, agent: Agent, state: Environment):
+    def calculate_move_values_random__z_based(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
@@ -258,14 +258,16 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         move_values = move_z_coordinate + random_map_values  # + follow_map
         return move_values
 
-    def calculate_move_values_r_z_f(self, agent: Agent, state: Environment):
+    def calculate_move_values_random__z_based__follow(
+        self, agent: Agent, state: Environment
+    ):
         """moves agents in a calculated direction
         calculate weigthed sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
         """
-        move_map_in_place = agent.move_map_in_place
+        move_map_in_place = agent.get_localized_move_map()
 
         # random map
         random_map_values = np.random.random(len(move_map_in_place)) + 0.5
@@ -289,20 +291,6 @@ class Algo14_Build_DensRange(AgentAlgorithm):
 
         return move_values
 
-    def get_legal_move_mask(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-
-        # legal move mask
-        filter = get_values_by_index_map(
-            self.region_legal_move, agent.move_shape_map, agent.pose, dtype=np.float64
-        )
-        legal_move_mask = filter == 1
-        return legal_move_mask
 
     def build(self, agent: Agent, state: Environment, build_limit=0.5):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
@@ -358,7 +346,6 @@ class Algo14_Build_DensRange(AgentAlgorithm):
                 self.walk_region_thickness,
             )
             # reset if
-            agent.step_counter = 0
             if agent.reset_after_build:
                 agent.deploy_in_region(self.region_legal_move)
 
@@ -369,17 +356,19 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         )
         # move
         if not collision:
-            move_values = self.calculate_move_values_r_z(agent, state)
+            move_values = self.calculate_move_values_random__z_based(agent, state)
             move_map_in_place = agent.move_map_in_place
 
-            legal_move_mask = self.get_legal_move_mask(agent, state)
+            legal_move_region_map = get_values_by_index_map_and_origin(
+                self.region_legal_move, agent.move_shape_map, agent.pose
+            )
+            legal_move_mask = legal_move_region_map == 1
 
             agent.move_by_index_map(
                 index_map_in_place=move_map_in_place[legal_move_mask],
                 move_values=move_values[legal_move_mask],
                 random_batch_size=1,
             )
-            agent.step_counter += 1
 
         # RESET
         else:
@@ -388,5 +377,5 @@ class Algo14_Build_DensRange(AgentAlgorithm):
 
         # reset if inactive
         if agent.inactive_step_count_limit:  # noqa: SIM102
-            if agent.step_counter >= agent.inactive_step_count_limit:
+            if len(agent.move_history) >= agent.inactive_step_count_limit:
                 agent.deploy_in_region(self.region_legal_move)

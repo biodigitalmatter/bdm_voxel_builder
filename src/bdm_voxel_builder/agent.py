@@ -17,10 +17,10 @@ from bdm_voxel_builder.helpers import (
     clip_indices_to_grid_size,
     get_array_density_from_zone_xxyyzz,
     get_cube_array_indices,
+    get_indices_from_map_and_origin,
     get_sub_array,
-    get_values_by_index_map,
+    get_values_by_index_map_and_origin,
     index_map_cylinder,
-    index_map_move_and_clip,
     index_map_sphere,
     random_choice_index_from_best_n,
 )
@@ -37,7 +37,6 @@ class Agent:
         space_grid: Grid = None,
         track_grid: Grid = None,
         leave_trace: bool = False,
-        save_move_history: bool = True,
     ):
         self._pose = np.array(pose, dtype=np.int_)  # initialize without trace
         self.compass_array = compass_array
@@ -46,9 +45,7 @@ class Agent:
         self.track_grid = track_grid
         self.ground_grid = ground_grid
         self.move_history = []
-        self.save_move_history = save_move_history
         self.track_flag = None
-        self.step_counter = 0
         self.passive_counter = 0
 
         self._cube_array = []
@@ -97,11 +94,15 @@ class Agent:
 
     @pose.setter
     def pose(self, new_pose):
-        if self.leave_trace:
-            old_pose = self.pose
-            self.space_grid.set_value(old_pose, 0)
-            self.space_grid.set_value(new_pose, 1)
+        old_pose = self.pose
 
+        self.move_history.append(old_pose)
+
+        if self.leave_trace:
+            self.track_grid.set_value(old_pose, 1)
+
+        self.space_grid.set_value(old_pose, 0)
+        self.space_grid.set_value(new_pose, 1)
         self._pose = new_pose
 
     @property
@@ -396,7 +397,8 @@ class Agent:
         if not isinstance(pose, np.ndarray | list):
             pose = self.pose
 
-        values = get_values_by_index_map(array, index_map, pose, return_list=True)
+        indices = get_indices_from_map_and_origin(index_map, pose)
+        values = array[indices]
         # nb_indices = self.get_nb_indices_26(self.pose)
         # values = []
         # for pose in nb_indices:
@@ -684,9 +686,13 @@ class Agent:
                 pass
             else:
                 # check self collision
-                self_collision_values = get_values_by_index_map(
-                    self.space_grid.array, agent_size_index_map, nb_pose
+                indices = get_indices_from_map_and_origin(
+                    agent_size_index_map,
+                    nb_pose,
+                    clipping_box=self.space_grid.clipping_box,
                 )
+                self_collision_values = self.space_grid.get_values(indices)
+
                 nb_value_collision = np.sum(self_collision_values)
                 if nb_value_collision > 0:
                     # exclude.append(True)
@@ -695,7 +701,7 @@ class Agent:
                 else:
                     if not fly:
                         # check all nbs
-                        nbs_values = get_values_by_index_map(
+                        nbs_values = get_values_by_index_map_and_origin(
                             solid_array, agent_size_index_map, nb_pose
                         )
                         if np.sum(nbs_values) == 0:
@@ -739,16 +745,6 @@ class Agent:
         # print('choice:', choice)
         new_pose = cube[choice]
         # print('new_pose:', new_pose)
-
-        if self.save_move_history:
-            v = new_pose - self.pose
-            self.move_history.append(v)
-
-        # update track grid
-        if self.leave_trace:
-            self.track_grid.set_grid_value_at_index(self.pose, 1)
-        # update location in space grid
-        self.space_grid.set_grid_value_at_index(self.pose, 0)
 
         # move
         self.pose = new_pose
@@ -798,10 +794,6 @@ class Agent:
         # best option
         new_pose = direction_cube[i]
 
-        if self.save_move_history:
-            v = new_pose - self.pose
-            self.move_history.append(v)
-
         # update space grid before move
         if self.leave_trace:
             self.track_grid.set_value_at_index(index=self.pose, value=1)
@@ -820,48 +812,30 @@ class Agent:
         move_values,
         random_batch_size: int = 1,
     ):
-        """move in the direciton of the strongest pheromon - random choice of best three
+        """move in the direction of the strongest pheromone - random choice of best three
         checks invalid moves
         solid grid collision
         self collision
         selects a random direction from the 'n' best options
         return bool_
         """
+        # return early if move_values is empty
+        if len(move_values) < 1:
+            return False
+
+        # if len(move_values) == 0 or
+        # return if len(move_values) == 0 or np.max(move_values) == -1
+
         # CHOOSE WHERE TO MOVE
         # select randomly from the best n value
-        if len(move_values) > 0:
-            if random_batch_size <= 1:
-                pass
-                i = np.argmax(move_values)
-            else:
-                i = random_choice_index_from_best_n(move_values, random_batch_size)
-                # print(f"choice index {i}")
+        if random_batch_size <= 1:
+            i = np.argmax(move_values)
         else:
-            return False
-        if move_values[i] == -1:
-            return False
-
-        # best option, relative
-        last_move_vector = index_map_in_place[i]
-        new_pose = self.pose + last_move_vector
-        # best option, absolute
-        new_pose = index_map_in_place[i]
-        # print(f"new_pose {new_pose}")
-        # ACTUAL MOVE
-        if self.save_move_history:
-            v = new_pose - self.pose
-            self.move_history.append(v)
-
-        # update space grid before move
-        if self.leave_trace:
-            self.track_grid.set_value_at_index(index=self.pose, value=1)
-        self.space_grid.set_value_at_index(index=self.pose, value=0)
+            i = random_choice_index_from_best_n(move_values, random_batch_size)
 
         # move
-        self.pose = new_pose
+        self.pose = index_map_in_place[i]
 
-        # update location in space grid
-        self.space_grid.set_value_at_index(index=self.pose, value=1)
         return True
 
     def get_direction_cube_values_for_grid_domain(self, grid: Grid, domain, strength=1):
@@ -1140,7 +1114,7 @@ class Agent:
         return False
 
     def deploy_airborne(
-        self, grid_deploy_on, grid_deploy_in, reset_move_history=True, ground_level_Z=0
+        self, grid_deploy_on, grid_deploy_in, keep_move_history=False, ground_level_Z=0
     ):
         pose = get_any_free_voxel_above_array(
             grid_deploy_on.array, np.ones_like(grid_deploy_in.array)
@@ -1152,11 +1126,12 @@ class Agent:
                 [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_level_Z
             )
 
-        self.reset_at_pose(pose, reset_move_history)
+        self.reset(pose_after_reset=pose, keep_move_history=keep_move_history)
+
         return pose
 
     def deploy_airborne_min(
-        self, grid_deploy_on, grid_deploy_in, reset_move_history=True, ground_level_Z=0
+        self, grid_deploy_on, grid_deploy_in, keep_move_history=False, ground_level_Z=0
     ):
         pose = get_lowest_free_voxel_above_array(
             grid_deploy_on.array, grid_deploy_in.array
@@ -1168,19 +1143,18 @@ class Agent:
         #         [0, e - 1, 0, f - 1], grid_deploy_in.grid_size, ground_level_Z
         #     )
 
-        self.reset_at_pose(pose, reset_move_history)
+        self.reset(pose_after_reset=pose, keep_move_history=keep_move_history)
+
         return pose
 
-    def reset_at_pose(self, pose, reset_move_history=True):
-        self.space_grid.set_value_at_index(self.pose, 0)
-        x, y, z = pose
-        self.pose = [x, y, z]
+    def reset(self, pose_after_reset=(0, 0, 0), keep_move_history=False):
+        self.pose = pose_after_reset
 
         self.build_chance = 0
         self.erase_chance = 0
         self.track_flag = None
         self.passive_counter = 0
-        if reset_move_history:
+        if not keep_move_history:
             self.move_history = []
 
     def deploy_in_region(self, region, reset_move_history=True):
@@ -1190,7 +1164,6 @@ class Agent:
         self.erase_chance = 0
         if reset_move_history:
             self.move_history = []
-            self.step_counter = 0
 
     def update_build_chance_random(self):
         a, b = self.build_prob_rand_range
@@ -1273,11 +1246,30 @@ class Agent:
 
         return grid.get_value(self._pose) != 0
 
-    def get_move_map_in_place(self):
-        map = index_map_move_and_clip(
-            self.move_shape_map, self.pose, self.space_grid.grid_size
+    def get_localized_index_map(
+        self,
+        map: np.ndarray[np.int_ | bool],
+        clipping_box: cg.Box | tuple[tuple[float]] = None,
+    ):
+        """Returns indices of the surrounding voxels based on the map.
+
+        Formerly known as get_surrounding_indices_using map"""
+        return get_indices_from_map_and_origin(
+            map, self.pose, clipping_box=clipping_box or self.space_grid.clipping_box
         )
-        return map
+
+    def get_surrounding_values_using_map(
+        self,
+        grid: Grid,
+        map: np.ndarray[np.int_ | bool],
+    ):
+        map = self.get_localized_index_map(map, clipping_box=grid.clipping_box)
+        return grid.get_values(map)
+
+    def get_localized_move_map(self):
+        return self.get_localized_index_map(
+            self.move_shape_map, clipping_box=self.space_grid.clipping_box
+        )
 
     def modify_limit_in_density_range(
         self,

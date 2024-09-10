@@ -1,7 +1,6 @@
 import random as r
 from dataclasses import dataclass
 
-import compas.geometry as cg
 import numpy as np
 from compas.colors import Color
 
@@ -10,10 +9,9 @@ from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
-from bdm_voxel_builder.helpers.array import (
-    get_mask_zone_xxyyzz,
+from bdm_voxel_builder.helpers import (
     get_surrounding_offset_region,
-    get_values_by_index_map,
+    get_values_by_index_map_and_origin,
     index_map_sphere,
 )
 
@@ -228,75 +226,49 @@ class Algo13_Build_Prob(AgentAlgorithm):
             agents.append(agent)
         return agents
 
-    def calculate_move_values_r_z(self, agent: Agent, state: Environment):
+    def calculate_move_values_random__z_based(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
+        calculate weighted sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
         """
-        move_map_in_place = agent.move_map_in_place
+        localized_move_map = agent.get_localized_move_map()
 
-        # random map
-        map_size = len(move_map_in_place)
-        random_map_values = np.random.random(map_size) + 0.5
+        # random weights for map (0-1)
+        random_map_values = np.random.random(size=len(localized_move_map)) + 0.5
 
         # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
+        localized_z_component = localized_move_map[:, 2]
+        # made global from the local map here, in case agent.move_shape_map is oriented
+        z_component = localized_z_component.astype(np.float_) - agent.pose[2]
 
         # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
+        z_component *= agent.move_mod_z
         random_map_values *= agent.move_mod_random
-        move_values = move_z_coordinate + random_map_values  # + follow_map
+        move_values = z_component + random_map_values  # + follow_map
         return move_values
 
-    def calculate_move_values_r_z_f(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
+    def calculate_move_values_random__z_based__follow(
+        self, agent: Agent, state: Environment
+    ):
+        """Generate probability values for the movement index map to control
+        movement.
+
+        Weight add for Z component and follow component.
         """
-        move_map_in_place = agent.move_map_in_place
+        move_values = self.calculate_move_values_random__z_based(agent, state)
 
-        # random map
-        random_map_values = np.random.random(len(move_map_in_place)) + 0.5
+        follow_grid: Grid = state.grids["follow_grid"]
 
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
+        follow_map = follow_grid.get_values_by_index_mask(
+            agent.get_localized_move_map()
         )
-
-        # follow pheromones
-        follow_map = get_values_by_index_map(
-            state.grids["follow_grid"].array, agent.move_shape_map, agent.pose
-        )
-
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
         follow_map *= agent.move_mod_follow
 
-        move_values = move_z_coordinate + random_map_values + follow_map
+        move_values += follow_map
 
         return move_values
-
-    def get_legal_move_mask(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-
-        # legal move mask
-        filter = get_values_by_index_map(
-            self.region_legal_move, agent.move_shape_map, agent.pose, dtype=np.float64
-        )
-        legal_move_mask = filter == 1
-        return legal_move_mask
 
     def build(self, agent: Agent, state: Environment, build_limit=0.5):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
@@ -344,25 +316,30 @@ class Algo13_Build_Prob(AgentAlgorithm):
 
             # update walk region
             self.region_legal_move = get_surrounding_offset_region(
-                [state.grids["ground"].array, state.grids["built_volume"].array],
+                [
+                    state.grids["ground"].to_numpy(),
+                    state.grids["built_volume"].to_numpy(),
+                ],
                 self.walk_region_thickness,
             )
             # reset if
-            agent.step_counter = 0
             if agent.reset_after_build:
                 agent.deploy_in_region(self.region_legal_move)
 
         # MOVE
         # check collision
         collision = agent.check_solid_collision(
-            [state.grids["built_volume"].array, state.grids["ground"].array]
+            [state.grids["built_volume"], state.grids["ground"]]
         )
         # move
         if not collision:
-            move_values = self.calculate_move_values_r_z(agent, state)
-            move_map_in_place = agent.move_map_in_place
+            move_values = self.calculate_move_values_random__z_based(agent, state)
+            move_map_in_place = agent.get_localized_move_map()
 
-            legal_move_mask = self.get_legal_move_mask(agent, state)
+            legal_move_region_map = get_values_by_index_map_and_origin(
+                self.region_legal_move, agent.move_shape_map, agent.pose
+            )
+            legal_move_mask = legal_move_region_map == 1
 
             agent.move_by_index_map(
                 index_map_in_place=move_map_in_place[legal_move_mask],
