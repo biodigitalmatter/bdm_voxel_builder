@@ -72,22 +72,18 @@ class Algo20_Build(AgentAlgorithm):
     max_build_angle = 60  # TEST
 
     # global agent settings
-    build_random_factor = 0.2
+    build_random_factor = 0.1
     # topology gains
-    topology_gain_inplane = 0
-    topology_gain_edge = 0
+    topology_gain_inplane = 0.8
+    topology_gain_edge = 0.8
 
     # topology sensor values
     max_shell_thickness = 8
     shell_planarity_max_fill = 0.75
     shell_thickness_max_fill = 0.6
     d_min_ridge_depth = 0
-    inplane_radius, inplane_h, inplane_z_lift = [3, 2, -3]
-    depth_radius, depth_h, depth_z_lift = [
-        1,
-        max_shell_thickness * 2,
-        (max_shell_thickness * -2) - 1,
-    ]
+    inplane_radius, inplane_h, inplane_z_lift = [3, 2, 1]
+    depth_radius, depth_h, depth_z_lift = [1, 8, 1]
 
     # agent type settings
     agent_type_A = {
@@ -98,7 +94,7 @@ class Algo20_Build(AgentAlgorithm):
         "build_random_factor": build_random_factor,
         "build_map_params": [3, 6, -2],
         "inactive_step_count_limit": None,
-        "reset_after_build": True,
+        "reset_after_build": False,
         "move_mod_z": 0.2,
         "move_mod_random": 0.5,
         "sense_range_radius": 3,
@@ -302,8 +298,8 @@ class Algo20_Build(AgentAlgorithm):
 
         # global direction preference
         move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
+            np.array(move_map_in_place, dtype=np.float64)[:, 0] - agent.pose[0]
+        ) * -1
 
         # MOVE PREFERENCE SETTINGS
         move_z_coordinate *= agent.move_mod_z

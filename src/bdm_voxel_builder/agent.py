@@ -1412,6 +1412,8 @@ class Agent:
         """return self.normal_vector, self.normal_vector
         compas.geometry.Vector"""
         vectors = self.get_nonzero_map_in_sense_range(ground_array, radius)
+        vectors = self.pose - vectors
+        self.all_vectors = vectors
         if len(vectors) != 0:
             average_vector = np.sum(vectors, axis=0) / len(vectors)
             average_vector = Vector(*average_vector)

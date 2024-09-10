@@ -5,9 +5,9 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
 grid_size = [100, 100, 80]
-iterations = 50
+iterations = 20
 agent_count = 10
-interval = 25
+interval = 2
 name = f"algo_20_test_sense_topo_i{iterations}a{agent_count}"
 
 config = Config(

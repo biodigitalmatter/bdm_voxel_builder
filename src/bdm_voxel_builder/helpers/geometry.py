@@ -208,7 +208,9 @@ def translate_index_map(
         raise TypeError
     index_map_pointcloud = Pointcloud(index_map)
 
-    f = frame
+    p = Plane(vector, [0, 0, 1])
+    f = Frame.from_plane(p)
+
     T = Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
