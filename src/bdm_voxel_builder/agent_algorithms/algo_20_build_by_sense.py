@@ -57,7 +57,7 @@ class Algo20_Build(AgentAlgorithm):
 
     seed_iterations: int = 1
 
-    import_scan = True
+    import_scan = False
 
     # directory import
     dir_scan_import = REPO_DIR / "data/live/build_grid/01_scanned"
@@ -298,8 +298,8 @@ class Algo20_Build(AgentAlgorithm):
 
         # global direction preference
         move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 0] - agent.pose[0]
-        ) * -1
+            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
+        )
 
         # MOVE PREFERENCE SETTINGS
         move_z_coordinate *= agent.move_mod_z

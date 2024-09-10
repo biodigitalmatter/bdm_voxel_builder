@@ -4,11 +4,11 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
-grid_size = [100, 100, 80]
-iterations = 20
+grid_size = [200, 200, 80]
+iterations = 200
 agent_count = 10
-interval = 2
-name = f"algo_20_test_sense_topo_i{iterations}a{agent_count}"
+interval = 10
+name = f"algo_20_test_sense_topo_real_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
