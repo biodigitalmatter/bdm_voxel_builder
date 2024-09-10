@@ -1,6 +1,7 @@
 import math
 import os
 from collections.abc import Sequence
+from copy import deepcopy
 from typing import Self
 
 import compas.geometry as cg
@@ -9,6 +10,8 @@ import numpy.typing as npt
 import pyopenvdb as vdb
 import pypcd4
 from compas.colors import Color
+
+from bdm_voxel_builder.helpers import get_indices_from_map_and_origin
 
 
 class Grid:
@@ -54,10 +57,16 @@ class Grid:
     def get_value(self, ijk: tuple[int, int, int]):
         return self.vdb.getConstAccessor().getValue(ijk)
 
+    def get_values(self, indices: list[tuple[int, int, int]]):
+        accessor = self.vdb.getConstAccessor()
+        return [accessor.getValue(ijk) for ijk in indices]
+
     def set_value(self, ijk: tuple[int, int, int], value: float):
         self.vdb.getAccessor().setValueOn(ijk, value)
 
-    def set_values(self, indices: npt.NDArray, values: float | npt.NDArray):
+    def set_values(
+        self, indices: list[tuple[int, int, int]], values: float | np.ndarray[np.float_]
+    ):
         accessor = self.vdb.getAccessor()
 
         if not isinstance(values, Sequence):
@@ -69,22 +78,29 @@ class Grid:
     def set_value_by_index_map(
         self, index_map: np.ndarray, origin: npt.ArrayLike, value=1
     ):
-        # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
-        index_map = index_map.copy()
-        index_map += origin  # shift the index_map to the origin
-        a_max = [d - 1 for d in self.clipping_box.dimensions]
-
-        clipped_index_map = np.unique(index_map.clip([0, 0, 0], a_max), axis=0)
-
-        indices = clipped_index_map.transpose()
-
+        indices = get_indices_from_map_and_origin(index_map, origin)
         self.set_values(indices, value)
+
+    def set_values_by_array(self, array: np.ndarray, origin=None):
+        self.vdb.copyFromArray(array=array, ijk=(origin))
+
+    def set_values_in_zone_xxyyzz(
+        self, zone_xxyyzz: tuple[int, int, int, int, int, int], value=1.0
+    ):
+        """add or replace values within zone (including both end)
+        add_values == True: add values in self.array
+        add_values == False: replace values in self.array *default
+        input:
+            zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
+        """
+        bmin, bmax = zone_xxyyzz[:3], zone_xxyyzz[3:]
+        self.vdb.fill(bmin, bmax, value, active=True)
 
     def get_active_voxels(self) -> npt.NDArray:
         """returns indices of nonzero values
         list of coordinates
             shape = [3,n]"""
-        return np.array([item.min for item in self.vdb.citerOnValues()], dtype=np.int64)
+        return np.array([item.min for item in self.vdb.citerOnValues()], dtype=np.int_)
 
     def get_number_of_active_voxels(self) -> int:
         return self.vdb.activeVoxelCount()
@@ -98,9 +114,18 @@ class Grid:
     def get_world_pointcloud(self) -> cg.Pointcloud:
         return cg.Pointcloud(self.get_world_pts())
 
-    def merge_with(self, grid: Self):
-        grid = grid.deepCopy()
-        self.vdb.combine(grid, lambda a, b: max(a, b))
+    def merge_with(self, other: Self):
+        if not isinstance(other, Sequence):
+            other = [other]
+
+        for grid in other:
+            vdb = grid.vdb.deepCopy()
+            self.vdb.combine(vdb, lambda a, b: max(a, b))
+
+    def merged_with(self, other: Self):
+        new = deepcopy(self)
+        new.merge_with(other)
+        return new
 
     def to_numpy(self):
         arr = np.zeros([int(s) for s in self.clipping_box.dimensions])

@@ -1,4 +1,5 @@
 import compas.geometry as cg
+import numpy as np
 import pyopenvdb as vdb
 import pytest
 from numpy.testing import assert_allclose
@@ -92,6 +93,45 @@ def set_values():
 def set_value_by_index_map():
     # TODO: Implement test
     pass
+
+
+class TestSetValuesByArray:
+    @pytest.fixture
+    def array(self):
+        return np.array(
+            [
+                [[1, 1, 1], [1, 1, 1]],
+                [[1, 1, 1], [1, 1, 1]],
+            ]
+        )
+
+    def test_set_values_by_array(self, array):
+        grid = Grid(name="test_set_values_by_array")
+        grid.set_values_by_array(array)
+
+        assert grid.get_number_of_active_voxels() == 12
+        assert grid.get_value((0, 0, 0)) == 1
+        assert grid.get_value((1, 0, 0)) == 1
+        assert grid.get_value((0, 1, 0)) == 1
+        assert grid.get_value((1, 1, 0)) == 1
+        assert grid.get_value((0, 0, 1)) == 1
+        assert grid.get_value((1, 0, 1)) == 1
+        assert grid.get_value((0, 1, 1)) == 1
+        assert grid.get_value((1, 1, 1)) == 1
+
+    def test_set_values_by_array_origin(self, array, large_grid):
+        assert large_grid.get_number_of_active_voxels() == 20
+        origin = (-10, -20, -30)
+
+        large_grid.set_values_by_array(array, origin=origin)
+
+        assert large_grid.get_number_of_active_voxels() == 32
+        assert large_grid.get_value((-9, -19, -30)) == 1
+        assert large_grid.get_value((-9, -19, -29)) == 1
+        assert large_grid.get_value((-9, -19, -28)) == 1
+        assert large_grid.get_value((84, 78, 226)) == 1
+        assert large_grid.get_value((88, 57, 149)) == 1
+        assert large_grid.get_value((96, 38, 282)) == 1
 
 
 def test_get_active_voxels(small_grid):

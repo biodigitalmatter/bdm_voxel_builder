@@ -11,7 +11,7 @@ class Environment:
         self.xform = config.xform or cg.Transformation()
         self.iteration_count: int = 0
         self.end_state: bool = False
-        self.grids: list[Grid] = config.algo.initialization(
+        self.grids: dict[Grid] = config.algo.initialization(
             iterations=config.iterations,
             clipping_box=self.clipping_box,
             xform=self.xform,

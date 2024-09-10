@@ -1,5 +1,6 @@
 from math import ceil
 
+import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 
@@ -256,7 +257,7 @@ def index_map_box(box_size, box_min_size=None):
 
 def index_map_sphere(
     radius: float = 1.5, min_radius: float = None
-) -> np.ndarray[np.int64]:
+) -> np.ndarray[np.int_]:
     """
     The index_map_sphere function generates a 3D array of indices that represent
     the coordinates within a sphere of a given radius. Optionally, it can also
@@ -277,7 +278,7 @@ def index_map_sphere(
     x = indices[0][mask]
     y = indices[1][mask]
     z = indices[2][mask]
-    sphere_array = np.array([x, y, z], dtype=np.int64).transpose()
+    sphere_array = np.array([x, y, z], dtype=np.int_).transpose()
     return sphere_array
 
 
@@ -286,25 +287,26 @@ def index_map_cylinder(radius=3, h=2, min_radius=None):
     x, y, z = np.indices([d, d, h])
     r2 = np.ceil(radius)
     x, y, z = [x - r2, y - r2, z]
-    l1 = np.linalg.norm([x, y], axis=0)
+    xy_norm = np.linalg.norm([x, y], axis=0)
     # print(l1)
 
     height_condition = z < h
-    radius_condition = l1 <= radius
+    radius_condition = xy_norm <= radius
 
     if min_radius:
-        radius_min_condition = l1 >= min_radius
+        radius_min_condition = xy_norm >= min_radius
         mask = np.logical_and(radius_condition, radius_min_condition)
         mask = np.logical_and(mask, height_condition)
     else:
         mask = np.logical_and(radius_condition, height_condition)
 
-    # print(f"mask {mask}")
     indices = [x, y, z]
     x = indices[0][mask]
     y = indices[1][mask]
     z = indices[2][mask]
-    index_map = np.array([x, y, z], dtype=np.int32)
+
+    index_map = np.array([x, y, z], dtype=np.int_)
+
     return index_map.transpose()
 
 
@@ -346,63 +348,73 @@ def index_map_sphere_scale_NU(
     return arr.transpose()
 
 
-def index_map_move_and_clip(
-    index_map_: np.ndarray,
-    move_to: tuple[int, int, int] = [0, 0, 0],
-    grid_size: tuple[int, int, int] = None,
-):
-    index_map = index_map_.copy()
-    index_map += np.int_(move_to)
-    if grid_size:
-        index_map = np.clip(index_map, [0, 0, 0], grid_size - np.array([1, 1, 1]))
-        index_map = np.unique(index_map, axis=0)
-    return index_map
-
-
-def get_values_by_index_map(
-    array, index_map_, origin, return_list=False, dtype=np.float64
-):
-    """
-    Filters the values of a 3D NumPy array based on an index map.
-        numpy.ndarray: A 1D array containing the filtered values.
-    """
-    # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
-    index_map = index_map_.copy()
-    index_map += np.array(origin, dtype=np.int32)
-    # array = np.array(array, dtype=np.int32)
-    index_map = np.unique(
-        np.clip(
-            index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]), dtype=np.int32
-        ),
-        axis=0,
-    )
-    # print(f"index_map in get_value function: {index_map}")
-    indices = tuple(np.array(index_map).T)
-
-    # Extract the elements using advanced indexing
-    filtered_values = np.array(array[indices], dtype=dtype)
-    # print(origin, filtered_values)
-    # print(f"filtered values: {filtered_values}")
-
-    if return_list:
-        return filtered_values.tolist()
+def clip_indices_to_box(
+    array: np.ndarray[np.int_], bbox: cg.Box | tuple[tuple[float]]
+) -> np.ndarray:
+    if not isinstance(bbox, cg.Box):
+        a_min, a_max = bbox
     else:
-        return filtered_values
+        a_min, a_max = bbox.diagonal
+        # cast to lists
+        a_min = list(a_min)
+        a_max = list(a_max)
+
+    clipped = np.clip(array, a_min=a_min, a_max=a_max).round().astype(np.int_)
+    return np.unique(clipped, axis=0)
 
 
-def set_value_by_index_map(array, index_map_, origin, value=1):
+def get_indices_from_map_and_origin(
+    index_map: np.ndarray[np.int_],
+    origin: tuple[int, int, int] = (0, 0, 0),
+    clipping_box: cg.Box | tuple[tuple[float]] = None,
+):
+    indices = index_map + np.array(origin, dtype=np.int_)
+    if clipping_box:
+        indices = clip_indices_to_box(index_map, clipping_box)
+    return indices
+
+
+def get_localized_index_map(
+    index_map: np.ndarray, origin: tuple[int], clipping_box: cg.Box, value=1
+):
+    indices = get_indices_from_map_and_origin(
+        index_map, origin, clipping_box=clipping_box
+    )
+
+    array = np.zeroes(clipping_box.dimensions, dtype=np.int_)
+
+    array[indices] = value
+    return array
+
+
+def get_values_by_index_map_and_origin(
+    array: np.ndarray,
+    index_map: np.ndarray[np.int_],
+    origin: tuple[int, int, int],
+    clipping_box: cg.Box = None,
+):
     """
     Filters the values of a 3D NumPy array based on an index map.
         numpy.ndarray: A 1D array containing the filtered values.
     """
-    # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
-    index_map = index_map_.copy()
-    index_map += np.array(origin, dtype=np.int32)
-    index_map = np.unique(
-        (np.clip(index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]))), axis=0
+    indices = get_indices_from_map_and_origin(
+        index_map, origin, clipping_box=clipping_box
     )
-    indices = tuple(np.array(index_map).T)
-    # Extract the elements using  indexing
+
+    return array[indices]
+
+
+def set_value_by_index_map(
+    array: np.ndarray,
+    index_map: np.ndarray,
+    origin: tuple[int, int, int] = (0, 0, 0),
+    value=1,
+):
+    """
+    Filters the values of a 3D NumPy array based on an index map.
+        numpy.ndarray: A 1D array containing the filtered values.
+    """
+    indices = get_indices_from_map_and_origin(index_map, origin=None)
     array[indices] = value
     return array
 
