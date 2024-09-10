@@ -1,12 +1,13 @@
+import compas.geometry as cg
 import numpy as np
-import numpy.typing as npt
 
 from bdm_voxel_builder.grid import DiffusiveGrid
+from bdm_voxel_builder.helpers import get_mask_zone_xxyyzz
 
 
 def diffuse_diffusive_grid(
     grid: DiffusiveGrid,
-    emmission_array: npt.NDArray | list = None,
+    emmission_array: np.ndarray | list = None,
     blocking_grids: DiffusiveGrid | list[DiffusiveGrid] = None,
     gravity_shift_bool: bool = False,
     diffuse_bool: bool = True,
@@ -168,3 +169,14 @@ def get_random_index_in_zone_xxyy_on_Z_level(
     z = ground_level + 1
 
     return np.array([x, y, z])
+
+
+def make_ground_mockup(clipping_box=cg.Box):
+    a, b, c = (round(v) for v in clipping_box.dimensions)
+
+    base_layer = np.array([a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4], dtype=np.int_)
+    mask = get_mask_zone_xxyyzz((a, b, c), base_layer, return_bool=True)
+
+    mockup_ground = np.zeros((a, b, c))
+    mockup_ground[mask] = 1
+    return mockup_ground

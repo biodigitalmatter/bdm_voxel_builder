@@ -6,6 +6,7 @@ from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers.array import (
@@ -13,26 +14,7 @@ from bdm_voxel_builder.helpers.array import (
     get_surrounding_offset_region,
     get_values_by_index_map,
     index_map_sphere,
-    set_value_by_index_map,
 )
-
-
-def make_ground_mockup(grid_size):
-    a, b, c = grid_size
-    box_1 = [10, 25, 10, 40, 1, 4]
-    box_2 = [15, 20, 15, 18, 1, 40]
-    box_3 = [0, 12, 0, 10, 4, 5]
-    box_4 = [0, 18, 0, 15, 15, 40]
-
-    base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4]
-    base_layer = np.array(base_layer, dtype=np.int32)
-    mockup_ground = np.zeros(grid_size)
-    # ground_zones = [box_1, box_2, box_3, box_4, base_layer]
-    ground_zones = [base_layer]
-    for zone in ground_zones:
-        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
-        mockup_ground[mask] = 1
-    return mockup_ground
 
 
 @dataclass

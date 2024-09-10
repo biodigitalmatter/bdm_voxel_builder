@@ -132,10 +132,6 @@ def pointcloud_to_grid_array(
     return grid_array.astype(dtype)
 
 
-def gyroid_array(grid_size, thickness=1, scale=1):
-    x, y, z = np.indices(grid_size) * scale
-
-
 def gyroid_array(grid_size, scale=1, thickness_out=1, thickness_in=0):
     x, y, z = np.indices(grid_size) * scale
 
