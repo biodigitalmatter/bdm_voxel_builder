@@ -347,6 +347,16 @@ def index_map_move_and_clip(
     return index_map
 
 
+def clip_index_map(
+    index_map_: np.ndarray,
+    bounds: tuple[int, int, int] = None,
+):
+    index_map = index_map_.copy()
+    index_map = np.clip(index_map, [0, 0, 0], bounds - np.array([1, 1, 1]))
+    index_map = np.unique(index_map, axis=0)
+    return index_map
+
+
 def get_values_by_index_map(
     array, index_map_, origin, return_list=False, dtype=np.float64
 ):
@@ -368,14 +378,14 @@ def get_values_by_index_map(
     indices = tuple(np.array(index_map).T)
 
     # Extract the elements using advanced indexing
-    filtered_values = np.array(array[indices], dtype=dtype)
-    # print(origin, filtered_values)
-    # print(f"filtered values: {filtered_values}")
+    values = np.array(array[indices], dtype=dtype)
+    # print(origin, values)
+    # print(f"filtered values: {values}")
 
     if return_list:
-        return filtered_values.tolist()
+        return values.tolist()
     else:
-        return filtered_values
+        return values
 
 
 def set_value_by_index_map(array, index_map_, origin=None, value=1):
@@ -398,8 +408,8 @@ def set_value_by_index_map(array, index_map_, origin=None, value=1):
 
 
 def random_choice_index_from_best_n_old(list_array, n, print_=False):
-    """double random choice to to avoid only finding the index of the selected
-    if equals"""
+    """double random choice to avoid finding only the index of the selected
+    if tie"""
     array = list_array
     a = np.sort(array)
     best_of = a[(len(array) - n) :]

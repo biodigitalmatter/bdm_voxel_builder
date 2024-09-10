@@ -24,7 +24,7 @@ from bdm_voxel_builder.helpers import (
     index_map_sphere,
     random_choice_index_from_best_n,
 )
-from bdm_voxel_builder.helpers.array import mask_index_map_by_nonzero
+from bdm_voxel_builder.helpers.array import mask_index_map_by_nonzero, clip_index_map
 from bdm_voxel_builder.helpers.geometry import (
     transfrom_index_map_to_plane,
     translate_index_map,
@@ -105,8 +105,7 @@ class Agent:
         self.last_move_vector = []
         self.move_turn_degree = None
 
-        self._normal_vector = Vector(0, 0, -1)
-        self._normal_vector = Vector(0, 0, -1)
+        self._normal_vector = Vector(0, 0, 1)
 
     @property
     def pose(self):
@@ -170,10 +169,6 @@ class Agent:
         if not isinstance(value, (float | int)):
             raise ValueError("Chance must be a number")
         self._die_chance = value
-
-    @property
-    def normal_vector(self):
-        return self.calculate_normal_vector()
 
     @property
     def normal_vector(self):
@@ -1439,7 +1434,10 @@ class Agent:
             new_origin = self.pose
         if not normal:
             normal = self.normal_vector
-        return transfrom_index_map_to_plane(index_map, new_origin, normal)
+        transformed_map = transfrom_index_map_to_plane(index_map, new_origin, normal)
+        bounds = self.space_grid.grid_size
+        clipped_map = clip_index_map(transformed_map, bounds)
+        return clipped_map
 
     def orient_index_maps(self, index_maps, new_origins=None, normals=None):
         """transforms shape maps
@@ -1459,14 +1457,10 @@ class Agent:
         return maps
 
     def orient_move_shape_map(self):
-        normal_vector = self.normal_vector
-        normal_vector.invert()
-        return self.orient_index_map(self.move_shape_map, normal=normal_vector)
+        return self.orient_index_map(self.move_shape_map)
 
     def orient_build_shape_map(self):
-        normal_vector = self.normal_vector
-        normal_vector.invert()
-        return self.orient_index_map(self.build_shape_map, normal=normal_vector)
+        return self.orient_index_map(self.build_shape_map)
 
     def orient_sense_range_map(self):
         return self.orient_index_map(self.sense_range_map)
@@ -1478,7 +1472,7 @@ class Agent:
         return self.orient_index_map(self.inplane_map)
 
     def get_normal_angle(self):
-        vector = self.normal_vector
-        angle = vector.angle(Vector.Zaxis(), degrees=True)
+        v = self.normal_vector
+        angle = v.angle(Vector.Zaxis(), degrees=True)
         self._normal_angle = angle
         return angle

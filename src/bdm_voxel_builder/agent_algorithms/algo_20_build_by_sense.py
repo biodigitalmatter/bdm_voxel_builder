@@ -19,8 +19,6 @@ from bdm_voxel_builder.helpers.array import (
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 from compas.colors import Color
 
-import_scan = False
-
 
 def make_ground_mockup(grid_size):
     a, b, c = grid_size
@@ -59,6 +57,8 @@ class Algo20_Build(AgentAlgorithm):
 
     seed_iterations: int = 1
 
+    import_scan = True
+
     # directory import
     dir_scan_import = REPO_DIR / "data/live/build_grid/01_scanned"
     dir_scan_import_npy = REPO_DIR / "data/live/build_grid/01_scanned/npy"
@@ -69,28 +69,34 @@ class Algo20_Build(AgentAlgorithm):
 
     walk_region_thickness = 1
 
-    max_build_angle = 90  # TEST
+    max_build_angle = 60  # TEST
 
     # global agent settings
+    build_random_factor = 1.2
     # topology gains
-    topology_gain_inplane = 0.9
-    topology_gain_edge = 0.9
+    topology_gain_inplane = 0
+    topology_gain_edge = 0
 
     # topology sensor values
-    d_wall_inplane = 0.75
-    d_wall_max_depth = 0.9
-    d_min_ridge_depth = 0.1
+    max_shell_thickness = 8
+    shell_planarity_max_fill = 0.75
+    shell_thickness_max_fill = 0.6
+    d_min_ridge_depth = 0
     inplane_radius, inplane_h, inplane_z_lift = [3, 2, -3]
-    depth_radius, depth_h, depth_z_lift = [1, 5, -6]
+    depth_radius, depth_h, depth_z_lift = [
+        1,
+        max_shell_thickness * 2,
+        (max_shell_thickness * -2) - 1,
+    ]
 
     # agent type settings
     agent_type_A = {
-        "build_probability": 0.7,
         "walk_radius": 4,
         "min_walk_radius": 0,
         "build_radius": 3,
-        "build_h": 2,
-        "build_random_factor": 0.1,
+        "build_h": 3,
+        "build_random_factor": build_random_factor,
+        "build_map_params": [3, 6, -2],
         "inactive_step_count_limit": None,
         "reset_after_build": True,
         "move_mod_z": 0.2,
@@ -134,12 +140,12 @@ class Algo20_Build(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(210, 220, 230),
         )
-        if import_scan:
+        if self.import_scan:
             file_path = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
             loaded_grid = Grid.from_npy(file_path).array
             loaded_grid = np.array(
                 loaded_grid, dtype=np.float64
-            )  # TODO set dtype in algo_11_a_import_scan.py  # noqa: E501
+            )  # TODO set dtype in algo_11_a_self.import_scan.py  # noqa: E501
 
             # the imported array is already cropped to the BBOX of interest
 
@@ -186,16 +192,16 @@ class Algo20_Build(AgentAlgorithm):
             flip_colors=True,
             decay_ratio=1 / 10000,
         )
-        sense_maps = DiffusiveGrid(
-            name="sense_maps",
+        sense_maps_grid = DiffusiveGrid(
+            name="sense_maps_grid",
             grid_size=self.grid_size,
-            color=Color.from_rgb255(0, 125, 225),
+            color=Color.from_rgb255(200, 195, 0),
             flip_colors=True,
         )
-        move_map = DiffusiveGrid(
-            name="move_map",
+        move_map_grid = DiffusiveGrid(
+            name="move_map_grid",
             grid_size=self.grid_size,
-            color=Color.from_rgb255(0, 125, 225),
+            color=Color.from_rgb255(180, 180, 195),
             flip_colors=True,
         )
 
@@ -213,8 +219,8 @@ class Algo20_Build(AgentAlgorithm):
             "density": density,
             "follow_grid": follow_grid,
             "scan": scan,
-            "sense_maps": sense_maps,
-            "move_map": move_map,
+            "sense_maps_grid": sense_maps_grid,
+            "move_map_grid": move_map_grid,
         }
         return grids
 
@@ -251,7 +257,6 @@ class Algo20_Build(AgentAlgorithm):
                 if u <= i / self.agent_count < v:
                     d = self.agent_types[j]
             agent.id = i
-            agent.build_probability = d["build_probability"]
             agent.walk_radius = d["walk_radius"]
             agent.min_walk_radius = d["min_walk_radius"]
             agent.build_radius = d["build_radius"]
@@ -360,8 +365,8 @@ class Algo20_Build(AgentAlgorithm):
         density = state.grids["density"]
         built_centroids = state.grids["built_centroids"]
         ground = state.grids["ground"]
-        sense_maps = state.grids["sense_maps"]
-        move_map = state.grids["move_map"]
+        sense_maps_grid = state.grids["sense_maps_grid"]
+        move_map_grid = state.grids["move_map_grid"]
 
         x, y, z = agent.pose
 
@@ -381,14 +386,14 @@ class Algo20_Build(AgentAlgorithm):
             build_map,
             value=self.print_dot_counter,
         )
-        move_map.array = set_value_by_index_map(
-            move_map.array, agent.orient_move_shape_map()
+        move_map_grid.array = set_value_by_index_map(
+            move_map_grid.array, agent.orient_sense_range_map()
         )
-        sense_maps.array = set_value_by_index_map(
-            sense_maps.array, agent.orient_inplane_map()
+        sense_maps_grid.array = set_value_by_index_map(
+            sense_maps_grid.array, agent.orient_inplane_map()
         )
-        sense_maps.array = set_value_by_index_map(
-            sense_maps.array, agent.orient_depth_map()
+        sense_maps_grid.array = set_value_by_index_map(
+            sense_maps_grid.array, agent.orient_depth_map()
         )
 
         print(f"built at: {agent.pose}")
@@ -410,7 +415,7 @@ class Algo20_Build(AgentAlgorithm):
             build_probability = 0
         else:
             # RANDOM FACTOR
-            bg_random = (r.random() - 0.5) * agent.build_random_factor
+            bg_random = r.random() * agent.build_random_factor
 
             # NORMAL ANGLE PREFERENCE
             angle1, angle2 = [0, agent.pref_build_normal_max]
@@ -439,24 +444,25 @@ class Algo20_Build(AgentAlgorithm):
             )
             # access topology type
             # topology sensor values
-            d_wall_inplane = self.d_wall_inplane
-            d_wall_max_depth = self.d_wall_max_depth
+            shell_planarity_max_fill = self.shell_planarity_max_fill
+            shell_thickness_max_fill = self.shell_thickness_max_fill
             d_min_ridge_depth = self.d_min_ridge_depth
-            if inplane_density >= d_wall_inplane:  # walking on wall
-                if depth_density > d_wall_max_depth:
+            if inplane_density >= shell_planarity_max_fill:  # walking on wall
+                if depth_density > shell_thickness_max_fill:
                     # too thick wall
                     bg_shell_topology = topology_gain_inplane * -1
                     # print("THICK SHELL")
-                elif depth_density <= d_wall_max_depth:
+                elif depth_density <= shell_thickness_max_fill:
                     # thin wall >> build
                     bg_shell_topology = topology_gain_inplane
                     print("\nTHIN SHELL")
             elif (
-                inplane_density < d_wall_inplane and depth_density >= d_min_ridge_depth
+                inplane_density < shell_planarity_max_fill
+                and depth_density >= d_min_ridge_depth
             ):
                 # being on ridge edge of the shell
                 bg_shell_topology = topology_gain_edge
-                print("\nEDGE")
+                print("\nEDGE ")
             else:
                 bg_shell_topology = 0
 
@@ -500,7 +506,6 @@ class Algo20_Build(AgentAlgorithm):
                     agent.deploy_in_region(self.region_legal_move)
                 else:
                     pass
-
         # MOVE
         # check collision
         collision = agent.check_solid_collision(
