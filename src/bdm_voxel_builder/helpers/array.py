@@ -15,7 +15,7 @@ NB_INDEX_DICT = {
 
 
 def sort_pts_by_values(arr: npt.NDArray, multiply=1):
-    """returns sortedpts, values"""
+    """returns sorted points, values"""
     indices = np.indices(arr.shape)
     pt_location = np.logical_not(arr == 0)
     coordinates = []
@@ -34,10 +34,10 @@ def sort_pts_by_values(arr: npt.NDArray, multiply=1):
 
     # Extract the sorted nested list
 
-    sortedpts = [element[1] for element in sorted_paired_lists]
+    sorted_pts = [element[1] for element in sorted_paired_lists]
     values = [element[0] * multiply for element in sorted_paired_lists]
 
-    return sortedpts, values
+    return sorted_pts, values
 
 
 def create_random_array(shape: int | tuple[int]):
@@ -119,7 +119,7 @@ def make_solid_box_xxyyzz(grid_size, x_min, x_max, y_min, y_max, z_min, z_max):
 
 def get_sub_array(array, offset_radius, center=None, format_values=None):
     """gets sub array around center, in 'offset_radius'
-    format values: returns sum '0', avarage '1', or all_values: 'None'"""
+    format values: returns sum '0', average '1', or all_values: 'None'"""
 
     x, y, z = center
     n = offset_radius
@@ -454,7 +454,7 @@ def clip_indices_to_grid_size(
     index: npt.NDArray | tuple[int], grid_size: tuple[int, int, int]
 ):
     """Clips indices (i, j, k) to grid size"""
-    return_nparray = isinstance(index, np.ndarray)
+    return_array = isinstance(index, np.ndarray)
 
     index = np.asarray(index)
 
@@ -482,7 +482,7 @@ def clip_indices_to_grid_size(
 
     clipped = np.clip(index, a_min=a_min, a_max=a_max)
 
-    if return_nparray:
+    if return_array:
         return clipped
     else:
         return clipped.tolist()

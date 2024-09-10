@@ -89,7 +89,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
         offset = state.grids["offset"]
         diffuse_diffusive_grid(
             offset,
-            emmission_array=scan.array,
+            emission_array=scan.array,
             decay_linear=True,
             decay=False,
             grade=True,

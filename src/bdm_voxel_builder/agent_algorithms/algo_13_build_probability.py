@@ -27,7 +27,7 @@ class Algo13_Build_Prob(AgentAlgorithm):
     probability is not gained, but flat
     build in shape
 
-    multiple agents types act paralell. for example:
+    multiple agents types act parallel. for example:
 
     agent_settings_B = {
         "build_prob_rand_range": [0, 0.2],

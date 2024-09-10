@@ -118,12 +118,7 @@ def pointcloud_to_grid_array(
 
     grid_array = np.zeros(grid_size)
 
-    indices = np.array(pointcloud.points).round().astype(np.int8)
-    print(f"pointcloud bounds: {np.min(indices)}, {np.max(indices)}")
-    # if indices.min() < 0:
-    #     raise ValueError(
-    #         "Pointcloud contains negative values, needs to be transformed to index grid."
-    #     )  # noqa: E501
+    indices = np.array(pointcloud.points).round().astype(np.int_)
 
     for i, j, k in indices:
         if np.max((i, j, k)) >= np.max(grid_size) or np.min((i, j, k)) < 0:
@@ -137,9 +132,8 @@ def gyroid_array(grid_size, scale=1, thickness_out=1, thickness_in=0):
 
     isovalue = np.cos(x) * np.sin(y) + np.cos(y) * np.sin(z) + np.cos(z) * np.sin(z)
     isovalue *= scale
-    gyriod = np.where(isovalue <= thickness_out, 1, 0)
-    # gyriod = np.where(thickness_in <= isovalue <= thickness_out, 1, 0)
-    return gyriod
+    gyroid = np.where(isovalue <= thickness_out, 1, 0)
+    return gyroid
 
 
 def lidinoid_array(grid_size, thickness=1, scale=1):
@@ -161,7 +155,5 @@ def lidinoid_array(grid_size, thickness=1, scale=1):
 
     isovalue = thickness - isovalue
     mask = isovalue >= 0
-    gyriod = np.where(mask is True, 1, 0)
-    # gyriod = np.zeros_like(mask)[mask] = 1
-    # gyriod = np.array(gyriod, dtype=np.int32)
-    return gyriod
+    gyroid = np.where(mask is True, 1, 0)
+    return gyroid

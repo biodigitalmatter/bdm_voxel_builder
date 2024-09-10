@@ -28,28 +28,7 @@ config = Config(
         agent_count=agent_count,
         name=name,
     ),
-    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("pheromon_move")),
+    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("pheromone_move")),
     save_interval=interval,
     visualize_interval=interval,
 )
-
-
-# # test_make_gyriod
-# grid_size = 50
-# iterations = 1
-# agent_count = 1
-# interval = 1
-# name = "make_gyroid"
-
-# config = Config(
-#     iterations=iterations,
-#     grid_size=grid_size,
-#     algo=Make_Gyroid(
-#         agent_count=agent_count,
-#         grid_size=grid_size,
-#         name=name,
-#     ),
-#     visualizer=CompasViewerVisualizer(save_file=True, skip_grids=[]),
-#     save_interval=interval,
-#     visualize_interval=interval,
-# )

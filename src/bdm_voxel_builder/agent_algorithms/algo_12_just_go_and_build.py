@@ -28,7 +28,7 @@ class Algo12_Random_builder(AgentAlgorithm):
     gain random chance
     build in shape
 
-    multiple agents types act paralell
+    multiple agents types act parallel
         build probability
         build radius
         walk radius
@@ -208,7 +208,7 @@ class Algo12_Random_builder(AgentAlgorithm):
 
     def move_agent_simple(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
+        calculate weighted sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
@@ -265,7 +265,7 @@ class Algo12_Random_builder(AgentAlgorithm):
 
     def move_agent(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
+        calculate weighted sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
@@ -273,23 +273,22 @@ class Algo12_Random_builder(AgentAlgorithm):
         move_map_in_place = get_indices_from_map_and_origin(
             agent.move_shape_map, agent.pose, agent.space_grid.grid_size
         )
-        pheromon_grid_move = state.grids["pheromon_grid_move"]
+        pheromone_grid_move = state.grids["pheromone_grid_move"]
         ground = state.grids["ground"]
         design = state.grids["design"]
-        built_volume = state.grids["built_volume"]
-        pheromon_build_flags = state.grids["pheromon_build_flags"]
-        # check solid volume inclusionarray
+        pheromone_build_flags = state.grids["pheromone_build_flags"]
+
         gv = ground.get_value(agent.pose)
         if gv != 0:
             return False
 
         # ph attraction towards design
-        pheromon_grid_map = pheromon_grid_move.get_values_by_index_map(
+        pheromone_grid_map = pheromone_grid_move.get_values_by_index_map(
             agent.move_shape_map, agent.pose
         )
 
         # ph attraction toward build track start
-        build_track_flag_map = pheromon_build_flags.get_values_by_index_map(
+        build_track_flag_map = pheromone_build_flags.get_values_by_index_map(
             agent.move_shape_map, agent.pose
         )
 
@@ -300,7 +299,7 @@ class Algo12_Random_builder(AgentAlgorithm):
         legal_move_mask = legal_move_region_map == 1
 
         # random map
-        map_size = len(pheromon_grid_map)
+        map_size = len(pheromone_grid_map)
         random_map_values = np.random.random(map_size) + 0.5
         # global direction preference
         dir_map = get_indices_from_map_and_origin(
@@ -319,19 +318,19 @@ class Algo12_Random_builder(AgentAlgorithm):
         # outside design boundary - direction toward design
         if density_in_move_map < 0.2:
             random_mod = 1
-            move_values = pheromon_grid_map * 1 + move_z_coordinate * -0
+            move_values = pheromone_grid_map * 1 + move_z_coordinate * -0
 
         # inside design space >> direction down
         else:
             random_mod = 3
             move_z_coordinate *= -1
             random_map_values *= 0.1
-            pheromon_grid_map *= 0
+            pheromone_grid_map *= 0
             build_track_flag_map *= 10
             move_values = (
                 move_z_coordinate
                 + random_map_values
-                + pheromon_grid_map
+                + pheromone_grid_map
                 + build_track_flag_map
             )
 
@@ -348,7 +347,7 @@ class Algo12_Random_builder(AgentAlgorithm):
             random_batch_size=random_mod,
         )
 
-        # doublecheck if in bounds
+        # double check if in bounds
         if any(np.array(agent.pose) < 0) or any(
             np.array(agent.pose) >= np.array(self.grid_size)
         ):

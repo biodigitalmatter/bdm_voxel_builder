@@ -430,7 +430,7 @@ class Agent:
         pad_values=0,
     ):
         """takes sub array around pose, in x/y/z radius optionally offsetted
-        format values: returns sum '0', avarage '1', or entire_array_slice: '2'"""
+        format values: returns sum '0', average '1', or entire_array_slice: '2'"""
         if not isinstance(pose, np.ndarray | list):
             pose = self.pose
 
@@ -659,7 +659,7 @@ class Agent:
         the grid in the index_map is checked:
         1. free of solid array
         2. self collision
-        3. any solid closeby (so agent doesnt fly, if fly false)
+        3. any solid close by (so agent doesn't fly, if fly false)
         """
         # get nb cell indices
         # nb_cells = self.get_nb_indices_6(self.pose)
@@ -719,10 +719,10 @@ class Agent:
 
         return np.asarray(move_options), np.asarray(option_index)
 
-    def move_on_ground_by_ph_cube(
+    def move_on_ground_by_pheromone_cube(
         self,
         ground,
-        pheromon_cube,
+        pheromone_cube,
         grid_size=None,
         fly=None,
         only_bounds=True,
@@ -739,8 +739,8 @@ class Agent:
         exclude = self.get_move_mask_26(
             ground, fly, check_self_collision=check_self_collision
         )
-        pheromon_cube[exclude] = -1
-        choice = np.argmax(pheromon_cube)
+        pheromone_cube[exclude] = -1
+        choice = np.argmax(pheromone_cube)
         # print('pose', self.pose)
         # print('choice:', choice)
         new_pose = cube[choice]
@@ -753,17 +753,18 @@ class Agent:
         self.space_grid.set_grid_value_at_index(self.pose, 1)
         return True
 
-    def move_by_pheromons(
+    def move_by_pheromones(
         self,
         solid_array,
-        pheromon_cube,
+        pheromone_cube,
         grid_size=None,
         fly=None,
         only_bounds=True,
         check_self_collision=False,
         random_batch_size: int = 1,
     ):
-        """move in the direciton of the strongest pheromon - random choice of best three
+        """move in the direction of the strongest pheromone - random choice of
+        best three
         checks invalid moves
         solid grid collision
         self collision
@@ -780,15 +781,15 @@ class Agent:
         exclude = self.get_move_mask_26_of_array(
             solid_array, grid_size, fly, check_self_collision=check_self_collision
         )
-        pheromon_cube[exclude] = -1
+        pheromone_cube[exclude] = -1
 
         # select randomly from the best n value
         if random_batch_size <= 1:
             pass
-            i = np.argmax(pheromon_cube)
+            i = np.argmax(pheromone_cube)
         else:
-            i = random_choice_index_from_best_n(pheromon_cube, random_batch_size)
-        if pheromon_cube[i] == -1:
+            i = random_choice_index_from_best_n(pheromone_cube, random_batch_size)
+        if pheromone_cube[i] == -1:
             return False
 
         # best option
@@ -812,7 +813,9 @@ class Agent:
         move_values,
         random_batch_size: int = 1,
     ):
-        """move in the direction of the strongest pheromone - random choice of best three
+        """move in the direction of the strongest pheromone - random choice of
+        best three
+
         checks invalid moves
         solid grid collision
         self collision
@@ -839,7 +842,7 @@ class Agent:
         return True
 
     def get_direction_cube_values_for_grid_domain(self, grid: Grid, domain, strength=1):
-        # mirrored above domain end and squezed with the domain length
+        # mirrored above domain end and squeezed with the domain length
         # centered at 1
         ph_cube = self.get_grid_nb_values_26(grid, self.pose)
         start, end = domain
@@ -853,7 +856,7 @@ class Agent:
         ph_cube = self.get_grid_nb_values_26(grid, self.pose)
         return ph_cube * strength
 
-    # METHODS TO CALCULATE BUILD PROPABILITIES
+    # METHODS TO CALCULATE BUILD PROBABILITIES
 
     def get_chances_by_density(
         self,
@@ -1282,9 +1285,9 @@ class Agent:
         mod_above_range=-0.1,
         nonzero=True,
     ):
-        surr_map = index_map_sphere(radius)
-        d = self.get_array_density_by_index_map(array, surr_map, nonzero=nonzero)
-        a, b, p = [min_density, max_density, self.build_probability]
+        surrounding_map = index_map_sphere(radius)
+        d = self.get_array_density_by_index_map(array, surrounding_map, nonzero=nonzero)
+        a, b, _ = [min_density, max_density, self.build_probability]
         if d < a:
             return mod_below_range
         elif d < b:

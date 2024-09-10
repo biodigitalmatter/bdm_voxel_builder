@@ -212,7 +212,7 @@ class DiffusiveGrid(Grid):
 
         if proportional:  # proportional
             self.array += self.array * self.emission_factor
-        else:  # absolut
+        else:  # absolute
             self.array = np.where(
                 self.array != 0, self.array + self.emission_factor, self.array
             )
@@ -228,7 +228,7 @@ class DiffusiveGrid(Grid):
                 self.array + external_emission_array * factor,
                 self.array,
             )
-        else:  # absolut
+        else:  # absolute
             self.array = np.where(external_emission_array != 0, factor, self.array)
 
     def block_grids(self, other_grids: list[Grid]):
@@ -252,10 +252,10 @@ class DiffusiveGrid(Grid):
     ):
         self.iteration_counter += 1
         # emission update
-        self.emmission_in()
+        self.emission_in()
         # decay
         self.decay()
         # diffuse
         self.diffuse(diffusion_limit_by_Hirsh, reintroduce_on_the_other_end)
         # emission_out
-        self.emmission_out_update()
+        self.emission_out_update()

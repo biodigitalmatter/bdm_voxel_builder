@@ -28,7 +28,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
     probability is not gained, but flat
     build in shape
 
-    multiple agents types act paralell. for example:
+    multiple agents types act parallel. for example:
 
     agent_settings_B = {
         "build_prob_rand_range": [0, 0.2],
@@ -236,7 +236,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
 
     def calculate_move_values_random__z_based(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
+        calculate weighed sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
@@ -262,7 +262,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         self, agent: Agent, state: Environment
     ):
         """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
+        calculate weighted sum of slices of grids makes the direction_cube
         check and excludes illegal moves by replace values to -1
         move agent
         return True if moved, False if not or in ground
@@ -290,7 +290,6 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         move_values = move_z_coordinate + random_map_values + follow_map
 
         return move_values
-
 
     def build(self, agent: Agent, state: Environment, build_limit=0.5):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""

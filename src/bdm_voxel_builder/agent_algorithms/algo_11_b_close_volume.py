@@ -106,17 +106,6 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         return grids
 
     def update_environment(self, state: Environment):
-        # scan = state.grids["scan"]
-        # solid = state.grids["solid"]
-        # diffuse_diffusive_grid(
-        #     solid,
-        #     emmission_array=scan.array,
-        #     decay_linear=True,
-        #     decay=False,
-        #     grade=True,
-        #     gravity_shift_bool=True,
-        # )
-
         pass
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
