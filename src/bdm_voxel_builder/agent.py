@@ -1415,13 +1415,19 @@ class Agent:
         if len(vectors) != 0:
             average_vector = np.sum(vectors, axis=0) / len(vectors)
             average_vector = Vector(*average_vector)
-            average_vector.unitize()
-            average_vector.invert()
-            self._normal_vector = average_vector
-            return average_vector
+            if average_vector.length != 0:
+                average_vector.unitize()
+                average_vector.invert()
+                self._normal_vector = average_vector
+                return average_vector
+            else:
+                print("zero length vector")
+                self._normal_vector = Vector(0, 0, 1)
+                return self._normal_vector
+
         else:  # bug. originated from somewhere else. I think its fixed
             print(f"empty list error >> use previous normal. pose: {self.pose}")
-            self._normal_vector = self._normal_vector
+            self._normal_vector = self._normal_vector = Vector(0, 0, 1)
             return self._normal_vector
 
     def orient_index_map(self, index_map, new_origin=None, normal=None):

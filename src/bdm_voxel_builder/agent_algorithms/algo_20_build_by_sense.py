@@ -72,7 +72,7 @@ class Algo20_Build(AgentAlgorithm):
     max_build_angle = 60  # TEST
 
     # global agent settings
-    build_random_factor = 1.2
+    build_random_factor = 0.2
     # topology gains
     topology_gain_inplane = 0
     topology_gain_edge = 0
