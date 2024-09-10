@@ -7,10 +7,10 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.helpers.array import (
-    get_mask_zone_xxyyzz,
-    get_values_by_index_map,
+from bdm_voxel_builder.grid import DiffusiveGrid, Grid
+from bdm_voxel_builder.helpers import (
+    get_indices_from_map_and_origin,
+    get_values_by_index_map_and_origin,
     index_map_cylinder,
     index_map_move_and_clip,
     index_map_sphere,
@@ -91,12 +91,24 @@ class Algo12_Random_builder(AgentAlgorithm):
         returns: grids
         """
         iterations = kwargs.get("iterations")
-        ground = DiffusiveGrid(
+        clipping_box = kwargs.get("clipping_box")
+        xform = kwargs.get("xform")
+
+        # CREATE MOCK UP VOLUME
+        mockup_ground = make_ground_mockup(clipping_box)
+
+        ground = Grid.from_numpy(
+            mockup_ground,
+            name="ground",
+            xform=xform,
+            color=Color.from_rgb255(97, 92, 97),
+        )
+        ground = Grid(
             name="ground",
             grid_size=self.grid_size,
             color=Color.from_rgb255(97, 92, 97),
         )
-        agent_space = DiffusiveGrid(
+        agent_space = Grid(
             name="agent_space",
             grid_size=self.grid_size,
             color=Color.from_rgb255(34, 116, 240),
@@ -130,14 +142,8 @@ class Algo12_Random_builder(AgentAlgorithm):
             decay_ratio=1 / 10000,
         )
 
-        # CREATE MOCK UP VOLUME
-        mockup_ground = make_ground_mockup(self.grid_size)
-
-        # imported design TEMP
-        ground.array = mockup_ground
-
         # init legal_move_mask
-        walk_on_array = np.clip(ground.array + built_volume.array, 0, 1)
+        walk_on_array = np.clip(ground.to_numpy() + built_volume.to_numpy(), 0, 1)
         walk_on_array_offset = offset_array_radial(walk_on_array, 2)
         self.region_legal_move = walk_on_array_offset - walk_on_array
 
@@ -401,22 +407,17 @@ class Algo12_Random_builder(AgentAlgorithm):
         - or voxels in 3x3 square
         of the built_volume grid"""
         built = False
-        built_volume = state.grids["built_volume"]
-        built_centroids = state.grids["built_centroids"]
+        built_volume: Grid = state.grids["built_volume"]
+        built_centroids: Grid = state.grids["built_centroids"]
 
         # build
         if agent.build_chance >= agent.build_limit:
-            # get pose
-            x, y, z = agent.pose
-
             # update print dot array
-            built_centroids.array[x, y, z] = 1
+            built_centroids.set_value(agent.pose, 1)
             self.print_dot_counter += 1
 
             # update built_volume_volume_array
-            built_volume.array = set_value_by_index_map(
-                built_volume.array, agent.built_shape_map, agent.pose
-            )
+            built_volume.set_value_by_index_map(agent.built_shape_map, agent.pose, 1)
             built = True
         else:
             built = False
@@ -427,9 +428,9 @@ class Algo12_Random_builder(AgentAlgorithm):
 
     def update_legal_move_region(self, state: Environment, offset_steps=2):
         """returns offsetted shell next to the union of ground and built_volume grids"""
-        ground = state.grids["ground"]
-        built_volume = state.grids["built_volume"]
-        walk_on_array = np.clip(ground.array + built_volume.array, 0, 1)
+        ground: Grid = state.grids["ground"]
+        built_volume: Grid = state.grids["built_volume"]
+        walk_on_array = np.clip(ground.to_numpy() + built_volume.to_numpy(), 0, 1)
         walk_on_array_offset = offset_array_radial(walk_on_array, offset_steps)
         self.region_legal_move = walk_on_array_offset - walk_on_array
 

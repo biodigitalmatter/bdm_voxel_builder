@@ -8,11 +8,11 @@ from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.helpers.array import (
-    get_mask_zone_xxyyzz,
+from bdm_voxel_builder.grid import DiffusiveGrid, Grid
+from bdm_voxel_builder.helpers import (
     get_surrounding_offset_region,
     get_values_by_index_map,
+    get_values_by_index_map_and_origin,
     index_map_sphere,
 )
 
@@ -112,25 +112,36 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         returns: grids
         """
         iterations = kwargs.get("iterations")
-        ground = DiffusiveGrid(
+        xform = kwargs.get("xform")
+
+        # CREATE MOCK UP VOLUME
+        clipping_box = kwargs.get("clipping_box")
+
+        # CREATE MOCK UP VOLUME
+        mockup_ground = make_ground_mockup(clipping_box)
+        ground = Grid.from_numpy(
+            mockup_ground,
             name="ground",
-            grid_size=self.grid_size,
+            xform=xform,
             color=Color.from_rgb255(97, 92, 97),
         )
-        agent_space = DiffusiveGrid(
+        agent_space = Grid(
             name="agent_space",
             grid_size=self.grid_size,
+            xform=xform,
             color=Color.from_rgb255(34, 116, 240),
         )
         track = DiffusiveGrid(
             name="track",
             grid_size=self.grid_size,
+            xform=xform,
             color=Color.from_rgb255(34, 116, 240),
             decay_ratio=1 / 10000,
         )
         built_centroids = DiffusiveGrid(
             name="built_centroids",
             grid_size=self.grid_size,
+            xform=xform,
             color=Color.from_rgb255(252, 25, 0),
             flip_colors=True,
             decay_ratio=1 / 10000,
@@ -139,6 +150,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         built_volume = DiffusiveGrid(
             name="built_volume",
             grid_size=self.grid_size,
+            xform=xform,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
             decay_ratio=1 / 10000,
@@ -146,20 +158,15 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         follow_grid = DiffusiveGrid(
             name="follow_grid",
             grid_size=self.grid_size,
+            xform=xform,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
             decay_ratio=1 / 10000,
         )
 
-        # CREATE MOCK UP VOLUME
-        mockup_ground = make_ground_mockup(self.grid_size)
-
-        # imported design TEMP
-        ground.array = mockup_ground
-
         # init legal_move_mask
         self.region_legal_move = get_surrounding_offset_region(
-            [ground.array], self.walk_region_thickness
+            [ground.to_numpy()], self.walk_region_thickness
         )
 
         # WRAP ENVIRONMENT
@@ -300,26 +307,22 @@ class Algo14_Build_DensRange(AgentAlgorithm):
     def build(self, agent: Agent, state: Environment, build_limit=0.5):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
 
-        built_volume = state.grids["built_volume"]
-        built_centroids = state.grids["built_centroids"]
+        built_volume: Grid = state.grids["built_volume"]
+        built_centroids: Grid = state.grids["built_centroids"]
 
         # build
-        # get pose
-        x, y, z = agent.pose
 
         # update print dot array
-        built_centroids.array[x, y, z] = 1
+        built_centroids.set_value(agent.pose, 1)
         self.print_dot_counter += 1
 
         # update built_volume_volume_array
-        built_volume.array = set_value_by_index_map(
-            built_volume.array, agent.built_shape_map, agent.pose
-        )
+        built_volume.set_value_by_index_map(agent.build_shape_map, agent.pose)
 
         print(f"built at: {agent.pose}")
 
     # ACTION FUNCTION
-    def agent_action(self, agent, state: Environment):
+    def agent_action(self, agent: Agent, state: Environment):
         """
         BUILD
         MOVE
@@ -329,7 +332,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         # BUILD
         if agent.build_by_density:
             mod = agent.modify_limit_in_density_range(
-                array=state.grids["built_volume"].array,
+                array=state.grids["built_volume"].to_numpy(),
                 radius=agent.build_radius,
                 min_density=agent.min_build_density,
                 max_density=agent.max_build_density,
@@ -348,7 +351,10 @@ class Algo14_Build_DensRange(AgentAlgorithm):
 
             # update walk region
             self.region_legal_move = get_surrounding_offset_region(
-                [state.grids["ground"].array, state.grids["built_volume"].array],
+                [
+                    state.grids["ground"].to_numpy(),
+                    state.grids["built_volume"].to_numpy(),
+                ],
                 self.walk_region_thickness,
             )
             # reset if
