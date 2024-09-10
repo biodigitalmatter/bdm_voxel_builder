@@ -1,9 +1,9 @@
 import random as r
 from math import ceil, trunc
 
+import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
-from compas.geometry import Vector
 
 from bdm_voxel_builder.agent_algorithms.common import (
     get_any_free_voxel_above_array,
@@ -31,7 +31,7 @@ class Agent:
 
     def __init__(
         self,
-        pose: npt.NDArray[np.int64] = (0, 0, 0),
+        pose: npt.NDArray[np.int_] = (0, 0, 0),
         compass_array: dict[str, npt.NDArray[np.int8]] = NB_INDEX_DICT,
         ground_grid: Grid = None,
         space_grid: Grid = None,
@@ -39,7 +39,7 @@ class Agent:
         leave_trace: bool = False,
         save_move_history: bool = True,
     ):
-        self._pose = np.array(pose, dtype=np.int64)  # initialize without trace
+        self._pose = np.array(pose, dtype=np.int_)  # initialize without trace
         self.compass_array = compass_array
         self.leave_trace: bool = leave_trace
         self.space_grid = space_grid
@@ -64,7 +64,6 @@ class Agent:
         self.build_radius = 1
         self.move_shape_map = None
         self.built_shape_map = None
-        self._move_map_in_place = None
         self.print_limit_1 = 0.5
         self.print_limit_2 = 0.5
         self.print_limit_3 = 0.5
@@ -104,11 +103,6 @@ class Agent:
             self.space_grid.set_value(new_pose, 1)
 
         self._pose = new_pose
-
-    @property
-    def move_map_in_place(self):
-        self._move_map_in_place = self.get_move_map_in_place()
-        return self._move_map_in_place
 
     @property
     def cube_array(self):
@@ -195,11 +189,38 @@ class Agent:
         return np.asarray(u + m + b)
 
     # INTERACTION WITH GRIDS
-    def get_grid_value_at_pose(self, grid: Grid):
-        x, y, z = self.pose
-        v = grid.array[x, y, z]
+    def get_array_value_at_index(
+        self,
+        array: np.ndarray,
+        index=(0, 0, 0),
+        reintroduce=False,
+        limit_in_bounds=True,
+        round_=False,
+        ceil_=False,
+        eliminate_dec=False,
+    ):
+        if reintroduce:
+            i, j, k = np.mod(index, array.shape)
+        elif limit_in_bounds:
+            a, b, c = array.shape
+            i, j, k = np.clip(index, [0, 0, 0], [a - 1, b - 1, c - 1])
+        else:
+            i, j, k = index
+        try:
+            v = array[i][j][k]
+        except Exception as e:
+            print(e)
+            v = 0
+        if round_:
+            v = round(v)
+        elif ceil_:
+            v = ceil(v)
+        elif eliminate_dec:
+            v = trunc(v)
+
         return v
 
+    # TODO: move to grid class?
     def get_grid_value_at_index(
         self,
         grid: Grid,
@@ -210,60 +231,17 @@ class Agent:
         ceil_=False,
         eliminate_dec=False,
     ):
-        array = grid.array
-        if reintroduce:
-            i, j, k = np.mod(index, array.shape)
-        elif limit_in_bounds:
-            a, b, c = array.shape
-            i, j, k = np.clip(index, [0, 0, 0], [a - 1, b - 1, c - 1])
-        else:
-            i, j, k = index
-        try:
-            v = array[i][j][k]
-        except Exception as e:
-            print(e)
-            v = 0
+        return self.get_array_value_at_index(
+            grid.to_numpy(),
+            index=index,
+            reintroduce=reintroduce,
+            limit_in_bounds=limit_in_bounds,
+            round_=round_,
+            ceil_=ceil_,
+            eliminate_dec=eliminate_dec,
+        )
 
-        if round_:
-            v = round(v)
-        elif ceil_:
-            v = ceil(v)
-        elif eliminate_dec:
-            v = trunc(v)
-
-        return v
-
-    def get_array_value_at_index(
-        self,
-        array,
-        index=(0, 0, 0),
-        reintroduce=False,
-        limit_in_bounds=True,
-        round_=False,
-        ceil_=False,
-        eliminate_dec=False,
-    ):
-        if reintroduce:
-            i, j, k = np.mod(index, array.shape)
-        elif limit_in_bounds:
-            a, b, c = array.shape
-            i, j, k = np.clip(index, [0, 0, 0], [a - 1, b - 1, c - 1])
-        else:
-            i, j, k = index
-        try:
-            v = array[i][j][k]
-        except Exception as e:
-            print(e)
-            v = 0
-        if round_:
-            v = round(v)
-        elif ceil_:
-            v = ceil(v)
-        elif eliminate_dec:
-            v = trunc(v)
-
-        return v
-
+    # TODO: move to grid class?
     def set_array_value_at_index(
         self, value, array, index=(0, 0, 0), reintroduce=False, limit_in_bounds=True
     ):
@@ -489,47 +467,6 @@ class Agent:
 
         return v
 
-    def get_grid_density_in_slice_shape(
-        self, grid: Grid, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False, print_=False
-    ):
-        """returns grid density
-        slice shape = [
-        x_radius = 1,
-        y_radius = 1,
-        z_radius = 0,
-        x_offset = 0,
-        y_offset = 0,
-        z_offset = 0
-        ]
-        *radius: amount of indices in both direction added. r = 1 at i = 0
-        returns array[-1:2]
-        """
-        # get the sum of the values in the slice
-        values = self.get_array_slice_parametric(
-            grid.array,
-            *slice_shape,
-            self.pose,
-            format_values=2,
-        )
-        sum_values = np.sum(values)
-        radiis = slice_shape[:3]
-        slice_volume = 1
-        for x in radiis:
-            slice_volume *= (x + 0.5) * 2
-        if not nonzero:
-            density = sum_values / slice_volume
-        else:
-            density = np.count_nonzero(values) / slice_volume
-        if density > 0 and print_:
-            print(
-                f"slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}"  # noqa: E501
-            )
-        return density
-
-    def get_array_density_in_box(self, array, box, nonzero=False):
-        d = get_array_density_from_zone_xxyyzz(array, self.pose, box, nonzero=True)
-        return d
-
     def get_array_density_in_slice_shape(
         self, array, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False, print_=False
     ):
@@ -568,6 +505,29 @@ class Agent:
                 f"slice_volume: {slice_volume}, density:{density}, n of nonzero = {np.count_nonzero(values)}, sum_values: {sum_values},values:{values}"  # noqa: E501
             )
         return density
+
+    def get_grid_density_in_slice_shape(
+        self, grid: Grid, slice_shape=(1, 1, 0, 0, 0, 1), nonzero=False, print_=False
+    ):
+        """returns grid density
+        slice shape = [
+        x_radius = 1,
+        y_radius = 1,
+        z_radius = 0,
+        x_offset = 0,
+        y_offset = 0,
+        z_offset = 0
+        ]
+        *radius: amount of indices in both direction added. r = 1 at i = 0
+        returns array[-1:2]
+        """
+        return self.get_array_density_in_slice_shape(
+            grid.to_numpy, slice_shape=slice_shape, nonzero=nonzero, print_=print_
+        )
+
+    def get_array_density_in_box(self, array, box, nonzero=False):
+        d = get_array_density_from_zone_xxyyzz(array, self.pose, box, nonzero=True)
+        return d
 
     def get_move_mask_6(self, grid: Grid):
         """return ground directions as bools
@@ -1041,7 +1001,7 @@ class Agent:
     ):
         """gets pheromone v at pose.
         if in limits, returns strength or strength * value"""
-        v = self.get_grid_value_at_pose(diffusive_grid)
+        v = diffusive_grid.get_value(self.pose)
         # build
         if limit1 is None:
             flag = v <= limit2
@@ -1290,12 +1250,12 @@ class Agent:
 
     def limit_move_mask_by_turn_degree(self):
         angle_limit = self.move_turn_degree
-        last_move_v = Vector(self.calculate_last_move_vector())
+        last_move_v = cg.Vector(self.calculate_last_move_vector())
         map = self.move_shape_map
         mask = []
         for i in range(len(map)):
             v = map[i]
-            map_vector = Vector(v)
+            map_vector = cg.Vector(v)
             angle = map_vector.angle(last_move_v, degrees=True)
             if angle > angle_limit:
                 mask.append(False)
@@ -1303,11 +1263,15 @@ class Agent:
                 mask.append(True)
         return np.array(mask, dtype=np.bool)
 
-    def check_solid_collision(self, solid_arrays: list):
+    def check_solid_collision(self, solid_grids: list[Grid]):
         "returns True if collision"
-        array = np.clip(np.sum(solid_arrays, axis=0), 0, 1)
-        v = array[*self._pose]
-        return v != 0
+
+        if len(solid_grids) > 1:
+            grid = solid_grids[0].merged_with(solid_grids[1:])
+        else:
+            grid = solid_grids[0]
+
+        return grid.get_value(self._pose) != 0
 
     def get_move_map_in_place(self):
         map = index_map_move_and_clip(
