@@ -47,7 +47,8 @@ class Agent:
 
     id = 0
     build_h = 2
-    build_random_factor = 0.1
+    build_random_chance = 0.1
+    build_random_gain = 0.6
     pref_build_angle = 20
     pref_build_angle_gain = 0
     max_build_angle = 90

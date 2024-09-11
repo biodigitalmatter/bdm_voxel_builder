@@ -4,11 +4,14 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
-grid_size = [200, 200, 100]
-iterations = 1000
-agent_count = 25
-interval = 200
-name = f"algo_20_agent_types_i{iterations}a{agent_count}"
+grid_size = [250, 200, 100]
+
+# grid_size = [80, 100, 60]
+
+iterations = 3200
+agent_count = 20
+interval = 10
+name = f"algo_20_central_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,

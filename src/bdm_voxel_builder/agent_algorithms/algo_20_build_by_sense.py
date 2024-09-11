@@ -23,17 +23,14 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 
 def make_ground_mockup(grid_size):
     a, b, c = grid_size
-    box_1 = [10, 13, 10, 60, 1, 30]
-    box_2 = [10, 60, 10, 30, 1, 30]
+    box_1 = [a / 2, a / 2 + 3, b / 3, b / 3 + 20, 0, 30]
+    box_1 = np.array(box_1, dtype=np.int32)
 
-    base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4]
-    base_layer = [0, a, 0, b / 2, 0, 3]
-    base_layer_2 = [0, a, b / 2, b, 0, 6]
+    base_layer = [0, a, 0, b, 0, 10]
     base_layer = np.array(base_layer, dtype=np.int32)
-    base_layer_2 = np.array(base_layer_2, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
-    ground_zones = [box_1, box_2, base_layer, base_layer_2]
+    ground_zones = [box_1, base_layer]
     # ground_zones = [base_layer]
     for zone in ground_zones:
         mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
@@ -57,11 +54,12 @@ basic_agent.reset_after_build = True
 basic_agent.inactive_step_count_limit = None
 # sensor settings
 basic_agent.sense_radius = 3
-basic_agent.build_random_factor = 0.1
+basic_agent.build_random_chance = 0.04
+basic_agent.build_random_gain = 10
 basic_agent.pref_build_angle = 25
 basic_agent.pref_build_angle_gain = 0
 basic_agent.max_shell_thickness = 5
-basic_agent.max_build_angle = 90
+basic_agent.max_build_angle = 91
 
 # create shape maps
 basic_agent.move_map = index_map_sphere(
@@ -80,29 +78,31 @@ basic_agent.sense_depth_map = index_map_cylinder(
 # __dict__
 agent_dict_A = basic_agent.__dict__.copy()
 
-# TYPE B
-basic_agent.agent_type_summary = "B random_build_if_vertical"
-# movement settings
-basic_agent.max_build_angle = 10
-basic_agent.walk_radius = 2
-basic_agent.build_random_factor = 0.1
-basic_agent.sense_topology_bool = False
-basic_agent.reset_after_build = True
-agent_dict_B = basic_agent.__dict__.copy()
+# # TYPE B
+# basic_agent.agent_type_summary = "B random_build_if_vertical"
+# # movement settings
+# basic_agent.max_build_angle = 10
+# basic_agent.walk_radius = 2
+# basic_agent.build_random_chance = 0.1
+# basic_agent.sense_topology_bool = False
+# basic_agent.reset_after_build = True
+# agent_dict_B = basic_agent.__dict__.copy()
 
-# TYPE C
-basic_agent.agent_type_summary = "C tower_up"
-# movement settings
-basic_agent.move_mod_z = 0.3
-basic_agent.build_random_factor = 0.1
-basic_agent.sense_topology_bool = False
-basic_agent.reset_after_build = False
-# basic_agent.die_chance = 0.2
-agent_dict_C = basic_agent.__dict__.copy()
+# # TYPE C
+# basic_agent.agent_type_summary = "C tower_up"
+# # movement settings
+# basic_agent.move_mod_z = 0.3
+# basic_agent.build_random_chance = 0.1
+# basic_agent.sense_topology_bool = False
+# basic_agent.reset_after_build = False
+# # basic_agent.die_chance = 0.2
+# agent_dict_C = basic_agent.__dict__.copy()
 
 # dict list
-agent_type_dicts = [agent_dict_A, agent_dict_B, agent_dict_C]
-agent_type_distribution = [12, 1, 1]
+# agent_type_dicts = [agent_dict_A, agent_dict_B, agent_dict_C]
+agent_type_dicts = [agent_dict_A]
+
+agent_type_distribution = [1]
 
 
 @dataclass
@@ -131,7 +131,7 @@ class Algo20_Build(AgentAlgorithm):
     walk_region_thickness = 1
 
     # import scan
-    import_scan = True
+    import_scan = False
     dir_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
 
     def __post_init__(self):
@@ -265,17 +265,17 @@ class Algo20_Build(AgentAlgorithm):
         d = np.array(agent_type_distribution)
         sum_ = np.sum(d)
         d_normalized = d * 1 / sum_
-        print(d_normalized)
+        # print(d_normalized)
         id = 0
         for i, n in enumerate(d_normalized):
             print(i, n)
             type_size = int(n * self.agent_count)
-            print(type_size)
+            # print(type_size)
             for _j in range(type_size):
                 data_dict = agent_type_dicts[i]
-                print("type:", data_dict["agent_type_summary"])
+                # print("type:", data_dict["agent_type_summary"])
                 # create object
-                print("id in the loop", id)
+                # print("id in the loop", id)
                 agent = Agent()
                 agent.__dict__ = data_dict
                 # set grids
@@ -288,8 +288,12 @@ class Algo20_Build(AgentAlgorithm):
                 agents.append(agent)
                 del agent
                 id += 1
-        for agent in agents:
-            print(agent.id, agent.agent_type_summary)
+        # for agent in agents:
+        #     print(agent.id, agent.agent_type_summary)
+
+        print("build_random_chance", agents[0].build_random_chance)
+        print("pref_build_angle_gain", agents[0].pref_build_angle_gain)
+
         return agents
 
     def calculate_move_values_random_and_Z(self, agent: Agent, state: Environment):
@@ -414,13 +418,17 @@ class Algo20_Build(AgentAlgorithm):
         # nozzle_access_condition = agent.check_accessibility_in_cone_divisions(
         #     cone_angle, cone_height, cone_division
         # ) TODO
-        nozzle_access_condition = True
-        build_angle_condition = agent.normal_angle > agent.max_build_angle
-        if not nozzle_access_condition and build_angle_condition:
+        nozzle_access_collision = False
+        print(f"angle: {agent.normal_angle}")
+        overhanging = agent.normal_angle > agent.max_build_angle
+        if nozzle_access_collision or overhanging:
             build_probability = 0
         else:
             # RANDOM FACTOR
-            bp_random = r.random() * agent.build_random_factor
+            if r.random() < agent.build_random_chance:  # noqa: SIM108
+                bp_random = agent.build_random_gain
+            else:
+                bp_random = 0
 
             # NORMAL ANGLE PREFERENCE
             if agent.normal_angle <= agent.pref_build_angle:
@@ -469,7 +477,7 @@ class Algo20_Build(AgentAlgorithm):
                 bp_shell_topology = 0
 
             build_probability = bp_random + bp_angle_factor + bp_shell_topology
-
+        print(f"build_probability:{build_probability}")
         return build_probability
 
     # ACTION FUNCTION
@@ -482,6 +490,9 @@ class Algo20_Build(AgentAlgorithm):
         """
         # BUILD
         build_probability = self.get_agent_build_probability(agent, state)
+        # print(
+        #     f"""\n## agent_{agent.id} - {agent.pose} ##\n{agent.agent_type_summary}\n {agent.normal_vector} ,{agent.normal_angle} degree"""  # noqa: E501
+        # )
         if build_probability > r.random():
             print(
                 f"""\n## agent_{agent.id} - {agent.pose} ##\n{agent.agent_type_summary}\n {agent.normal_vector}"""  # noqa: E501
