@@ -2,6 +2,8 @@ import random as r
 from dataclasses import dataclass
 
 import numpy as np
+from compas.colors import Color
+
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
@@ -17,15 +19,14 @@ from bdm_voxel_builder.helpers.array import (
     set_value_by_index_map,
 )
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
-from compas.colors import Color
 
 
 def make_ground_mockup(grid_size):
     a, b, c = grid_size
-    box_1 = [10, 25, 10, 40, 1, 4]
-    box_2 = [15, 20, 15, 18, 1, 40]
-    box_3 = [0, 12, 0, 10, 4, 5]
-    box_4 = [0, 18, 0, 15, 15, 40]
+    box_1 = [10, 25, 10, 40, 1, 4]  # noqa: F841
+    box_2 = [15, 20, 15, 18, 1, 40]  # noqa: F841
+    box_3 = [0, 12, 0, 10, 4, 5]  # noqa: F841
+    box_4 = [0, 18, 0, 15, 15, 40]  # noqa: F841
 
     base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4]
     base_layer = np.array(base_layer, dtype=np.int32)
@@ -211,24 +212,22 @@ class Algo15_Build(AgentAlgorithm):
         agents: list[Agent] = []
 
         for i in range(self.agent_count):
-            # create object
-            agent = Agent(
-                space_grid=agent_space,
-                track_grid=track,
-                ground_grid=ground_grid,
-                leave_trace=True,
-                save_move_history=True,
-            )
-
-            # deploy agent
-            agent.deploy_in_region(self.region_legal_move)
-
             # agent settings
             div = self.agent_type_dividors + [1]
             for j in range(len(self.agent_types)):
                 u, v = div[j], div[j + 1]
                 if u <= i / self.agent_count < v:
                     d = self.agent_types[j]
+
+            # create object
+            agent = Agent(
+                space_grid=agent_space,
+                track_grid=track,
+                ground_grid=ground_grid,
+            )
+
+            # deploy agent
+            agent.deploy_in_region(self.region_legal_move)
 
             agent.build_probability = d["build_probability"]
             agent.walk_radius = d["walk_radius"]
@@ -248,13 +247,9 @@ class Algo15_Build(AgentAlgorithm):
             agent.sense_radius = d["sense_range_radius"]
 
             # create shape maps
-            agent.move_shape_map = index_map_sphere(
-                agent.walk_radius, agent.min_walk_radius
-            )
-            agent.build_shape_map = index_map_cylinder(
-                agent.build_radius, agent.build_h
-            )
-            agent.sense_range_map = index_map_sphere(agent.sense_radius, 0)
+            agent.move_map = index_map_sphere(agent.walk_radius, agent.min_walk_radius)
+            agent.build_map = index_map_cylinder(agent.build_radius, agent.build_h)
+            agent.sense_map = index_map_sphere(agent.sense_radius, 0)
 
             agents.append(agent)
         return agents
@@ -302,7 +297,7 @@ class Algo15_Build(AgentAlgorithm):
 
         # follow pheromones
         follow_map = get_values_by_index_map(
-            state.grids["follow_grid"].array, agent.move_shape_map, agent.pose
+            state.grids["follow_grid"].array, agent.move_map, agent.pose
         )
 
         # MOVE PREFERENCE SETTINGS
@@ -324,7 +319,7 @@ class Algo15_Build(AgentAlgorithm):
 
         # legal move mask
         filter = get_values_by_index_map(
-            self.region_legal_move, agent.move_shape_map, agent.pose, dtype=np.float64
+            self.region_legal_move, agent.move_map, agent.pose, dtype=np.float64
         )
         legal_move_mask = filter == 1
         return legal_move_mask
@@ -344,17 +339,17 @@ class Algo15_Build(AgentAlgorithm):
         built_centroids.array[x, y, z] = self.print_dot_counter
 
         # orient shape map
-        build_shape_map = agent.orient_build_shape_map()
+        build_map = agent.orient_build_map()
         # update density_volume_array
         density.array = set_value_by_index_map(
             density.array,
-            build_shape_map,
+            build_map,
             value=self.print_dot_counter,
         )
         # # update ground_volume_array
         # ground.array = set_value_by_index_map(
         #     ground.array,
-        #     build_shape_map,
+        #     build_map,
         #     value=self.print_dot_counter,
         # )
 

@@ -6,7 +6,7 @@ import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 from compas.files import PLY
-from compas.geometry import Frame, Plane, Pointcloud, Transformation, Point, Vector
+from compas.geometry import Frame, Plane, Point, Pointcloud, Transformation, Vector
 
 from bdm_voxel_builder.helpers import sort_pts_by_values
 
@@ -119,7 +119,7 @@ def pointcloud_to_grid_array(
 
     grid_array = np.zeros(grid_size)
 
-    indices = np.array(pointcloud.points).round().astype(np.int8)
+    indices = np.array(pointcloud.points).round().astype(np.int_)
 
     for i, j, k in indices:
         if np.max((i, j, k)) >= np.max(grid_size) or np.min((i, j, k)) < 0:
@@ -157,7 +157,7 @@ def transfrom_index_map_to_plane(
     T = Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
-    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int64)
+    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int32)
     return index_map_oriented
 
 
@@ -184,7 +184,7 @@ def transfrom_index_map_to_frame(
     T = Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
-    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int64)
+    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int32)
     return index_map_oriented
 
 
@@ -214,15 +214,11 @@ def translate_index_map(
     T = Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
-    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int64)
+    index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int32)
     return index_map_oriented
 
 
 ### generate array fills by trigonometric functions
-
-
-def gyroid_array(grid_size, thickness=1, scale=1):
-    x, y, z = np.indices(grid_size) * scale
 
 
 def gyroid_array(grid_size, scale=1, thickness_out=1, thickness_in=0):
@@ -254,7 +250,7 @@ def lidinoid_array(grid_size, thickness=1, scale=1):
 
     isovalue = thickness - isovalue
     mask = isovalue >= 0
-    gyriod = np.where(mask == True, 1, 0)
+    gyriod = np.where(mask, 1, 0)
     # gyriod = np.zeros_like(mask)[mask] = 1
     # gyriod = np.array(gyriod, dtype=np.int32)
     return gyriod

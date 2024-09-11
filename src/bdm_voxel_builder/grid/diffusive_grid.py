@@ -103,7 +103,7 @@ class DiffusiveGrid(Grid):
             pass
         else:
             self.array = (
-                np.int64(self.array * self.gradient_resolution)
+                np.int32(self.array * self.gradient_resolution)
                 / self.gradient_resolution
             )
 

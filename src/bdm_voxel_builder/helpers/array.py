@@ -254,7 +254,7 @@ def index_map_box(box_size, box_min_size=None):
     return filtered_index_map
 
 
-def index_map_sphere(radius: float, min_radius: float = None) -> np.ndarray[np.int64]:
+def index_map_sphere(radius: float, min_radius: float = None) -> np.ndarray[np.int32]:
     d = int(np.ceil(radius) * 2) + 1
     x, y, z = np.indices([d, d, d])
     r2 = np.ceil(radius)
@@ -776,16 +776,14 @@ def mask_index_map_by_nonzero(
     array=None, origin: tuple[int, int, int] = None, sense_range_or_radius=None
 ):
     """return nonzero indices in location"""
-    sense_range_map = (
+    sense_map = (
         index_map_sphere(sense_range_or_radius)
         if isinstance(sense_range_or_radius, float | int)
         else sense_range_or_radius.copy()
     )
-    sense_range_map_clipped = index_map_move_and_clip(
-        sense_range_map, origin, array.shape
-    )
-    values = get_values_by_index_map(array, sense_range_map, origin, return_list=False)
+    sense_map_clipped = index_map_move_and_clip(sense_map, origin, array.shape)
+    values = get_values_by_index_map(array, sense_map, origin, return_list=False)
     x = np.argwhere(values != 0)
 
-    filled_surrounding_indices = sense_range_map_clipped[x.reshape([x.size])]
+    filled_surrounding_indices = sense_map_clipped[x.reshape([x.size])]
     return filled_surrounding_indices
