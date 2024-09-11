@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import compas.geometry as cg
+
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm

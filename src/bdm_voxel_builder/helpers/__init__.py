@@ -1,19 +1,16 @@
 # ruff: noqa: F401, F403
 
 from .array import (
-    NB_INDEX_DICT,
     clip_indices_to_grid_size,
     conditional_fill,
     create_random_array,
     crop_array,
     get_array_density_from_zone_xxyyzz,
     get_array_density_using_map,
-    get_cube_array_indices,
     get_localized_map,
     get_mask_zone_xxyyzz,
     get_sub_array,
     get_surrounding_offset_region,
-    get_values_using_map,
     index_map_box,
     index_map_cube,
     index_map_cylinder,
@@ -21,6 +18,7 @@ from .array import (
     make_solid_box_xxyyzz,
     make_solid_box_xxz,
     make_solid_box_z,
+    mask_index_map_by_nonzero,
     offset_array_from_corner,
     offset_array_radial,
     random_choice_index_from_best_n,
@@ -39,6 +37,9 @@ from .geometry import (
     ply_to_compas,
     pointcloud_from_grid_array,
     pointcloud_to_grid_array,
+    transform_index_map_to_frame,
+    transform_index_map_to_plane,
+    translate_index_map,
 )
 from .math import remap, remap_trim
 from .vdb import xform_to_compas, xform_to_vdb

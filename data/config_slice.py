@@ -24,7 +24,7 @@ iterations = 10000
 agent_count = 1
 interval = 1000
 name = f"slicer_f_walk_r_7-1_{iterations}a{agent_count}"
-skip_grids = ("pheromon_grid_move", "agent_space", "pheromon_build_flags")
+skip_grids = ("pheromone_grid_move", "agent_space", "pheromone_build_flags")
 
 config = Config(
     iterations=iterations,

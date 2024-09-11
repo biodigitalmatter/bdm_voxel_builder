@@ -14,7 +14,7 @@ from bdm_voxel_builder.helpers import (
 from bdm_voxel_builder.visualizer.matplotlib import MPLVisualizer
 
 
-def simulate(frame, config: Config = None, sim_state: Environment = None):
+def simulate(frame, config: Config, sim_state: Environment):
     algo = config.algo
     visualizer = config.visualizer
 

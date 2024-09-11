@@ -10,7 +10,6 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
 from bdm_voxel_builder.helpers.file import save_ndarray
-from compas.colors import Color
 
 
 @dataclass
@@ -98,7 +97,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
     def update_environment(self, state: Environment):
         pass
 
-    def setup_agents(self, environment: Environment):
+    def setup_agents(self, state: Environment):
         agents = []
         return agents
 
