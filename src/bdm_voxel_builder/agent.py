@@ -1,4 +1,6 @@
 import random as r
+from copy import copy
+from dataclasses import dataclass
 from math import ceil, trunc
 
 import compas.geometry as cg
@@ -13,7 +15,6 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
-    NB_INDEX_DICT,
     clip_indices_to_grid_size,
     get_array_density_from_zone_xxyyzz,
     get_array_density_using_map,
@@ -25,69 +26,83 @@ from bdm_voxel_builder.helpers import (
     random_choice_index_from_best_n,
 )
 from bdm_voxel_builder.helpers.array import get_localized_map
+from bdm_voxel_builder.helpers.array import clip_index_map, mask_index_map_by_nonzero
+from bdm_voxel_builder.helpers.geometry import transfrom_index_map_to_plane
 
 
+@dataclass
 class Agent:
     """Object based voxel walker"""
 
-    def __init__(
-        self,
-        pose: tuple[int, int, int] = (0, 0, 0),
-        compass_array: dict[str, npt.NDArray[np.int8]] = NB_INDEX_DICT,
-        ground_grid: Grid = None,
-        space_grid: Grid = None,
-        track_grid: Grid = None,
-        leave_trace: bool = False,
-    ):
-        self._pose = np.array(pose, dtype=np.int_)  # initialize without trace
-        self.compass_array = compass_array
-        self.leave_trace: bool = leave_trace
-        self.space_grid = space_grid
-        self.track_grid = track_grid
-        self.ground_grid = ground_grid
-        self.move_history = []
-        self.track_flag = None
-        self.passive_counter = 0
+    initial_pose: npt.NDArray[np.int_] | None = None
+    compass_array = None
+    leave_trace: bool = None
+    space_grid = None
+    track_grid = None
+    ground_grid = None
+    move_history = []
+    save_move_history = True
+    track_flag = None
+    step_counter = 0
+    passive_counter = 0
 
-        self._cube_array = []
-        self._climb_style = ""
-        self._build_chance = 0
-        self._erase_chance = 0
-        self._die_chance = 0
-        self._build_limit = 1
-        self._erase_limit = 1
+    id = 0
+    build_h = 2
+    build_random_factor = 0.1
+    pref_build_angle = 60
+    pref_build_angle_gain = 0.1
+    max_build_angle = 90
 
-        self.walk_radius = 2
-        self.min_walk_radius = 0
-        self.build_radius = 1
-        self.move_shape_map = None
-        self.built_shape_map = None
-        self.print_limit_1 = 0.5
-        self.print_limit_2 = 0.5
-        self.print_limit_3 = 0.5
+    _cube_array = []
+    _climb_style = ""
+    _build_chance = 0
+    _erase_chance = 0
+    _die_chance = 0
+    _build_limit = 1
+    _erase_limit = 1
 
-        self.min_build_density = 0
-        self.max_build_density = 1
-        self.build_limit_mod_by_density = [0.5, -0.5, 0.5]
-        self.build_by_density = False
+    walk_radius = 4
+    min_walk_radius = 0
+    build_radius = 3
+    sense_radius = 5
+    move_map = None
+    build_map = None
+    sense_map = None
+    sense_inplane_map = None
+    sense_depth_map = None
+    print_limit_1 = 0.5
+    print_limit_2 = 0.5
+    print_limit_3 = 0.5
 
-        self.move_mod_z = 0
-        self.move_mod_random = 0.1
-        self.move_mod_follow = 1
+    min_build_density = 0
+    max_build_density = 1
+    build_limit_mod_by_density = [0.5, -0.5, 0.5]
+    build_by_density = False
+    build_by_density_random_factor = 0
+    max_shell_thickness = 5
 
-        self.build_limit = 1
-        self.erase_limit = 1
-        self.reset_after_build = False
-        self.reset_after_erase = False
+    move_mod_z = 0
+    move_mod_random = 0.1
+    move_mod_follow = 1
 
-        self.build_probability = 0.5
-        self.build_prob_rand_range = [0.25, 0.75]
-        self.erase_gain_random_range = [0.25, 0.75]
+    build_limit = 1
+    erase_limit = 1
+    reset_after_build = False
+    reset_after_erase = False
 
-        self.inactive_step_count_limit = None
+    build_probability = 0.5
+    build_prob_rand_range = [0.25, 0.75]
+    erase_gain_random_range = [0.25, 0.75]
 
-        self.last_move_vector = []
-        self.move_turn_degree = None
+    inactive_step_count_limit = None
+
+    last_move_vector = []
+    move_turn_degree = None
+
+    _normal_vector = Vector(0, 0, 1)
+
+    def __post_init__(self):
+        self.pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
 
     @property
     def pose(self):
@@ -147,6 +162,17 @@ class Agent:
             raise ValueError("Chance must be a number")
         self._die_chance = value
 
+    @property
+    def normal_vector(self):
+        """unit vector pointing towards surrounding mass centroid
+        surrounding: sense_map"""
+        return self.calculate_normal_vector()
+
+    @property
+    def normal_angle(self):
+        v = self.get_normal_angle()
+        return v
+
     NB_INDEX_DICT = {
         "up": np.asarray([0, 0, 1]),
         "left": np.asarray([-1, 0, 0]),
@@ -155,6 +181,9 @@ class Agent:
         "front": np.asarray([0, -1, 0]),
         "back": np.asarray([0, 1, 0]),
     }
+
+    def copy(self):
+        return copy(self)
 
     def analyze_relative_position(self, grid: Grid):
         """check if there is sg around the agent
@@ -381,6 +410,39 @@ class Agent:
             pose_2 = np.clip(pose, [0, 0, 0], [a - 1, b - 1, c - 1])
             if np.sum(pose - pose_2) == 0:
                 values.append(array[*pose])
+        if nonzero:
+            density = np.count_nonzero(values) / len(values)
+        else:
+            density = sum(values) / len(values)
+
+        if print_:
+            print(f"grid values:\n{values}\n")
+            print(f"grid_density:{density} in pose:{self.pose}")
+        return density
+
+    def get_array_density_by_index_map(
+        self, array: np.ndarray, index_map, pose=None, print_=False, nonzero=False
+    ):
+        """return clay density"""
+        if not isinstance(pose, np.ndarray | list):
+            pose = self.pose
+
+        values = get_values_by_index_map(array, index_map, pose, return_list=True)
+        if nonzero:
+            density = np.count_nonzero(values) / len(values)
+        else:
+            density = sum(values) / len(values)
+
+        if print_:
+            print(f"grid values:\n{values}\n")
+            print(f"grid_density:{density} in pose:{self.pose}")
+        return density
+
+    def get_array_density_by_oriented_index_map(
+        self, array: np.ndarray, index_map, print_=False, nonzero=False
+    ):
+        """return clay density"""
+        values = get_values_by_index_map(array, index_map, [0, 0, 0], return_list=True)
         if nonzero:
             density = np.count_nonzero(values) / len(values)
         else:
@@ -621,7 +683,7 @@ class Agent:
         exclude_pheromones = np.asarray(exclude)
         return exclude_pheromones
 
-    def filter_move_shape_map(
+    def filter_move_map(
         self,
         solid_array,
         index_map_oriented,
@@ -1309,3 +1371,114 @@ class Agent:
         move_values += follow_map
 
         return move_values
+
+    def get_build_limit_by_density_range(self, array, radius, nonzero):
+        """return build"""
+        # check density
+
+        surr_map = index_map_sphere(radius)
+        d = self.get_array_density_by_index_map(array, surr_map, nonzero=nonzero)
+        if self.build_by_density_random_factor != 0:
+            r_mod = self.build_by_density_random_factor * r.random()
+
+        if self.min_build_density <= d <= self.max_build_density:
+            build_limit = 0 + r_mod
+        else:
+            build_limit = 1 - r_mod
+        return build_limit
+
+    # topology sense methods
+
+    def get_nonzero_map_in_sense_range(self, ground_array=None, radius=None):
+        if not ground_array:
+            array = self.ground_grid.array
+        sense_map = self.sense_map.copy() if not radius else index_map_sphere(radius)
+        filled_surrounding_indices = mask_index_map_by_nonzero(
+            array, self.pose.tolist(), sense_map
+        )
+
+        return filled_surrounding_indices
+
+    def get_filled_vectors_in_sense_map(self, ground_array=None, radius=None):
+        filtered_nonzero_map = self.get_nonzero_map_in_sense_range(ground_array, radius)
+        vectors = []
+        for x, y, z in filtered_nonzero_map:
+            vectors.append(Vector(x, y, z))
+        return vectors
+
+    def calculate_normal_vector(self, ground_array=None, radius=None):
+        """return self.normal_vector, self.normal_vector
+        compas.geometry.Vector"""
+        vectors = self.get_nonzero_map_in_sense_range(ground_array, radius)
+        vectors = self.pose - vectors
+        self.all_vectors = vectors
+        if len(vectors) != 0:
+            average_vector = np.sum(vectors, axis=0) / len(vectors)
+            average_vector = Vector(*average_vector)
+            if average_vector.length != 0:
+                average_vector.unitize()
+                average_vector.invert()
+                self._normal_vector = average_vector
+                return average_vector
+            else:
+                print("zero length vector")
+                self._normal_vector = Vector(0, 0, 1)
+                return self._normal_vector
+
+        else:  # bug. originated from somewhere else. I think its fixed
+            print(f"empty list error >> use previous normal. pose: {self.pose}")
+            self._normal_vector = self._normal_vector = Vector(0, 0, 1)
+            return self._normal_vector
+
+    def orient_index_map(self, index_map, new_origin=None, normal=None):
+        """transforms shape map
+        input:
+        index_maps: list
+        new_origins: None or Point
+        normals: None or Vector"""
+        if not new_origin:
+            new_origin = self.pose
+        if not normal:
+            normal = self.normal_vector
+        transformed_map = transfrom_index_map_to_plane(index_map, new_origin, normal)
+        bounds = self.space_grid.grid_size
+        clipped_map = clip_index_map(transformed_map, bounds)
+        return clipped_map
+
+    def orient_index_maps(self, index_maps, new_origins=None, normals=None):
+        """transforms shape maps
+        input:
+        index_maps: list
+        new_origins: None or list
+        normals: None or list"""
+        maps = []
+        for i in range(len(index_maps)):
+            new_origin = self.pose if not new_origins else new_origins[i]
+            normal = self.normal_vector if not normals else normals[i]
+
+            index_map = index_maps[i]
+
+            transformed_map = self.orient_index_map(index_map, new_origin, normal)
+            maps.append(transformed_map)
+        return maps
+
+    def orient_move_map(self):
+        return self.orient_index_map(self.move_map)
+
+    def orient_build_map(self):
+        return self.orient_index_map(self.build_map)
+
+    def orient_sense_map(self):
+        return self.orient_index_map(self.sense_map)
+
+    def orient_sense_depth_map(self):
+        return self.orient_index_map(self.sense_depth_map)
+
+    def orient_sense_inplane_map(self):
+        return self.orient_index_map(self.sense_inplane_map)
+
+    def get_normal_angle(self):
+        v = self.normal_vector
+        angle = v.angle([0, 0, -1], degrees=True)
+        self._normal_angle = angle
+        return angle

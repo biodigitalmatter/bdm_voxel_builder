@@ -269,9 +269,7 @@ def index_map_box(box_size, box_min_size=None):
     return filtered_index_map
 
 
-def index_map_sphere(
-    radius: float = 1.5, min_radius: float | None = None
-) -> npt.NDArray[np.int_]:
+def index_map_sphere(radius: float, min_radius: float | None= None):
     """
     The index_map_sphere function generates a 3D array of indices that represent
     the coordinates within a sphere of a given radius. Optionally, it can also
@@ -296,23 +294,22 @@ def index_map_sphere(
     return sphere_array
 
 
-def index_map_cylinder(radius=3, h=2, min_radius=None):
+def index_map_cylinder(radius, height, min_radius=0, z_lift=0):
     d = int(np.ceil(radius) * 2) + 1
-    x, y, z = np.indices([d, d, h])
+    x, y, z = np.indices([d, d, height])
+    z += z_lift
     r2 = np.ceil(radius)
     x, y, z = [x - r2, y - r2, z]
     xy_norm = np.linalg.norm([x, y], axis=0)
     # print(l1)
 
-    height_condition = z < h
     radius_condition = xy_norm <= radius
 
     if min_radius:
         radius_min_condition = xy_norm >= min_radius
         mask = np.logical_and(radius_condition, radius_min_condition)
-        mask = np.logical_and(mask, height_condition)
     else:
-        mask = np.logical_and(radius_condition, height_condition)
+        mask = xy_norm <= radius
 
     indices = [x, y, z]
     x = indices[0][mask]
@@ -415,8 +412,8 @@ def set_value_using_map(
 
 
 def random_choice_index_from_best_n_old(list_array, n, print_=False):
-    """double random choice to to avoid only finding the index of the selected
-    if equals"""
+    """double random choice to avoid finding only the index of the selected
+    if tie"""
     array = list_array
     a = np.sort(array)
     best_of = a[(len(array) - n) :]
@@ -777,3 +774,20 @@ def get_surrounding_offset_region(arrays, offset_thickness=1):
     walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)
     offset_region = walk_on_array_offset - walk_on_array
     return offset_region
+
+
+def mask_index_map_by_nonzero(
+    array=None, origin: tuple[int, int, int] = None, sense_range_or_radius=None
+):
+    """return nonzero indices in location"""
+    sense_map = (
+        index_map_sphere(sense_range_or_radius)
+        if isinstance(sense_range_or_radius, float | int)
+        else sense_range_or_radius.copy()
+    )
+    sense_map_clipped = index_map_move_and_clip(sense_map, origin, array.shape)
+    values = get_values_by_index_map(array, sense_map, origin, return_list=False)
+    x = np.argwhere(values != 0)
+
+    filled_surrounding_indices = sense_map_clipped[x.reshape([x.size])]
+    return filled_surrounding_indices
