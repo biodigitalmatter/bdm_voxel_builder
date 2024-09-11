@@ -1,4 +1,5 @@
 # ruff: noqa: F401
+# pyright: reportMissingImports=false
 
 from bdm_voxel_builder.agent_algorithms.algo_10_b_slicer_agents import (
     Algo10b_VoxelSlicer,

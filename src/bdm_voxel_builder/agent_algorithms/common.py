@@ -113,10 +113,16 @@ def get_random_index_in_zone_xxyy_on_Z_level(
 def make_ground_mockup(clipping_box: cg.Box):
     a, b, c = (round(v) for v in clipping_box.dimensions)
 
-    base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0.0, 4.0]
-    base_layer = [round(v) for v in base_layer]
-    mask = get_mask_zone_xxyyzz((a, b, c), base_layer, return_bool=True)
+    box_1 = [10, 13, 10, 60, 1, 30]
+    box_2 = [10, 60, 10, 30, 1, 30]
+
+    base_layer = [round(n) for n in [0, a, 0, b / 2, 0, 3]]
+    base_layer_2 = [round(n) for n in [0, a, b / 2, b, 0, 6]]
 
     mockup_ground = np.zeros((a, b, c))
-    mockup_ground[mask] = 1
+    ground_zones = [box_1, box_2, base_layer, base_layer_2]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz((a, b, c), zone, return_bool=True)
+        mockup_ground[mask] = 1
     return mockup_ground

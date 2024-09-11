@@ -15,27 +15,26 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
+    clip_index_map,
     clip_indices_to_grid_size,
     get_array_density_from_zone_xxyyzz,
     get_array_density_using_map,
-    get_cube_array_indices,
+    get_localized_map,
     get_sub_array,
-    get_values_using_map,
     index_map_cylinder,
     index_map_sphere,
+    mask_index_map_by_nonzero,
     random_choice_index_from_best_n,
+    transform_index_map_to_plane,
 )
-from bdm_voxel_builder.helpers.array import get_localized_map
-from bdm_voxel_builder.helpers.array import clip_index_map, mask_index_map_by_nonzero
-from bdm_voxel_builder.helpers.geometry import transfrom_index_map_to_plane
+from bdm_voxel_builder.helpers.array import get_values_using_map
 
 
 @dataclass
 class Agent:
     """Object based voxel walker"""
 
-    initial_pose: npt.NDArray[np.int_] | None = None
-    compass_array = None
+    initial_pose: tuple[int, int, int] | None = None
     leave_trace: bool = None
     space_grid = None
     track_grid = None
@@ -99,7 +98,7 @@ class Agent:
     last_move_vector = []
     move_turn_degree = None
 
-    _normal_vector = Vector(0, 0, 1)
+    _normal_vector = cg.Vector(0, 0, 1)
 
     def __post_init__(self):
         self.pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
@@ -120,17 +119,6 @@ class Agent:
         self.space_grid.set_value(old_pose, 0)
         self.space_grid.set_value(new_pose, 1)
         self._pose = new_pose
-
-    @property
-    def cube_array(self):
-        self._cube_array = get_cube_array_indices()
-        return self._cube_array
-
-    @cube_array.setter
-    def cube_array(self, value):
-        if not isinstance(value, (list)):
-            raise ValueError("cube must be a list of np arrays.")
-        self._cube_array = value
 
     @property
     def build_chance(self):
@@ -172,15 +160,6 @@ class Agent:
     def normal_angle(self):
         v = self.get_normal_angle()
         return v
-
-    NB_INDEX_DICT = {
-        "up": np.asarray([0, 0, 1]),
-        "left": np.asarray([-1, 0, 0]),
-        "down": np.asarray([0, 0, -1]),
-        "right": np.asarray([1, 0, 0]),
-        "front": np.asarray([0, -1, 0]),
-        "back": np.asarray([0, 1, 0]),
-    }
 
     def copy(self):
         return copy(self)
@@ -410,39 +389,6 @@ class Agent:
             pose_2 = np.clip(pose, [0, 0, 0], [a - 1, b - 1, c - 1])
             if np.sum(pose - pose_2) == 0:
                 values.append(array[*pose])
-        if nonzero:
-            density = np.count_nonzero(values) / len(values)
-        else:
-            density = sum(values) / len(values)
-
-        if print_:
-            print(f"grid values:\n{values}\n")
-            print(f"grid_density:{density} in pose:{self.pose}")
-        return density
-
-    def get_array_density_by_index_map(
-        self, array: np.ndarray, index_map, pose=None, print_=False, nonzero=False
-    ):
-        """return clay density"""
-        if not isinstance(pose, np.ndarray | list):
-            pose = self.pose
-
-        values = get_values_by_index_map(array, index_map, pose, return_list=True)
-        if nonzero:
-            density = np.count_nonzero(values) / len(values)
-        else:
-            density = sum(values) / len(values)
-
-        if print_:
-            print(f"grid values:\n{values}\n")
-            print(f"grid_density:{density} in pose:{self.pose}")
-        return density
-
-    def get_array_density_by_oriented_index_map(
-        self, array: np.ndarray, index_map, print_=False, nonzero=False
-    ):
-        """return clay density"""
-        values = get_values_by_index_map(array, index_map, [0, 0, 0], return_list=True)
         if nonzero:
             density = np.count_nonzero(values) / len(values)
         else:
@@ -755,6 +701,14 @@ class Agent:
                         # exclude.append(False)
 
         return np.asarray(move_options), np.asarray(option_index)
+
+    def get_localized_move_mask(self, array: npt.NDArray[np.float_]):
+        localized_move_map = self.get_localized_move_map()
+        filter = get_values_using_map(array, localized_move_map, self.pose)
+
+        legal_move_mask = filter == 1
+
+        return legal_move_mask
 
     def move_on_ground_by_pheromone_cube(
         self,
@@ -1403,7 +1357,7 @@ class Agent:
         filtered_nonzero_map = self.get_nonzero_map_in_sense_range(ground_array, radius)
         vectors = []
         for x, y, z in filtered_nonzero_map:
-            vectors.append(Vector(x, y, z))
+            vectors.append(cg.Vector(x, y, z))
         return vectors
 
     def calculate_normal_vector(self, ground_array=None, radius=None):
@@ -1414,7 +1368,7 @@ class Agent:
         self.all_vectors = vectors
         if len(vectors) != 0:
             average_vector = np.sum(vectors, axis=0) / len(vectors)
-            average_vector = Vector(*average_vector)
+            average_vector = cg.Vector(*average_vector)
             if average_vector.length != 0:
                 average_vector.unitize()
                 average_vector.invert()
@@ -1422,12 +1376,12 @@ class Agent:
                 return average_vector
             else:
                 print("zero length vector")
-                self._normal_vector = Vector(0, 0, 1)
+                self._normal_vector = cg.Vector(0, 0, 1)
                 return self._normal_vector
 
         else:  # bug. originated from somewhere else. I think its fixed
             print(f"empty list error >> use previous normal. pose: {self.pose}")
-            self._normal_vector = self._normal_vector = Vector(0, 0, 1)
+            self._normal_vector = self._normal_vector = cg.Vector(0, 0, 1)
             return self._normal_vector
 
     def orient_index_map(self, index_map, new_origin=None, normal=None):
@@ -1440,7 +1394,7 @@ class Agent:
             new_origin = self.pose
         if not normal:
             normal = self.normal_vector
-        transformed_map = transfrom_index_map_to_plane(index_map, new_origin, normal)
+        transformed_map = transform_index_map_to_plane(index_map, new_origin, normal)
         bounds = self.space_grid.grid_size
         clipped_map = clip_index_map(transformed_map, bounds)
         return clipped_map

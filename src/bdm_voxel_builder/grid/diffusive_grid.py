@@ -9,7 +9,7 @@ from compas.colors import Color
 from compas.geometry import Box
 
 from bdm_voxel_builder.grid import Grid
-from bdm_voxel_builder.helpers import crop_array, remap
+from bdm_voxel_builder.helpers import crop_array
 
 
 class GravityDir(enum.Enum):
@@ -48,6 +48,7 @@ class DiffusiveGrid(Grid):
             xform=xform,
             color=color,
             grid=grid,
+            flip_colors=flip_colors,
         )
         self.diffusion_ratio = diffusion_ratio
         self.diffusion_random_factor = diffusion_random_factor
@@ -56,29 +57,11 @@ class DiffusiveGrid(Grid):
         self.decay_ratio = decay_ratio
         self.emission_factor = emission_factor
         self.gradient_resolution = gradient_resolution
-        self.flip_colors = flip_colors
         self.emission_array = emission_array
         self.gravity_dir = gravity_dir
         self.gravity_ratio = gravity_ratio
         self.voxel_crop_range = voxel_crop_range
         self.iteration_counter: int = 0
-
-    @property
-    def color_array(self):
-        r, g, b = self.color.rgb
-        array = self.to_numpy()
-        colors = np.copy(array)
-        min_ = np.min(array)
-        max_ = np.max(array)
-        colors = remap(colors, output_domain=[0, 1], input_domain=[min_, max_])
-        if self.flip_colors:
-            colors = 1 - colors
-
-        reds = np.reshape(colors * (r), newshape=array.shape)
-        greens = np.reshape(colors * (g), newshape=array.shape)
-        blues = np.reshape(colors * (b), newshape=array.shape)
-
-        return np.concatenate((reds, greens, blues), axis=3)
 
     def grade(self):
         if self.gradient_resolution == 0:

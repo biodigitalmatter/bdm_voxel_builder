@@ -1,45 +1,22 @@
 import random as r
 from dataclasses import dataclass
 
+import compas.geometry as cg
 import numpy as np
 from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.grid.base import Grid
-from bdm_voxel_builder.helpers.array import (
-    get_mask_zone_xxyyzz,
+from bdm_voxel_builder.grid import DiffusiveGrid, Grid
+from bdm_voxel_builder.helpers import (
+    get_nth_newest_file_in_folder,
     get_surrounding_offset_region,
-    get_values_by_index_map,
     index_map_cylinder,
     index_map_sphere,
-    set_value_by_index_map,
 )
-from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
-
-
-def make_ground_mockup(grid_size):
-    a, b, c = grid_size
-    box_1 = [10, 13, 10, 60, 1, 30]
-    box_2 = [10, 60, 10, 30, 1, 30]
-
-    base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4]
-    base_layer = [0, a, 0, b / 2, 0, 3]
-    base_layer_2 = [0, a, b / 2, b, 0, 6]
-    base_layer = np.array(base_layer, dtype=np.int32)
-    base_layer_2 = np.array(base_layer_2, dtype=np.int32)
-
-    mockup_ground = np.zeros(grid_size)
-    ground_zones = [box_1, box_2, base_layer, base_layer_2]
-    # ground_zones = [base_layer]
-    for zone in ground_zones:
-        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
-        mockup_ground[mask] = 1
-    return mockup_ground
-
 
 # CREATE AGENT TYPES
 
@@ -93,7 +70,7 @@ class Algo20_Build(AgentAlgorithm):
     """
 
     agent_count: int
-    grid_size: int | tuple[int, int, int]
+    clipping_box: cg.Box
     name: str = "algo_20"
     relevant_data_grids: str = "density"
     grid_to_dump: str = "density"
@@ -262,76 +239,6 @@ class Algo20_Build(AgentAlgorithm):
                     agent.deploy_in_region(self.region_legal_move)
                     agents.append(agent)
         return agents
-
-    def calculate_move_values_random_and_Z(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-        move_map_in_place = agent.move_map_in_place
-
-        # random map
-        map_size = len(move_map_in_place)
-        random_map_values = np.random.random(map_size) + 0.5
-
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
-
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
-        move_values = move_z_coordinate + random_map_values  # + follow_map
-        return move_values
-
-    def calculate_move_values_random_and_Z_f(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-        move_map_in_place = agent.move_map_in_place
-
-        # random map
-        random_map_values = np.random.random(len(move_map_in_place)) + 0.5
-
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
-
-        # follow pheromones
-        follow_map = get_values_by_index_map(
-            state.grids["follow_grid"].array, agent.move_map, agent.pose
-        )
-
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
-        follow_map *= agent.move_mod_follow
-
-        move_values = move_z_coordinate + random_map_values + follow_map
-
-        return move_values
-
-    def get_legal_move_mask(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-
-        # legal move mask
-        filter = get_values_by_index_map(
-            self.region_legal_move, agent.move_map, agent.pose, dtype=np.float64
-        )
-        legal_move_mask = filter == 1
-        return legal_move_mask
 
     def build(self, agent: Agent, state: Environment):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""

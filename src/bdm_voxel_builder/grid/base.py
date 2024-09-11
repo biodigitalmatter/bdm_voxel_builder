@@ -11,7 +11,7 @@ import pyopenvdb as vdb
 import pypcd4
 from compas.colors import Color
 
-from bdm_voxel_builder.helpers import get_localized_map
+from bdm_voxel_builder.helpers import get_localized_map, remap
 
 
 class Grid:
@@ -22,6 +22,7 @@ class Grid:
         xform: cg.Transformation | None = None,
         color: Color | None = None,
         grid: vdb.GridBase | None = None,
+        flip_colors: bool = False,
     ):
         self.clipping_box = clipping_box
         self.xform = xform or cg.Transformation()
@@ -29,6 +30,24 @@ class Grid:
 
         self.vdb = grid or vdb.FloatGrid()
         self.name = name or "grid"
+
+        self.flip_colors = flip_colors
+
+    def get_color_array(self):
+        r, g, b = self.color.rgb
+        array = self.to_numpy()
+        colors = np.copy(array)
+        min_ = np.min(array)
+        max_ = np.max(array)
+        colors = remap(colors, output_domain=[0, 1], input_domain=[min_, max_])
+        if self.flip_colors:
+            colors = 1 - colors
+
+        reds = np.reshape(colors * (r), newshape=array.shape)
+        greens = np.reshape(colors * (g), newshape=array.shape)
+        blues = np.reshape(colors * (b), newshape=array.shape)
+
+        return np.concatenate((reds, greens, blues), axis=3)
 
     @property
     def clipping_box(self):

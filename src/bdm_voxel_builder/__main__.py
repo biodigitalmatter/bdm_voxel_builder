@@ -54,8 +54,8 @@ def simulate(frame, config: Config, sim_state: Environment):
     sim_state.iteration_count += 1
 
 
-def _load_config(configfile: pathlib.Path) -> Config:
-    module_spec = importlib.util.spec_from_file_location("config", configfile)
+def _load_config(config_file: pathlib.Path) -> Config:
+    module_spec = importlib.util.spec_from_file_location("config", config_file)
     config_module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(config_module)
 
@@ -64,10 +64,10 @@ def _load_config(configfile: pathlib.Path) -> Config:
 
 @click.command()
 @click.argument(
-    "configfile", type=click.Path(exists=True), default=DATA_DIR / "config.py"
+    "config-file", type=click.Path(exists=True), default=DATA_DIR / "config.py"
 )
-def main(configfile):
-    config: Config = _load_config(configfile)
+def main(config_file):
+    config: Config = _load_config(config_file)
 
     algo = config.algo
     visualizer = config.visualizer

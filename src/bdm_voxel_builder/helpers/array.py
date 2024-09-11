@@ -4,15 +4,6 @@ import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 
-NB_INDEX_DICT = {
-    "up": np.asarray([0, 0, 1]),
-    "left": np.asarray([-1, 0, 0]),
-    "down": np.asarray([0, 0, -1]),
-    "right": np.asarray([1, 0, 0]),
-    "front": np.asarray([0, -1, 0]),
-    "back": np.asarray([0, 1, 0]),
-}
-
 
 def sort_pts_by_values(arr: npt.NDArray, multiply=1):
     """returns sorted points, values"""
@@ -45,28 +36,6 @@ def create_random_array(shape: int | tuple[int]):
         shape = [shape] * 3
 
     return np.random.default_rng().random(shape)
-
-
-def get_cube_array_indices(self_contain=False):
-    """26 nb indices, ordered: top-middle-bottom"""
-    # horizontal
-    f = NB_INDEX_DICT["front"]
-    b = NB_INDEX_DICT["back"]
-    le = NB_INDEX_DICT["left"]
-    r = NB_INDEX_DICT["right"]
-    u = NB_INDEX_DICT["up"]
-    d = NB_INDEX_DICT["down"]
-    # first_story in level:
-    story_1 = [f + le, f, f + r, le, r, b + le, b, b + r]
-    story_0 = [i + d for i in story_1]
-    story_2 = [i + u for i in story_1]
-    if self_contain:
-        nbs_w_corners = (
-            story_2 + [u] + story_1 + [np.asarray([0, 0, 0])] + story_0 + [d]
-        )
-    else:
-        nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
-    return nbs_w_corners
 
 
 def conditional_fill(array, condition="<", value=0.5):
@@ -269,7 +238,7 @@ def index_map_box(box_size, box_min_size=None):
     return filtered_index_map
 
 
-def index_map_sphere(radius: float, min_radius: float | None= None):
+def index_map_sphere(radius: float, min_radius: float | None = None):
     """
     The index_map_sphere function generates a 3D array of indices that represent
     the coordinates within a sphere of a given radius. Optionally, it can also
@@ -785,9 +754,10 @@ def mask_index_map_by_nonzero(
         if isinstance(sense_range_or_radius, float | int)
         else sense_range_or_radius.copy()
     )
-    sense_map_clipped = index_map_move_and_clip(sense_map, origin, array.shape)
-    values = get_values_by_index_map(array, sense_map, origin, return_list=False)
+    values = get_values_using_map(array, sense_map, origin)
+
     x = np.argwhere(values != 0)
 
-    filled_surrounding_indices = sense_map_clipped[x.reshape([x.size])]
+    localized_sense_map = get_localized_map(sense_map, origin)
+    filled_surrounding_indices = localized_sense_map[x.reshape([x.size])]
     return filled_surrounding_indices
