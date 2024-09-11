@@ -7,6 +7,7 @@ from compas.colors import Color
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.grid.base import Grid
@@ -55,7 +56,7 @@ basic_agent.inactive_step_count_limit = None
 # sensor settings
 basic_agent.sense_radius = 3
 basic_agent.build_random_chance = 0.04
-basic_agent.build_random_gain = 10
+basic_agent.build_random_gain = 1
 basic_agent.pref_build_angle = 25
 basic_agent.pref_build_angle_gain = 0
 basic_agent.max_shell_thickness = 5
@@ -207,7 +208,7 @@ class Algo20_Build(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
-            decay_ratio=1 / 10000,
+            decay_ratio=1 / 1000,
         )
         follow_grid = DiffusiveGrid(
             name="follow_grid",
@@ -215,6 +216,7 @@ class Algo20_Build(AgentAlgorithm):
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
             decay_ratio=1 / 10000,
+            gradient_resolution=10000,
         )
         sense_maps_grid = DiffusiveGrid(
             name="sense_maps_grid",
@@ -249,11 +251,13 @@ class Algo20_Build(AgentAlgorithm):
         return grids
 
     def update_environment(self, state: Environment):
-        # grids = state.grids
+        grids = state.grids
         pass
         # grids["centroids"].decay()
-        # grids["built_volume"].decay()
-        # diffuse_diffusive_grid(grids.follow_grid, )
+        grids["built_volume"].decay()
+        diffuse_diffusive_grid(
+            grids["follow_grid"], emmission_array=grids["built_volume"].array
+        )
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
         agent_space = grids["agent"]
@@ -523,7 +527,7 @@ class Algo20_Build(AgentAlgorithm):
         collision = agent.check_solid_collision([state.grids["built_volume"].array])
         # move
         if not collision:
-            move_values = self.calculate_move_values_random_and_Z(agent, state)
+            move_values = self.calculate_move_values_random_and_Z_f(agent, state)
             move_map_in_place = agent.move_map_in_place
 
             legal_move_mask = self.get_legal_move_mask(agent, state)
