@@ -5,10 +5,10 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
 grid_size = [200, 200, 100]
-iterations = 15
-agent_count = 10
+iterations = 1000
+agent_count = 25
 interval = 200
-name = f"algo_20_on_scan_i{iterations}a{agent_count}"
+name = f"algo_20_agent_types_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
@@ -18,9 +18,7 @@ config = Config(
         grid_size=grid_size,
         name=name,
     ),
-    visualizer=CompasViewerVisualizer(
-        save_file=True, skip_grids=("scan", "agent_space")
-    ),
+    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("agent_space")),
     save_interval=interval,
     visualize_interval=interval,
 )

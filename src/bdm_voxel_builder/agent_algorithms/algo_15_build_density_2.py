@@ -51,7 +51,7 @@ class Algo15_Build(AgentAlgorithm):
     agent_count: int
     grid_size: int | tuple[int, int, int]
     name: str = "algo_15"
-    relevant_data_grids: str = "density"
+    relevant_data_grids: str = "built_volume"
     grid_to_dump: str = "built_centroids"
 
     seed_iterations: int = 1
@@ -160,8 +160,8 @@ class Algo15_Build(AgentAlgorithm):
             decay_ratio=1 / 10000,
             decay_linear_value=1 / (iterations * 10),
         )
-        density = DiffusiveGrid(
-            name="density",
+        built_volume = DiffusiveGrid(
+            name="built_volume",
             grid_size=self.grid_size,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
@@ -192,7 +192,7 @@ class Algo15_Build(AgentAlgorithm):
             "ground": ground,
             "track": track,
             "built_centroids": built_centroids,
-            "density": density,
+            "built_volume": built_volume,
             "follow_grid": follow_grid,
         }
         return grids
@@ -201,7 +201,7 @@ class Algo15_Build(AgentAlgorithm):
         # grids = state.grids
         pass
         # grids["built_centroids"].decay()
-        # grids["density"].decay()
+        # grids["built_volume"].decay()
         # diffuse_diffusive_grid(grids.follow_grid, )
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
@@ -329,7 +329,7 @@ class Algo15_Build(AgentAlgorithm):
 
         self.print_dot_counter += 1
 
-        density = state.grids["density"]
+        built_volume = state.grids["built_volume"]
         built_centroids = state.grids["built_centroids"]
         # ground = state.grids["ground"]
 
@@ -340,9 +340,9 @@ class Algo15_Build(AgentAlgorithm):
 
         # orient shape map
         build_map = agent.orient_build_map()
-        # update density_volume_array
-        density.array = set_value_by_index_map(
-            density.array,
+        # update built_volume_array
+        built_volume.array = set_value_by_index_map(
+            built_volume.array,
             build_map,
             value=self.print_dot_counter,
         )
@@ -367,7 +367,7 @@ class Algo15_Build(AgentAlgorithm):
 
         if agent.build_by_density:
             # check density
-            arr = state.grids["density"].array
+            arr = state.grids["built_volume"].array
             build_limit = agent.get_build_limit_by_density_range(
                 arr, self.density_check_radius, nonzero=True
             )
@@ -381,7 +381,7 @@ class Algo15_Build(AgentAlgorithm):
 
             # update walk region
             self.region_legal_move = get_surrounding_offset_region(
-                [state.grids["ground"].array, state.grids["density"].array],
+                [state.grids["ground"].array, state.grids["built_volume"].array],
                 self.walk_region_thickness,
             )
             # reset if
@@ -398,7 +398,7 @@ class Algo15_Build(AgentAlgorithm):
         # MOVE
         # check collision
         collision = agent.check_solid_collision(
-            [state.grids["density"].array, state.grids["ground"].array]
+            [state.grids["built_volume"].array, state.grids["ground"].array]
         )
         # move
         if not collision:

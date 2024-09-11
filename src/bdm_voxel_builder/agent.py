@@ -35,7 +35,7 @@ class Agent:
 
     initial_pose: npt.NDArray[np.int_] | None = None
     compass_array = None
-    leave_trace: bool = None
+    leave_trace: bool = True
     space_grid = None
     track_grid = None
     ground_grid = None
@@ -48,8 +48,8 @@ class Agent:
     id = 0
     build_h = 2
     build_random_factor = 0.1
-    pref_build_angle = 60
-    pref_build_angle_gain = 0.1
+    pref_build_angle = 20
+    pref_build_angle_gain = 0
     max_build_angle = 90
 
     _cube_array = []
@@ -69,9 +69,7 @@ class Agent:
     sense_map = None
     sense_inplane_map = None
     sense_depth_map = None
-    print_limit_1 = 0.5
-    print_limit_2 = 0.5
-    print_limit_3 = 0.5
+    sense_topology_bool = True
 
     min_build_density = 0
     max_build_density = 1
@@ -99,9 +97,11 @@ class Agent:
     move_turn_degree = None
 
     _normal_vector = Vector(0, 0, 1)
+    _pose = None
+    agent_type_summary = "basic"
 
     def __post_init__(self):
-        self.pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
+        self._pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
 
     @property
     def pose(self):
