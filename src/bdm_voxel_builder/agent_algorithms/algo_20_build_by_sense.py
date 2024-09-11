@@ -419,7 +419,6 @@ class Algo20_Build(AgentAlgorithm):
         #     cone_angle, cone_height, cone_division
         # ) TODO
         nozzle_access_collision = False
-        print(f"angle: {agent.normal_angle}")
         overhanging = agent.normal_angle > agent.max_build_angle
         if nozzle_access_collision or overhanging:
             build_probability = 0
@@ -477,7 +476,7 @@ class Algo20_Build(AgentAlgorithm):
                 bp_shell_topology = 0
 
             build_probability = bp_random + bp_angle_factor + bp_shell_topology
-        print(f"build_probability:{build_probability}")
+        # print(f"build_probability:{build_probability}")
         return build_probability
 
     # ACTION FUNCTION
