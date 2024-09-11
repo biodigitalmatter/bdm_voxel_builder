@@ -107,7 +107,7 @@ class TestSetValuesByArray:
 
     def test_set_values_by_array(self, array):
         grid = Grid(name="test_set_values_by_array")
-        grid.set_values_by_array(array)
+        grid.set_values_using_array(array)
 
         assert grid.get_number_of_active_voxels() == 12
         assert grid.get_value((0, 0, 0)) == 1

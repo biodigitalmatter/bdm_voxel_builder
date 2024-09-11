@@ -11,27 +11,24 @@ import pyopenvdb as vdb
 import pypcd4
 from compas.colors import Color
 
-from bdm_voxel_builder.helpers import get_indices_from_map_and_origin
+from bdm_voxel_builder.helpers import get_localized_map
 
 
 class Grid:
     def __init__(
         self,
-        name: str = None,
-        clipping_box: cg.Box = None,
-        xform: cg.Transformation = None,
-        color: Color = None,
-        grid: vdb.GridBase = None,
+        name: str | None = None,
+        clipping_box: cg.Box | None = None,
+        xform: cg.Transformation | None = None,
+        color: Color | None = None,
+        grid: vdb.GridBase | None = None,
     ):
         self.clipping_box = clipping_box
-        self.name = name
         self.xform = xform or cg.Transformation()
         self.color = color or Color.black()
 
         self.vdb = grid or vdb.FloatGrid()
-
-        if self.name:
-            self.vdb.name = self.name
+        self.name = name or "grid"
 
     @property
     def clipping_box(self):
@@ -54,6 +51,19 @@ class Grid:
 
             self._clipping_box = cg.Box.from_diagonal(diagonal)
 
+    @property
+    def name(self) -> str:
+        return self.vdb.name
+
+    @name.setter
+    def name(self, value: str):
+        self.vdb.name = value
+
+    def copy(self, name: str | None = None):
+        new_copy = deepcopy(self)
+        new_copy.name = name or self.name
+        return new_copy
+
     def get_value(self, ijk: tuple[int, int, int]):
         return self.vdb.getConstAccessor().getValue(ijk)
 
@@ -65,7 +75,9 @@ class Grid:
         self.vdb.getAccessor().setValueOn(ijk, value)
 
     def set_values(
-        self, indices: list[tuple[int, int, int]], values: float | np.ndarray[np.float_]
+        self,
+        indices: list[tuple[int, int, int]],
+        values: float | npt.NDArray[np.float_],
     ):
         accessor = self.vdb.getAccessor()
 
@@ -75,13 +87,16 @@ class Grid:
         for index, value in zip(indices, values, strict=True):
             accessor.setValueOn(index, value)
 
-    def set_value_by_index_map(
-        self, index_map: np.ndarray, origin: npt.ArrayLike, value=1
+    def set_value_using_map_and_origin(
+        self,
+        map: np.ndarray,
+        origin: tuple[int, int, int],
+        values: list[float] | float = 1.0,
     ):
-        indices = get_indices_from_map_and_origin(index_map, origin)
-        self.set_values(indices, value)
+        localized_map = get_localized_map(map, origin)
+        self.set_values(localized_map, values)
 
-    def set_values_by_array(self, array: np.ndarray, origin=None):
+    def set_values_using_array(self, array: np.ndarray, origin=None):
         self.vdb.copyFromArray(array=array, ijk=(origin))
 
     def set_values_in_zone_xxyyzz(
@@ -115,10 +130,9 @@ class Grid:
         return cg.Pointcloud(self.get_world_pts())
 
     def merge_with(self, other: Self):
-        if not isinstance(other, Sequence):
-            other = [other]
+        grids = [other] if not isinstance(other, Sequence) else other
 
-        for grid in other:
+        for grid in grids:
             vdb = grid.vdb.deepCopy()
             self.vdb.combine(vdb, lambda a, b: max(a, b))
 
@@ -137,14 +151,18 @@ class Grid:
     @classmethod
     def from_numpy(
         cls,
-        arr: npt.NDArray | os.PathLike,
-        clipping_box: cg.Box = None,
+        array_or_path: npt.NDArray | os.PathLike,
+        clipping_box: cg.Box | None = None,
+        name: str | None = None,
         **kwargs,
     ):
-        if isinstance(arr, os.PathLike):
-            arr = np.load(arr)
+        if isinstance(array_or_path, os.PathLike):
+            loaded_array: npt.NDArray = np.load(array_or_path)
+            array = loaded_array
+        else:
+            array = array_or_path
 
-        indices = np.array(np.nonzero(arr)).transpose()
+        indices = np.array(np.nonzero(array)).transpose()
 
         grid = vdb.FloatGrid()
         accessor = grid.getAccessor()
@@ -153,8 +171,9 @@ class Grid:
             accessor.setValueOn(ijk, 1)
 
         return cls(
-            clipping_box=clipping_box or cg.Box.from_diagonal(([0, 0, 0], arr.shape)),
+            clipping_box=clipping_box or cg.Box.from_diagonal(([0, 0, 0], array.shape)),
             grid=grid,
+            name=name,
             **kwargs,
         )
 

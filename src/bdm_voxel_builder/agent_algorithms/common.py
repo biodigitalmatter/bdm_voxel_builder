@@ -1,68 +1,7 @@
 import compas.geometry as cg
 import numpy as np
 
-from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import get_mask_zone_xxyyzz
-
-
-def diffuse_diffusive_grid(
-    grid: DiffusiveGrid,
-    emission_array: np.ndarray | list = None,
-    blocking_grids: DiffusiveGrid | list[DiffusiveGrid] = None,
-    gravity_shift_bool: bool = False,
-    diffuse_bool: bool = True,
-    decay: bool = True,
-    decay_linear: bool = False,
-    grade=True,
-    n_iterations: int = 1,
-):
-    """
-    DIFFUSE AND DECAY GRIDS
-    optionally multiple iterations
-    diffusion steps:
-
-    loads from emissive_grids
-    diffuse
-    apply gravity shift
-    decay_linear
-    decay_proportional
-    get_blocked_by (one or more grids)
-    apply gradient resolution
-
-    gravity direction: 0:left, 1:right, 2:front, 3:back, 4:down, 5:up"""
-    for _ in range(n_iterations):
-        if isinstance(emission_array, np.ndarray):
-            grid.emission_intake(emission_array, 1, False)
-        elif isinstance(emission_array, list):
-            for i in range(emission_array):
-                grid.emission_intake(emission_array[i], 1, False)
-
-        # diffuse
-        if diffuse_bool:
-            grid.diffuse()
-
-        # gravity
-        if gravity_shift_bool:
-            grid.gravity_shift()
-
-        # decay
-        if decay_linear:
-            grid.decay_linear()
-        elif decay:
-            grid.decay()
-
-        # collision
-
-        if blocking_grids:
-            if isinstance(blocking_grids, list):
-                for blocking_grid in blocking_grids:
-                    blocking_grid.block_grids([grid])
-            else:
-                blocking_grids.block_grids([grid])
-
-        # apply gradient steps
-        if grid.gradient_resolution != 0 and grade:
-            grid.grade()
 
 
 def get_any_voxel_in_region(index_map_array, non_zero=True):
@@ -171,10 +110,11 @@ def get_random_index_in_zone_xxyy_on_Z_level(
     return np.array([x, y, z])
 
 
-def make_ground_mockup(clipping_box=cg.Box):
+def make_ground_mockup(clipping_box: cg.Box):
     a, b, c = (round(v) for v in clipping_box.dimensions)
 
-    base_layer = np.array([a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0, 4], dtype=np.int_)
+    base_layer = [a * 0.35, a * 0.75, b * 0.35, b * 0.65, 0.0, 4.0]
+    base_layer = [round(v) for v in base_layer]
     mask = get_mask_zone_xxyyzz((a, b, c), base_layer, return_bool=True)
 
     mockup_ground = np.zeros((a, b, c))

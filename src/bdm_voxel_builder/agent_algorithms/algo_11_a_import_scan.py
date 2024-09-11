@@ -1,16 +1,14 @@
 from dataclasses import dataclass
 
-import numpy as np
+import compas.geometry as cg
 from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
-from bdm_voxel_builder.helpers.file import save_ndarray
 
 
 @dataclass
@@ -25,7 +23,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
     """
 
     agent_count: int
-    grid_size: int | tuple[int, int, int]
+    clipping_box: cg.Box
     name: str = "algo_11_a_import_scan"
     relevant_data_grids: str = "scan"
     grid_to_dump = "scan"
@@ -43,8 +41,8 @@ class Algo11a_ImportScan(AgentAlgorithm):
 
         Run in __post_init__ since @dataclass creates __init__ method"""
         super().__init__(
+            clipping_box=self.clipping_box,
             agent_count=self.agent_count,
-            grid_size=self.grid_size,
             grid_to_dump=self.grid_to_dump,
             name=self.name,
         )
@@ -57,13 +55,9 @@ class Algo11a_ImportScan(AgentAlgorithm):
         returns: grids
         """
         print("algorithm 11 started")
-        scan = DiffusiveGrid(
-            name="scan",
-            grid_size=self.grid_size,
-        )
         offset = DiffusiveGrid(
             name="offset",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(25, 100, 55),
             gradient_resolution=100,
             decay_ratio=1 / 10,
@@ -71,33 +65,32 @@ class Algo11a_ImportScan(AgentAlgorithm):
         file = get_nth_newest_file_in_folder(
             self.scan_ply_folder_path, self.file_index_to_load
         )
-        imported_grid = Grid.from_ply(file, self.grid_size, name=file.name)
+        imported_grid = Grid.from_ply(
+            file, clipping_box=self.clipping_box, name=file.name
+        )
 
-        print(f"imported file: {file}")
-        save_ndarray(imported_grid.array, note="", folder_path=self.dir_save_scan_npy)
-        imported_grid.save_vdb(self.dir_save_scan)
-        print(f"saved to {self.dir_save_scan}")
-        scan.array = imported_grid.array
-
-        print(f"imported from ply, sum = {np.sum(scan.array)}")
-
-        grids = {"scan": scan, "offset": offset, "imported_grid": imported_grid}
+        grids = {
+            "scan": imported_grid,
+            "offset": offset,
+            "imported_grid": imported_grid,
+        }
         return grids
 
     def update_environment(self, state: Environment):
         scan = state.grids["scan"]
         offset = state.grids["offset"]
-        diffuse_diffusive_grid(
-            offset,
-            emission_array=scan.array,
+
+        assert isinstance(offset, DiffusiveGrid)
+
+        offset.diffuse_diffusive_grid(
+            scan.to_numpy(),
             decay_linear=True,
             decay=False,
             grade=True,
             gravity_shift_bool=True,
         )
-        pass
 
-    def setup_agents(self, grids: dict[str, DiffusiveGrid]):
+    def setup_agents(self, state: Environment):
         agents = []
         return agents
 

@@ -16,14 +16,15 @@ from bdm_voxel_builder.helpers import (
     NB_INDEX_DICT,
     clip_indices_to_grid_size,
     get_array_density_from_zone_xxyyzz,
+    get_array_density_using_map,
     get_cube_array_indices,
-    get_indices_from_map_and_origin,
     get_sub_array,
-    get_values_by_index_map_and_origin,
+    get_values_using_map,
     index_map_cylinder,
     index_map_sphere,
     random_choice_index_from_best_n,
 )
+from bdm_voxel_builder.helpers.array import get_localized_map
 
 
 class Agent:
@@ -31,7 +32,7 @@ class Agent:
 
     def __init__(
         self,
-        pose: npt.NDArray[np.int_] = (0, 0, 0),
+        pose: tuple[int, int, int] = (0, 0, 0),
         compass_array: dict[str, npt.NDArray[np.int8]] = NB_INDEX_DICT,
         ground_grid: Grid = None,
         space_grid: Grid = None,
@@ -390,32 +391,6 @@ class Agent:
             print(f"grid_density:{density} in pose:{self.pose}")
         return density
 
-    def get_array_density_by_index_map(
-        self, array: np.ndarray, index_map, pose=None, print_=False, nonzero=False
-    ):
-        """return clay density"""
-        if not isinstance(pose, np.ndarray | list):
-            pose = self.pose
-
-        indices = get_indices_from_map_and_origin(index_map, pose)
-        values = array[indices]
-        # nb_indices = self.get_nb_indices_26(self.pose)
-        # values = []
-        # for pose in nb_indices:
-        #     a, b, c = array.shape
-        #     pose_2 = np.clip(pose, [0, 0, 0], [a - 1, b - 1, c - 1])
-        #     if np.sum(pose - pose_2) == 0:
-        #         values.append(array[*pose])
-        if nonzero:
-            density = np.count_nonzero(values) / len(values)
-        else:
-            density = sum(values) / len(values)
-
-        if print_:
-            print(f"grid values:\n{values}\n")
-            print(f"grid_density:{density} in pose:{self.pose}")
-        return density
-
     def get_array_slice_parametric(
         self,
         array,
@@ -686,7 +661,7 @@ class Agent:
                 pass
             else:
                 # check self collision
-                indices = get_indices_from_map_and_origin(
+                indices = get_localized_map(
                     agent_size_index_map,
                     nb_pose,
                     clipping_box=self.space_grid.clipping_box,
@@ -701,7 +676,7 @@ class Agent:
                 else:
                     if not fly:
                         # check all nbs
-                        nbs_values = get_values_by_index_map_and_origin(
+                        nbs_values = get_values_using_map(
                             solid_array, agent_size_index_map, nb_pose
                         )
                         if np.sum(nbs_values) == 0:
@@ -1182,7 +1157,7 @@ class Agent:
         self, volume_array, max_density_limit, radius, height, rate=0.5
     ):
         map = index_map_cylinder(radius, height)
-        density_above = self.get_array_density_by_index_map(
+        density_above = get_array_density_using_map(
             volume_array,
             map,
             self._pose + [0, 0, +1],
@@ -1251,14 +1226,14 @@ class Agent:
 
     def get_localized_index_map(
         self,
-        map: np.ndarray[np.int_ | bool],
-        clipping_box: cg.Box | tuple[tuple[float]] = None,
+        map_: npt.NDArray[np.int_],
+        clipping_box: cg.Box | None = None,
     ):
         """Returns indices of the surrounding voxels based on the map.
 
         Formerly known as get_surrounding_indices_using map"""
-        return get_indices_from_map_and_origin(
-            map, self.pose, clipping_box=clipping_box or self.space_grid.clipping_box
+        return get_localized_map(
+            map_, self.pose, clipping_box=clipping_box or self.space_grid.clipping_box
         )
 
     def get_surrounding_values_using_map(
@@ -1286,7 +1261,9 @@ class Agent:
         nonzero=True,
     ):
         surrounding_map = index_map_sphere(radius)
-        d = self.get_array_density_by_index_map(array, surrounding_map, nonzero=nonzero)
+        d = get_array_density_using_map(
+            array, surrounding_map, self.pose, nonzero=nonzero
+        )
         a, b, _ = [min_density, max_density, self.build_probability]
         if d < a:
             return mod_below_range
@@ -1294,3 +1271,41 @@ class Agent:
             return mod_in_range
         else:
             return mod_above_range
+
+    def calculate_move_values_random__z_based(self):
+        """moves agents in a calculated direction
+        calculate weighted sum of slices of grids makes the direction_cube
+        check and excludes illegal moves by replace values to -1
+        move agent
+        return True if moved, False if not or in ground
+        """
+        localized_move_map = self.get_localized_move_map()
+
+        # random weights for map (0-1)
+        random_map_values = np.random.random(size=len(localized_move_map)) + 0.5
+
+        # global direction preference
+        localized_z_component = localized_move_map[:, 2]
+        # made global from the local map here, in case agent.move_shape_map is oriented
+        z_component = localized_z_component.astype(np.float_) - self.pose[2]
+
+        # MOVE PREFERENCE SETTINGS
+        z_component *= self.move_mod_z
+        random_map_values *= self.move_mod_random
+        move_values = z_component + random_map_values  # + follow_map
+        return move_values
+
+    def calculate_move_values_random__z_based__follow(self, follow_grid: Grid):
+        """Generate probability values for the movement index map to control
+        movement.
+
+        Weight add for Z component and follow component.
+        """
+        move_values = self.calculate_move_values_random__z_based()
+
+        follow_map = follow_grid.get_values(self.get_localized_move_map())
+        follow_map *= self.move_mod_follow
+
+        move_values += follow_map
+
+        return move_values

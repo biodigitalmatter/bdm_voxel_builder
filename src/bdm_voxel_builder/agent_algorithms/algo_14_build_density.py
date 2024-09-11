@@ -1,18 +1,18 @@
 import random as r
 from dataclasses import dataclass
 
-import numpy as np
+import compas.geometry as cg
 from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
+from bdm_voxel_builder.agent_algorithms.common import (
+    make_ground_mockup,
+)
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import (
     get_surrounding_offset_region,
-    get_values_by_index_map,
-    get_values_by_index_map_and_origin,
     index_map_sphere,
 )
 
@@ -42,7 +42,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
     """
 
     agent_count: int
-    grid_size: int | tuple[int, int, int]
+    clipping_box: cg.Box
     name: str = "algo_12_random_builder"
     relevant_data_grids: str = "built_volume"
     grid_to_dump: str = "built_volume"
@@ -99,9 +99,10 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         Run in __post_init__ since @dataclass creates __init__ method"""
         super().__init__(
             agent_count=self.agent_count,
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             grid_to_dump=self.grid_to_dump,
             name=self.name,
+            grids_to_decay=["built_centroids", "built_volume"],
         )
 
     def initialization(self, **kwargs):
@@ -111,14 +112,13 @@ class Algo14_Build_DensRange(AgentAlgorithm):
 
         returns: grids
         """
-        iterations = kwargs.get("iterations")
+        iterations = float(kwargs["iterations"])
+
         xform = kwargs.get("xform")
+        assert isinstance(xform, cg.Transformation | None)
 
         # CREATE MOCK UP VOLUME
-        clipping_box = kwargs.get("clipping_box")
-
-        # CREATE MOCK UP VOLUME
-        mockup_ground = make_ground_mockup(clipping_box)
+        mockup_ground = make_ground_mockup(self.clipping_box)
         ground = Grid.from_numpy(
             mockup_ground,
             name="ground",
@@ -127,20 +127,20 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         )
         agent_space = Grid(
             name="agent_space",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             xform=xform,
             color=Color.from_rgb255(34, 116, 240),
         )
         track = DiffusiveGrid(
             name="track",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             xform=xform,
             color=Color.from_rgb255(34, 116, 240),
             decay_ratio=1 / 10000,
         )
         built_centroids = DiffusiveGrid(
             name="built_centroids",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             xform=xform,
             color=Color.from_rgb255(252, 25, 0),
             flip_colors=True,
@@ -149,7 +149,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         )
         built_volume = DiffusiveGrid(
             name="built_volume",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             xform=xform,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
@@ -157,7 +157,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         )
         follow_grid = DiffusiveGrid(
             name="follow_grid",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             xform=xform,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
@@ -180,15 +180,9 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         }
         return grids
 
-    def update_environment(self, state: Environment):
-        grids = state.grids
-        grids["built_centroids"].decay()
-        grids["built_volume"].decay()
-        # diffuse_diffusive_grid(grids.follow_grid, )
-
-    def setup_agents(self, grids: dict[str, DiffusiveGrid]):
-        agent_space = grids["agent"]
-        track = grids["track"]
+    def setup_agents(self, state: Environment):
+        agent_space = state.grids["agent"]
+        track = state.grids["track"]
 
         agents: list[Agent] = []
 
@@ -198,7 +192,6 @@ class Algo14_Build_DensRange(AgentAlgorithm):
                 space_grid=agent_space,
                 track_grid=track,
                 leave_trace=True,
-                save_move_history=True,
             )
 
             # deploy agent
@@ -234,63 +227,6 @@ class Algo14_Build_DensRange(AgentAlgorithm):
             agents.append(agent)
         return agents
 
-    def calculate_move_values_random__z_based(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weighed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-        move_map_in_place = agent.move_map_in_place
-
-        # random map
-        map_size = len(move_map_in_place)
-        random_map_values = np.random.random(map_size) + 0.5
-
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
-
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
-        move_values = move_z_coordinate + random_map_values  # + follow_map
-        return move_values
-
-    def calculate_move_values_random__z_based__follow(
-        self, agent: Agent, state: Environment
-    ):
-        """moves agents in a calculated direction
-        calculate weighted sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-        move_map_in_place = agent.get_localized_move_map()
-
-        # random map
-        random_map_values = np.random.random(len(move_map_in_place)) + 0.5
-
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
-
-        # follow pheromones
-        follow_map = get_values_by_index_map(
-            state.grids["follow_grid"].array, agent.move_shape_map, agent.pose
-        )
-
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
-        follow_map *= agent.move_mod_follow
-
-        move_values = move_z_coordinate + random_map_values + follow_map
-
-        return move_values
-
     def build(self, agent: Agent, state: Environment, build_limit=0.5):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
 
@@ -304,7 +240,7 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         self.print_dot_counter += 1
 
         # update built_volume_volume_array
-        built_volume.set_value_by_index_map(agent.build_shape_map, agent.pose)
+        built_volume.set_value_using_map_and_origin(agent.built_shape_map, agent.pose)
 
         print(f"built at: {agent.pose}")
 
@@ -351,20 +287,17 @@ class Algo14_Build_DensRange(AgentAlgorithm):
         # MOVE
         # check collision
         collision = agent.check_solid_collision(
-            [state.grids["built_volume"].array, state.grids["ground"].array]
+            [state.grids["built_volume"], state.grids["ground"]]
         )
         # move
         if not collision:
-            move_values = self.calculate_move_values_random__z_based(agent, state)
-            move_map_in_place = agent.move_map_in_place
+            move_values = agent.calculate_move_values_random__z_based()
+            localized_move_map = agent.get_localized_move_map()
 
-            legal_move_region_map = get_values_by_index_map_and_origin(
-                self.region_legal_move, agent.move_shape_map, agent.pose
-            )
-            legal_move_mask = legal_move_region_map == 1
+            legal_move_mask = localized_move_map == 1
 
             agent.move_by_index_map(
-                index_map_in_place=move_map_in_place[legal_move_mask],
+                index_map_in_place=localized_move_map[legal_move_mask],
                 move_values=move_values[legal_move_mask],
                 random_batch_size=1,
             )

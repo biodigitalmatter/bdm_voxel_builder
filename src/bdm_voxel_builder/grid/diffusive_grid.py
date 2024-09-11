@@ -1,4 +1,5 @@
 import enum
+from typing import Self
 
 import compas.geometry as cg
 import numpy as np
@@ -25,8 +26,8 @@ class DiffusiveGrid(Grid):
         self,
         name: str,
         clipping_box: Box,
-        xform: cg.Transformation = None,
-        color: Color = None,
+        xform: cg.Transformation | None = None,
+        color: Color | None = None,
         grid: vdb.GridBase = None,
         diffusion_ratio: float = 0.12,
         diffusion_random_factor: float = 0.0,
@@ -36,7 +37,7 @@ class DiffusiveGrid(Grid):
         emission_factor: float = 0.1,
         gradient_resolution: float = 0.0,
         flip_colors: bool = False,
-        emission_array: npt.NDArray = None,
+        emission_array: npt.NDArray | None = None,
         gravity_dir: GravityDir = GravityDir.DOWN,
         gravity_ratio: float = 0.0,
         voxel_crop_range=(0, 1),
@@ -259,3 +260,62 @@ class DiffusiveGrid(Grid):
         self.diffuse(diffusion_limit_by_Hirsh, reintroduce_on_the_other_end)
         # emission_out
         self.emission_out_update()
+
+    def diffuse_diffusive_grid(
+        self,
+        emission_array: npt.NDArray | list[npt.NDArray] | None = None,
+        blocking_grids: Self | list[Self] | None = None,
+        gravity_shift_bool: bool = False,
+        diffuse_bool: bool = True,
+        decay: bool = True,
+        decay_linear: bool = False,
+        grade=True,
+        n_iterations: int = 1,
+    ):
+        """
+        DIFFUSE AND DECAY GRIDS
+        optionally multiple iterations
+        diffusion steps:
+
+        loads from emissive_grids
+        diffuse
+        apply gravity shift
+        decay_linear
+        decay_proportional
+        get_blocked_by (one or more grids)
+        apply gradient resolution
+
+        gravity direction: 0:left, 1:right, 2:front, 3:back, 4:down, 5:up"""
+        for _ in range(n_iterations):
+            if isinstance(emission_array, np.ndarray):
+                self.emission_intake(emission_array, 1, False)
+            elif isinstance(emission_array, list):
+                for i in range(emission_array):
+                    self.emission_intake(emission_array[i], 1, False)
+
+            # diffuse
+            if diffuse_bool:
+                self.diffuse()
+
+            # gravity
+            if gravity_shift_bool:
+                self.gravity_shift()
+
+            # decay
+            if decay_linear:
+                self.decay_linear()
+            elif decay:
+                self.decay()
+
+            # collision
+
+            if blocking_grids:
+                if isinstance(blocking_grids, list):
+                    for blocking_grid in blocking_grids:
+                        blocking_grid.block_grids([self])
+                else:
+                    blocking_grids.block_grids([self])
+
+            # apply gradient steps
+            if self.gradient_resolution != 0 and grade:
+                self.grade()

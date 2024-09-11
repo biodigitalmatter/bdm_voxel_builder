@@ -134,7 +134,7 @@ def get_sub_array(array, offset_radius, center=None, format_values=None):
 
 def get_mask_zone_xxyyzz(
     grid_size: tuple[int, int, int],
-    zone_xxyyzz: tuple[int, int, int, int, int, int],
+    zone_xxyyzz: list[int, int, int, int, int, int],
     return_bool=True,
 ):
     """gets 3D boolean array within zone (including both end)
@@ -154,6 +154,20 @@ def get_mask_zone_xxyyzz(
     if return_bool:
         return mask.astype(np.bool_)
     return mask
+
+
+def get_array_density_using_map(
+    array: npt.NDArray, map_, origin=(0, 0, 0), nonzero=False
+):
+    """return clay density"""
+    values = get_values_using_map(array, map_, origin)
+
+    if nonzero:
+        density = np.count_nonzero(values) / len(values)
+    else:
+        density = sum(values) / len(values)
+
+    return density
 
 
 def get_array_density_from_zone_xxyyzz(
@@ -256,8 +270,8 @@ def index_map_box(box_size, box_min_size=None):
 
 
 def index_map_sphere(
-    radius: float = 1.5, min_radius: float = None
-) -> np.ndarray[np.int_]:
+    radius: float = 1.5, min_radius: float | None = None
+) -> npt.NDArray[np.int_]:
     """
     The index_map_sphere function generates a 3D array of indices that represent
     the coordinates within a sphere of a given radius. Optionally, it can also
@@ -348,7 +362,7 @@ def index_map_sphere_scale_NU(
     return arr.transpose()
 
 
-def clip_indices_to_box(
+def clip_map_to_box(
     array: np.ndarray[np.int_], bbox: cg.Box | tuple[tuple[float]]
 ) -> np.ndarray:
     if not isinstance(bbox, cg.Box):
@@ -363,59 +377,40 @@ def clip_indices_to_box(
     return np.unique(clipped, axis=0)
 
 
-def get_indices_from_map_and_origin(
-    index_map: np.ndarray[np.int_],
-    origin: tuple[int, int, int] = (0, 0, 0),
-    clipping_box: cg.Box | tuple[tuple[float]] = None,
-):
-    indices = index_map + np.array(origin, dtype=np.int_)
-    if clipping_box:
-        indices = clip_indices_to_box(index_map, clipping_box)
-    return indices
-
-
-def get_localized_index_map(
-    index_map: np.ndarray, origin: tuple[int], clipping_box: cg.Box, value=1
-):
-    indices = get_indices_from_map_and_origin(
-        index_map, origin, clipping_box=clipping_box
-    )
-
-    array = np.zeroes(clipping_box.dimensions, dtype=np.int_)
-
-    array[indices] = value
-    return array
-
-
-def get_values_by_index_map_and_origin(
-    array: np.ndarray,
-    index_map: np.ndarray[np.int_],
+def get_localized_map(
+    map_: npt.NDArray,
     origin: tuple[int, int, int],
-    clipping_box: cg.Box = None,
+    clipping_box: cg.Box | tuple[tuple[float]] | None = None,
 ):
-    """
-    Filters the values of a 3D NumPy array based on an index map.
-        numpy.ndarray: A 1D array containing the filtered values.
-    """
-    indices = get_indices_from_map_and_origin(
-        index_map, origin, clipping_box=clipping_box
-    )
-
-    return array[indices]
+    localized_map = map_ + np.array(origin, dtype=np.int_)
+    if clipping_box:
+        localized_map = clip_map_to_box(localized_map, clipping_box)
+    return localized_map
 
 
-def set_value_by_index_map(
+def get_values_using_map(
     array: np.ndarray,
-    index_map: np.ndarray,
-    origin: tuple[int, int, int] = (0, 0, 0),
-    value=1,
+    map: npt.NDArray[np.int_],
+    origin: tuple[int, int, int] | None = None,
+    clipping_box: cg.Box | None = None,
 ):
-    """
-    Filters the values of a 3D NumPy array based on an index map.
-        numpy.ndarray: A 1D array containing the filtered values.
-    """
-    indices = get_indices_from_map_and_origin(index_map, origin=None)
-    array[indices] = value
+    if origin is None:
+        origin = (0, 0, 0)
+    map = get_localized_map(map, origin, clipping_box=clipping_box)
+
+    return array[map]
+
+
+def set_value_using_map(
+    array: np.ndarray,
+    map_: npt.NDArray[np.int_],
+    origin: tuple[int, int, int] = (0, 0, 0),
+    clipping_box: cg.Box | list[tuple[float]] | None = None,
+    value=1.0,
+):
+    localized_map = get_localized_map(map_, origin, clipping_box=clipping_box)
+
+    array[localized_map] = value
     return array
 
 
