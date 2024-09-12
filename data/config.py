@@ -6,12 +6,12 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # setup 2 test
 grid_size = [300, 250, 150]
 
-grid_size = [80, 80, 40]
+grid_size = [120, 120, 100]
 
-iterations = 100
+iterations = 4000
 agent_count = 10
-interval = 10
-name = f"algo_20_test_fab_planes_i{iterations}a{agent_count}"
+interval = 100
+name = f"algo_20_central_follow_built_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,

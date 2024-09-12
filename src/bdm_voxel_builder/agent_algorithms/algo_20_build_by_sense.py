@@ -2,8 +2,8 @@ import os
 import random as r
 from dataclasses import dataclass
 
-from compas import json_dump, json_dumps
 import numpy as np
+from compas import json_dump, json_dumps
 from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
@@ -26,7 +26,7 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_sa
 
 def make_ground_mockup(grid_size):
     a, b, c = grid_size
-    box_1 = [a / 2, a / 2 + 3, b / 3, b / 3 + 20, 0, 30]
+    box_1 = [a / 2, a / 2 + 3, b / 2, b / 2 + 3, 0, 13]
     box_1 = np.array(box_1, dtype=np.int32)
 
     base_layer = [0, a, 0, b, 0, 10]
@@ -48,8 +48,9 @@ basic_agent = Agent()
 basic_agent.agent_type_summary = "A work_on_shell_and_edge"
 # movement settings
 basic_agent.walk_radius = 4
-basic_agent.move_mod_z = 0.08
-basic_agent.move_mod_random = 0.5
+basic_agent.move_mod_z = 0.1
+basic_agent.move_mod_random = 0.6
+basic_agent.move_mod_follow = 1
 # build settings
 basic_agent.build_radius = 3
 basic_agent.build_h = 3
