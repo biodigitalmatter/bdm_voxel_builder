@@ -5,7 +5,7 @@ from math import ceil, trunc
 
 import numpy as np
 import numpy.typing as npt
-from compas.geometry import Vector
+from compas.geometry import Plane, Vector
 
 from bdm_voxel_builder.agent_algorithms.common import (
     get_any_free_voxel_above_array,
@@ -101,6 +101,8 @@ class Agent:
     _pose = None
     agent_type_summary = "basic"
 
+    _fab_plane = None
+
     def __post_init__(self):
         self._pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
 
@@ -177,6 +179,11 @@ class Agent:
     def normal_angle(self):
         v = self.get_normal_angle()
         return v
+
+    @property
+    def fab_plane(self):
+        self._fab_plane = Plane(self.pose, self.normal_vector)
+        return self._fab_plane
 
     NB_INDEX_DICT = {
         "up": np.asarray([0, 0, 1]),

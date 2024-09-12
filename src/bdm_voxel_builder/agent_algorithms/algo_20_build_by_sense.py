@@ -1,6 +1,8 @@
+import os
 import random as r
 from dataclasses import dataclass
 
+from compas import json_dump, json_dumps
 import numpy as np
 from compas.colors import Color
 
@@ -19,7 +21,7 @@ from bdm_voxel_builder.helpers.array import (
     index_map_sphere,
     set_value_by_index_map,
 )
-from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
+from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_savepath
 
 
 def make_ground_mockup(grid_size):
@@ -56,7 +58,7 @@ basic_agent.inactive_step_count_limit = None
 # sensor settings
 basic_agent.sense_radius = 3
 basic_agent.build_random_chance = 0.04
-basic_agent.build_random_gain = 1
+basic_agent.build_random_gain = 0
 basic_agent.pref_build_angle = 25
 basic_agent.pref_build_angle_gain = 0
 basic_agent.max_shell_thickness = 5
@@ -134,6 +136,13 @@ class Algo20_Build(AgentAlgorithm):
     # import scan
     import_scan = False
     dir_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
+
+    # save fab_planes
+    fab_planes = []
+    fab_planes_file_path = get_savepath(
+        dir=REPO_DIR / "temp/fabplanes/", note=name, suffix="_fabplanes.txt"
+    )
+    # fab_planes_file = open(fab_planes_file_path, "a")
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -215,8 +224,8 @@ class Algo20_Build(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
-            decay_ratio=1 / 10000,
-            gradient_resolution=10000,
+            decay_ratio=1 / 1000,
+            gradient_resolution=1000000,
         )
         sense_maps_grid = DiffusiveGrid(
             name="sense_maps_grid",
@@ -392,12 +401,12 @@ class Algo20_Build(AgentAlgorithm):
         built_volume.array = set_value_by_index_map(
             built_volume.array,
             build_map,
-            value=self.print_dot_counter,
+            value=1,
         )
         ground.array = set_value_by_index_map(
             ground.array,
             build_map,
-            value=self.print_dot_counter,
+            value=1,
         )
 
         # update grids for index_map visualisation
@@ -412,6 +421,15 @@ class Algo20_Build(AgentAlgorithm):
         )
 
         print(f"built at: {agent.pose}")
+
+        # update fab_planes
+        plane = agent.fab_plane
+        self.fab_planes.append(plane)
+
+        # write fabplane to file
+        data = json_dumps(agent.fab_plane)
+        with open(self.fab_planes_file_path, "a") as f:
+            f.write(data + "\n")
 
     def get_agent_build_probability(self, agent, state):
         # BUILD CONSTRAINTS:
