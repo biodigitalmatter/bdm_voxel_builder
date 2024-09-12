@@ -4,14 +4,14 @@ from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # setup 2 test
-grid_size = [300, 250, 150]
+# grid_size = [300, 250, 150]
 
-grid_size = [120, 120, 100]
+grid_size = [200, 200, 150]
 
-iterations = 4000
-agent_count = 10
+iterations = 10000
+agent_count = 15
 interval = 100
-name = f"algo_20_central_follow_built_i{iterations}a{agent_count}"
+name = f"algo_20_central_follow_built_Shell15_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,

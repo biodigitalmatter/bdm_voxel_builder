@@ -62,7 +62,7 @@ basic_agent.build_random_chance = 0.04
 basic_agent.build_random_gain = 0
 basic_agent.pref_build_angle = 25
 basic_agent.pref_build_angle_gain = 0
-basic_agent.max_shell_thickness = 5
+basic_agent.max_shell_thickness = 15
 basic_agent.max_build_angle = 91
 
 # create shape maps
