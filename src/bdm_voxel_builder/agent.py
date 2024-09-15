@@ -71,6 +71,7 @@ class Agent:
     sense_inplane_map = None
     sense_depth_map = None
     sense_overhang_map = None
+    sense_nozzle_map = None
     sense_topology_bool = True
 
     min_build_density = 0
@@ -457,11 +458,13 @@ class Agent:
             pose = self.pose
 
         values = get_values_by_index_map(array, index_map, pose, return_list=True)
-        if nonzero:
-            density = np.count_nonzero(values) / len(values)
-        else:
-            density = sum(values) / len(values)
-
+        if len(values) > 0:
+            if nonzero:
+                density = np.count_nonzero(values) / len(values)
+            else:
+                density = sum(values) / len(values)
+        else: 
+            density = 0
         if print_:
             print(f"grid values:\n{values}\n")
             print(f"grid_density:{density} in pose:{self.pose}")
@@ -472,10 +475,13 @@ class Agent:
     ):
         """return clay density"""
         values = get_values_by_index_map(array, index_map, [0, 0, 0], return_list=True)
-        if nonzero:
-            density = np.count_nonzero(values) / len(values)
+        if len(values) > 0:
+            if nonzero:
+                density = np.count_nonzero(values) / len(values)
+            else:
+                density = sum(values) / len(values)
         else:
-            density = sum(values) / len(values)
+            density = 0
 
         if print_:
             print(f"grid values:\n{values}\n")
@@ -1491,8 +1497,14 @@ class Agent:
         return self.orient_index_map(self.sense_depth_map)
 
     def orient_sense_overhang_map(self):
-        map = index_map_move_and_clip(
-            self.sense_overhang_map, self.pose, self.space_grid.grid_size
+        map = self.orient_index_map(
+            self.sense_overhang_map, normal=Vector(0,0,1)
+        )
+        return map
+    
+    def orient_sense_nozzle_map(self):
+        map = self.orient_index_map(
+            self.sense_nozzle_map, normal=Vector(0,0,1)
         )
         return map
 

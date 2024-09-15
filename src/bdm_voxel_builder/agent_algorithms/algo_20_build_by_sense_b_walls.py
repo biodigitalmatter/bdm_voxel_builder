@@ -76,6 +76,7 @@ basic_agent.pref_build_angle = 25
 basic_agent.pref_build_angle_gain = 0
 basic_agent.max_shell_thickness = 15
 basic_agent.max_build_angle = 91
+basic_agent.min_density_below = 0.3
 
 # create shape maps
 basic_agent.move_map = index_map_sphere(
@@ -92,6 +93,10 @@ basic_agent.sense_depth_map = index_map_cylinder(
     1, basic_agent.max_shell_thickness * 2, 0, 1
 )
 basic_agent.sense_overhang_map = index_map_cylinder(radius=1, height=1, z_lift=-1)
+
+basic_agent.sense_nozzle_map = index_map_cylinder(
+    radius=basic_agent.build_radius, height=40, z_lift=2
+)
 # __dict__
 agent_dict_A = basic_agent.__dict__.copy()
 
@@ -123,7 +128,7 @@ agent_type_distribution = [1]
 
 print('started')
 @dataclass
-class Algo20_Build(AgentAlgorithm):
+class Algo20_Build_b(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo 20
 
@@ -260,10 +265,10 @@ class Algo20_Build(AgentAlgorithm):
 
                     # update walk region
         self.update_offset_regions(
-            ground.array, scan.array
+            ground.array.copy(), scan.array.copy()
         )
 
-        print('STATUS initialized')
+        print('STATinitialized')
 
         # WRAP ENVIRONMENT
         grids = {
@@ -280,8 +285,6 @@ class Algo20_Build(AgentAlgorithm):
         return grids
 
     def update_environment(self, state: Environment, **kwargs):
-        print(f'STATUS update: 0')
-
         grids = state.grids
         pass
         # grids["centroids"].decay()
@@ -289,8 +292,6 @@ class Algo20_Build(AgentAlgorithm):
         diffuse_diffusive_grid(
             grids["follow_grid"], emmission_array=grids["built_volume"].array, blocking_grids=[grids['ground']]
         )
-        print(f'STATUS update: 1')
-
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
         agent_space = grids["agent"]
@@ -457,16 +458,19 @@ class Algo20_Build(AgentAlgorithm):
 
     def get_agent_build_probability(self, agent, state):
         # BUILD CONSTRAINTS:
-        # cone_angle = 45
-        # cone_height = 100
-        # cone_division = 4
-
-        # nozzle_access_condition = agent.check_accessibility_in_cone_divisions(
-        #     cone_angle, cone_height, cone_division
-        # ) TODO
-        nozzle_access_collision = False
-        overhanging = agent.normal_angle > agent.max_build_angle
-        if nozzle_access_collision or overhanging:
+        ground = state.grids["ground"]
+        nozzle_map = agent.orient_sense_nozzle_map()
+        density = agent.get_array_density_by_oriented_index_map(
+            ground.array, nozzle_map, nonzero=True
+        )
+        nozzle_access_collision = density >= 0.01
+        overhang_map = agent.orient_sense_overhang_map()
+        density = agent.get_array_density_by_oriented_index_map(
+            ground.array, overhang_map, nonzero=True
+        )
+        too_low_overhang = density < agent.min_density_below
+        exceed_max_build_angle = agent.normal_angle > agent.max_build_angle
+        if nozzle_access_collision or exceed_max_build_angle:
             build_probability = 0
         else:
             # RANDOM FACTOR
@@ -564,7 +568,7 @@ class Algo20_Build(AgentAlgorithm):
 
             # update offset regions
             self.update_offset_regions(
-                ground_array=state.grids["ground"].array, scan_array=state.grids['scan'].array
+                ground_array=state.grids["ground"].array.copy(), scan_array=state.grids['scan'].array.copy()
             )
 
             # reset if

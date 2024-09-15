@@ -122,7 +122,7 @@ agent_type_distribution = [1]
 
 print('started')
 @dataclass
-class Algo20_Build(AgentAlgorithm):
+class Algo20_Build_a(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo 20
 
@@ -259,7 +259,7 @@ class Algo20_Build(AgentAlgorithm):
 
                     # update walk region
         self.update_offset_regions(
-            ground.array, scan.array
+            ground.array.copy(), scan.array.copy()
         )
 
 
@@ -522,13 +522,13 @@ class Algo20_Build(AgentAlgorithm):
     
     def update_offset_regions(self, ground_array, scan_array):
         self.region_legal_move = get_surrounding_offset_region(
-            arrays=[ground_array.copy()],
+            arrays=[ground_array],
             offset_thickness=self.walk_region_thickness,
         )
         if self.deploy_anywhere: self.region_deploy_agent = self.region_legal_move
         else:
             self.region_deploy_agent = get_surrounding_offset_region(
-                arrays=[scan_array.copy()],
+                arrays=[scan_array],
                 offset_thickness=self.walk_region_thickness,
                 exclude_arrays=[ground_array.copy()]
             )
@@ -559,7 +559,7 @@ class Algo20_Build(AgentAlgorithm):
 
             # update offset regions
             self.update_offset_regions(
-                ground_array=state.grids["ground"].array, scan_array=state.grids['scan'].array
+                ground_array=state.grids["ground"].array.copy(), scan_array=state.grids['scan'].array.copy()
             )
 
             # reset if
