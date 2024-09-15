@@ -1,5 +1,5 @@
 # ruff: noqa: F401
-from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense import Algo20_Build
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_b_walls import Algo20_Build
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
