@@ -2,6 +2,7 @@ import numpy as np
 import numpy.typing as npt
 
 from bdm_voxel_builder.grid import DiffusiveGrid
+from bdm_voxel_builder.helpers.array import offset_array_radial
 
 
 def diffuse_diffusive_grid(

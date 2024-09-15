@@ -91,6 +91,7 @@ basic_agent.sense_inplane_map = index_map_cylinder(
 basic_agent.sense_depth_map = index_map_cylinder(
     1, basic_agent.max_shell_thickness * 2, 0, 1
 )
+basic_agent.sense_overhang_map = index_map_cylinder(radius=1, height=1, z_lift=-1)
 # __dict__
 agent_dict_A = basic_agent.__dict__.copy()
 
@@ -145,7 +146,7 @@ class Algo20_Build(AgentAlgorithm):
     # global settings
 
     walk_region_thickness = 1
-    deploy_anywhere = True
+    deploy_anywhere = False # only on the initial scan volume
 
     # import scan
     import_scan = False
@@ -262,7 +263,7 @@ class Algo20_Build(AgentAlgorithm):
             ground.array, scan.array
         )
 
-
+        print('STATUS initialized')
 
         # WRAP ENVIRONMENT
         grids = {
@@ -278,7 +279,9 @@ class Algo20_Build(AgentAlgorithm):
         }
         return grids
 
-    def update_environment(self, state: Environment):
+    def update_environment(self, state: Environment, **kwargs):
+        print(f'STATUS update: 0')
+
         grids = state.grids
         pass
         # grids["centroids"].decay()
@@ -286,6 +289,8 @@ class Algo20_Build(AgentAlgorithm):
         diffuse_diffusive_grid(
             grids["follow_grid"], emmission_array=grids["built_volume"].array, blocking_grids=[grids['ground']]
         )
+        print(f'STATUS update: 1')
+
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
         agent_space = grids["agent"]

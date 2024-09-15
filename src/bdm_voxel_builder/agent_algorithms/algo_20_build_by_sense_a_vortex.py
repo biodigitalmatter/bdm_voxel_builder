@@ -522,15 +522,15 @@ class Algo20_Build(AgentAlgorithm):
     
     def update_offset_regions(self, ground_array, scan_array):
         self.region_legal_move = get_surrounding_offset_region(
-            arrays=[ground_array],
+            arrays=[ground_array.copy()],
             offset_thickness=self.walk_region_thickness,
         )
         if self.deploy_anywhere: self.region_deploy_agent = self.region_legal_move
         else:
             self.region_deploy_agent = get_surrounding_offset_region(
-                arrays=[scan_array],
+                arrays=[scan_array.copy()],
                 offset_thickness=self.walk_region_thickness,
-                exclude_arrays=[ground_array]
+                exclude_arrays=[ground_array.copy()]
             )
 
     # ACTION FUNCTION

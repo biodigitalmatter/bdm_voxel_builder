@@ -70,6 +70,7 @@ class Agent:
     sense_map = None
     sense_inplane_map = None
     sense_depth_map = None
+    sense_overhang_map = None
     sense_topology_bool = True
 
     min_build_density = 0
@@ -1359,6 +1360,12 @@ class Agent:
             self.move_map, self.pose, self.space_grid.grid_size
         )
         return map
+    
+    def get_map_in_place(self):
+        map = index_map_move_and_clip(
+            self.move_map, self.pose, self.space_grid.grid_size
+        )
+        return map
 
     def modify_limit_in_density_range(
         self,
@@ -1482,6 +1489,12 @@ class Agent:
 
     def orient_sense_depth_map(self):
         return self.orient_index_map(self.sense_depth_map)
+
+    def orient_sense_overhang_map(self):
+        map = index_map_move_and_clip(
+            self.sense_overhang_map, self.pose, self.space_grid.grid_size
+        )
+        return map
 
     def orient_sense_inplane_map(self):
         return self.orient_index_map(self.sense_inplane_map)

@@ -352,9 +352,12 @@ def clip_index_map(
     bounds: tuple[int, int, int] = None,
 ):
     index_map = index_map_.copy()
-    index_map = np.clip(index_map, [0, 0, 0], bounds - np.array([1, 1, 1]))
-    index_map = np.unique(index_map, axis=0)
-    return index_map
+    index_map_clipped_into_bounds = np.clip(index_map, [0, 0, 0], bounds - np.array([1, 1, 1]))
+
+    mask = index_map_clipped_into_bounds == index_map
+    same = np.all(mask, axis=1)
+    index_map_clipped = index_map[same]
+    return index_map_clipped
 
 
 def get_values_by_index_map(
@@ -763,19 +766,6 @@ def get_normal_vector(
     return v_hat
 
 
-def get_surrounding_offset_region(arrays, offset_thickness=1, exclude_arrays = None):
-    """returns surrounding volumetric region of several volumes in given thickness"""
-    arrays = np.array(arrays, np.int_)
-    walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
-    walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)
-    offset_region = walk_on_array_offset - walk_on_array
-    if not exclude_arrays:
-        arrays = np.array(arrays, np.int_)
-        exclude_region = np.clip(np.sum(arrays, axis=0), 0, 1)
-    offset_region -= exclude_region
-    return offset_region
-
-
 def mask_index_map_by_nonzero(
     array=None, origin: tuple[int, int, int] = None, sense_range_or_radius=None
 ):
@@ -791,3 +781,16 @@ def mask_index_map_by_nonzero(
 
     filled_surrounding_indices = sense_map_clipped[x.reshape([x.size])]
     return filled_surrounding_indices
+
+
+def get_surrounding_offset_region(arrays, offset_thickness=1, exclude_arrays = None):
+    """returns surrounding volumetric region of several volumes in given thickness"""
+    arrays = np.array(arrays, np.int_)
+    walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
+    walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)
+    offset_region = walk_on_array_offset - walk_on_array
+    if not exclude_arrays:
+        arrays = np.array(arrays, np.int_)
+        exclude_region = np.clip(np.sum(arrays, axis=0), 0, 1)
+        offset_region -= exclude_region
+    return offset_region

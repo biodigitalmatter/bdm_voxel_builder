@@ -1,5 +1,7 @@
 # ruff: noqa: F401
-from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_b_walls import Algo20_Build
+# from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_b_walls import Algo20_Build
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_a_vortex import Algo20_Build
+
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
@@ -8,10 +10,10 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 grid_size = [100,100,80]
 
-iterations = 100
+iterations = 130
 agent_count = 30
 interval = 10
-name = f"algo_20_central_follow_built_Shell15_i{iterations}a{agent_count}"
+name = f"algo_20_a_vortex_test_clip_map_i{iterations}a{agent_count}"
 
 config = Config(
     iterations=iterations,
