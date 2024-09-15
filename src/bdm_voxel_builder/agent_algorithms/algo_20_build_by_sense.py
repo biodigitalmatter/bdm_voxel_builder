@@ -26,14 +26,26 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_sa
 
 def make_ground_mockup(grid_size):
     a, b, c = grid_size
-    box_1 = [a / 2, a / 2 + 3, b / 2, b / 2 + 3, 0, 13]
-    box_1 = np.array(box_1, dtype=np.int32)
+
 
     base_layer = [0, a, 0, b, 0, 10]
     base_layer = np.array(base_layer, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
-    ground_zones = [box_1, base_layer]
+    ground_zones = [base_layer]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = 1
+    return mockup_ground
+
+def make_init_box_mockup(grid_size):
+    a, b, c = grid_size
+    box_1 = [a / 2, a / 2 + 3, b / 2, b / 2 + 3, 10, 13]
+    box_1 = np.array(box_1, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [box_1]
     # ground_zones = [base_layer]
     for zone in ground_zones:
         mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
@@ -108,7 +120,7 @@ agent_type_dicts = [agent_dict_A]
 
 agent_type_distribution = [1]
 
-
+print('started')
 @dataclass
 class Algo20_Build(AgentAlgorithm):
     """
@@ -133,6 +145,7 @@ class Algo20_Build(AgentAlgorithm):
     # global settings
 
     walk_region_thickness = 1
+    deploy_anywhere = True
 
     # import scan
     import_scan = False
@@ -188,6 +201,7 @@ class Algo20_Build(AgentAlgorithm):
             scan.array = loaded_grid
         else:
             scan.array = make_ground_mockup(self.grid_size)
+            scan.array = make_init_box_mockup(self.grid_size)
 
         # IMPORT SCAN
         ground.array = scan.array.copy()
@@ -220,13 +234,15 @@ class Algo20_Build(AgentAlgorithm):
             flip_colors=True,
             decay_ratio=1 / 1000,
         )
+        built_volume.array = make_init_box_mockup(self.grid_size)
+
         follow_grid = DiffusiveGrid(
             name="follow_grid",
             grid_size=self.grid_size,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
-            decay_ratio=1 / 1000,
-            gradient_resolution=1000000,
+            decay_ratio=1 / 1000000,
+            gradient_resolution=1000000000000,
         )
         sense_maps_grid = DiffusiveGrid(
             name="sense_maps_grid",
@@ -241,10 +257,12 @@ class Algo20_Build(AgentAlgorithm):
             flip_colors=True,
         )
 
-        # init legal_move_mask
-        self.region_legal_move = get_surrounding_offset_region(
-            [ground.array], self.walk_region_thickness
+                    # update walk region
+        self.update_offset_regions(
+            ground.array, scan.array
         )
+
+
 
         # WRAP ENVIRONMENT
         grids = {
@@ -266,7 +284,7 @@ class Algo20_Build(AgentAlgorithm):
         # grids["centroids"].decay()
         grids["built_volume"].decay()
         diffuse_diffusive_grid(
-            grids["follow_grid"], emmission_array=grids["built_volume"].array
+            grids["follow_grid"], emmission_array=grids["built_volume"].array, blocking_grids=[grids['ground']]
         )
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
@@ -298,7 +316,7 @@ class Algo20_Build(AgentAlgorithm):
                 agent.ground_grid = ground_grid
                 agent.id = id
                 # deploy agent
-                agent.deploy_in_region(self.region_legal_move)
+                agent.deploy_in_region(self.region_deploy_agent)
                 agents.append(agent)
                 del agent
                 id += 1
@@ -501,6 +519,19 @@ class Algo20_Build(AgentAlgorithm):
             build_probability = bp_random + bp_angle_factor + bp_shell_topology
         # print(f"build_probability:{build_probability}")
         return build_probability
+    
+    def update_offset_regions(self, ground_array, scan_array):
+        self.region_legal_move = get_surrounding_offset_region(
+            arrays=[ground_array],
+            offset_thickness=self.walk_region_thickness,
+        )
+        if self.deploy_anywhere: self.region_deploy_agent = self.region_legal_move
+        else:
+            self.region_deploy_agent = get_surrounding_offset_region(
+                arrays=[scan_array],
+                offset_thickness=self.walk_region_thickness,
+                exclude_arrays=[ground_array]
+            )
 
     # ACTION FUNCTION
     def agent_action(self, agent, state: Environment):
@@ -526,19 +557,19 @@ class Algo20_Build(AgentAlgorithm):
             # build
             self.build(agent, state)
 
-            # update walk region
-            self.region_legal_move = get_surrounding_offset_region(
-                arrays=[state.grids["ground"].array],
-                offset_thickness=self.walk_region_thickness,
+            # update offset regions
+            self.update_offset_regions(
+                ground_array=state.grids["ground"].array, scan_array=state.grids['scan'].array
             )
+
             # reset if
             agent.step_counter = 0
             if agent.reset_after_build:
                 if isinstance(agent.reset_after_build, float):
                     if r.random() < agent.reset_after_build:
-                        agent.deploy_in_region(self.region_legal_move)
+                        agent.deploy_in_region(self.region_deploy_agent)
                 elif agent.reset_after_build is True:
-                    agent.deploy_in_region(self.region_legal_move)
+                    agent.deploy_in_region(self.region_deploy_agent)
                 else:
                     pass
         # MOVE
@@ -561,9 +592,9 @@ class Algo20_Build(AgentAlgorithm):
         # RESET
         else:
             # reset if stuck
-            agent.deploy_in_region(self.region_legal_move)
+            agent.deploy_in_region(self.region_deploy_agent)
 
         # reset if inactive
         if agent.inactive_step_count_limit:  # noqa: SIM102
             if agent.step_counter >= agent.inactive_step_count_limit:
-                agent.deploy_in_region(self.region_legal_move)
+                agent.deploy_in_region(self.region_deploy_agent)

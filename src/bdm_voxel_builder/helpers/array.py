@@ -763,12 +763,16 @@ def get_normal_vector(
     return v_hat
 
 
-def get_surrounding_offset_region(arrays, offset_thickness=1):
+def get_surrounding_offset_region(arrays, offset_thickness=1, exclude_arrays = None):
     """returns surrounding volumetric region of several volumes in given thickness"""
-    arrays = np.array(arrays)
+    arrays = np.array(arrays, np.int_)
     walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
     walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)
     offset_region = walk_on_array_offset - walk_on_array
+    if not exclude_arrays:
+        arrays = np.array(arrays, np.int_)
+        exclude_region = np.clip(np.sum(arrays, axis=0), 0, 1)
+    offset_region -= exclude_region
     return offset_region
 
 
