@@ -60,7 +60,7 @@ basic_agent = Agent()
 basic_agent.agent_type_summary = "A work_on_shell_and_edge"
 # movement settings
 basic_agent.walk_radius = 4
-basic_agent.move_mod_z = 0.1
+basic_agent.move_mod_z = 0
 basic_agent.move_mod_random = 0.6
 basic_agent.move_mod_follow = 1
 # build settings
@@ -76,7 +76,7 @@ basic_agent.pref_build_angle = 25
 basic_agent.pref_build_angle_gain = 0
 basic_agent.max_shell_thickness = 15
 basic_agent.max_build_angle = 91
-basic_agent.min_density_below = 0.3
+basic_agent.overhang_density = 0.95
 
 # create shape maps
 basic_agent.move_map = index_map_sphere(
@@ -146,7 +146,7 @@ class Algo20_Build_b(AgentAlgorithm):
     vdb_to_dump: str = "built_volume"  # not implemented
     point_cloud_to_dump: str = "centroids"  # not implemented
 
-    seed_iterations: int = 1
+    seed_iterations: int = 200
 
     # global settings
 
@@ -206,8 +206,10 @@ class Algo20_Build_b(AgentAlgorithm):
             self.grid_size = np.shape(loaded_grid)
             scan.array = loaded_grid
         else:
-            scan.array = make_ground_mockup(self.grid_size)
-            scan.array = make_init_box_mockup(self.grid_size)
+            arr = make_ground_mockup(self.grid_size)
+            arr += make_init_box_mockup(self.grid_size)
+            arr = np.clip(arr, 0, 1)
+            scan.array = arr
 
         # IMPORT SCAN
         ground.array = scan.array.copy()
@@ -238,7 +240,7 @@ class Algo20_Build_b(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
-            decay_ratio=1 / 1000,
+            decay_ratio=1 / 10e12,
         )
         built_volume.array = make_init_box_mockup(self.grid_size)
 
@@ -247,8 +249,8 @@ class Algo20_Build_b(AgentAlgorithm):
             grid_size=self.grid_size,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
-            decay_ratio=1 / 1000000,
-            gradient_resolution=1000000000000,
+            decay_ratio=1 / 10e12,
+            gradient_resolution=10e22
         )
         sense_maps_grid = DiffusiveGrid(
             name="sense_maps_grid",
@@ -290,7 +292,10 @@ class Algo20_Build_b(AgentAlgorithm):
         # grids["centroids"].decay()
         grids["built_volume"].decay()
         diffuse_diffusive_grid(
-            grids["follow_grid"], emmission_array=grids["built_volume"].array, blocking_grids=[grids['ground']]
+            grids["follow_grid"], 
+            emmission_array=grids["built_volume"].array, 
+            blocking_grids=[grids['ground']],
+            grade=False
         )
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
@@ -324,7 +329,6 @@ class Algo20_Build_b(AgentAlgorithm):
                 # deploy agent
                 agent.deploy_in_region(self.region_deploy_agent)
                 agents.append(agent)
-                del agent
                 id += 1
         # for agent in agents:
         #     print(agent.id, agent.agent_type_summary)
@@ -380,10 +384,18 @@ class Algo20_Build_b(AgentAlgorithm):
             state.grids["follow_grid"].array, agent.move_map, agent.pose
         )
 
+        
+        built_density = agent.get_array_density_by_oriented_index_map(
+            state.grids['built_volume'].array, move_map_in_place, nonzero=True
+        )
         # MOVE PREFERENCE SETTINGS
         move_z_coordinate *= agent.move_mod_z
         random_map_values *= agent.move_mod_random
         follow_map *= agent.move_mod_follow
+        if built_density < 0.1:
+            follow_map *= 10000
+        else:
+            follow_map *= 0
 
         move_values = move_z_coordinate + random_map_values + follow_map
 
@@ -468,7 +480,7 @@ class Algo20_Build_b(AgentAlgorithm):
         density = agent.get_array_density_by_oriented_index_map(
             ground.array, overhang_map, nonzero=True
         )
-        too_low_overhang = density < agent.min_density_below
+        too_low_overhang = density < agent.overhang_density
         exceed_max_build_angle = agent.normal_angle > agent.max_build_angle
         if nozzle_access_collision or exceed_max_build_angle:
             build_probability = 0

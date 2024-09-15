@@ -8,13 +8,14 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # setup 2 test
 # grid_size = [300, 250, 150]
 
-grid_size = [100,100,80]
+grid_size = [200,200,80]
 
-iterations = 40
+iterations = 5000
 agent_count = 30
-interval = 10
-name = f"algo_20_b_test_nozzle_and_overhang_i{iterations}a{agent_count}"
-
+interval = 100
+name = f"algo_20_b_overhang_95_i{iterations}a{agent_count}"
+skip = ("agent_space", 'ground', 'follow_grid', 'move_map_grid')
+# skip = ('agent_space', 'move_map_grid')
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
@@ -23,7 +24,7 @@ config = Config(
         grid_size=grid_size,
         name=name,
     ),
-    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=("agent_space", 'ground', 'follow_grid', 'move_map_grid')),
+    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=skip),
     save_interval=interval,
     visualize_interval=interval,
 )
