@@ -52,14 +52,15 @@ def make_init_box_mockup(grid_size):
     return mockup_ground
 
 
-# ultimate_parameters
+# ultimate_parameters - walls_A
 overhang = 0.45
-move_up = 0
-move_towards_newly_built = 0.1
-start_to_build_new_volume_chance = 0.1
+move_up = 1
+move_towards_newly_built = 100
+start_to_build_new_volume_chance = 0.01
 max_shell_thickness = 15
 deploy_anywhere = False
-
+add_initial_box = False
+reset = False
 
 # CREATE AGENT TYPES
 
@@ -74,7 +75,7 @@ basic_agent.move_mod_follow = move_towards_newly_built
 # build settings
 basic_agent.build_radius = 3
 basic_agent.build_h = 3
-basic_agent.reset_after_build = True
+basic_agent.reset_after_build = reset
 basic_agent.inactive_step_count_limit = None
 # sensor settings
 basic_agent.sense_radius = 3
@@ -191,7 +192,8 @@ class Algo20_Build_b(AgentAlgorithm):
             scan.array = loaded_grid
         else:
             arr = make_ground_mockup(self.grid_size)
-            arr += make_init_box_mockup(self.grid_size)
+            if add_initial_box:
+                arr += make_init_box_mockup(self.grid_size)
             arr = np.clip(arr, 0, 1)
             scan.array = arr
 
@@ -226,7 +228,8 @@ class Algo20_Build_b(AgentAlgorithm):
             flip_colors=True,
             decay_ratio=1 / 10e12,
         )
-        built_volume.array = make_init_box_mockup(self.grid_size)
+        if add_initial_box:
+            built_volume.array = make_init_box_mockup(self.grid_size)
 
         follow_grid = DiffusiveGrid(
             name="follow_grid",
@@ -371,7 +374,7 @@ class Algo20_Build_b(AgentAlgorithm):
         random_map_values *= agent.move_mod_random
         follow_map *= agent.move_mod_follow
         if built_density < 0.1:
-            follow_map *= 10000
+            follow_map *= 10000000
 
         move_values = move_z_coordinate + random_map_values + follow_map
 
@@ -458,9 +461,9 @@ class Algo20_Build_b(AgentAlgorithm):
         nozzle_access_density = agent.get_array_density_by_oriented_index_map(
             ground.array, nozzle_map, nonzero=True
         )
-        print(
-            f"nozzle_acces_density: {nozzle_access_density}, degree: {agent.normal_angle}"
-        )
+        # print(
+        #     f"nozzle_acces_density: {nozzle_access_density}, degree: {agent.normal_angle}"
+        # )
         nozzle_access_collision = nozzle_access_density >= 0.01
         overhang_map = agent.orient_sense_overhang_map()
         density = agent.get_array_density_by_oriented_index_map(
@@ -478,13 +481,13 @@ class Algo20_Build_b(AgentAlgorithm):
 
             if agent.sense_topology_bool:
                 build = state.grids["built_volume"]
-                sense_map = agent.orient_sense_map()
+                move_map = agent.orient_move_map()
                 built_density = agent.get_array_density_by_oriented_index_map(
-                    build.array, sense_map, nonzero=True
+                    build.array, move_map, nonzero=True
                 )
                 # TOPOLOGY SENSATION:
                 if built_density < 0.05:  # noqa: SIM108
-                    topology_gain_inplane = 0.6
+                    topology_gain_inplane = start_to_build_new_volume_chance
                 else:
                     topology_gain_inplane = 0.8
                 topology_gain_edge = 0.8

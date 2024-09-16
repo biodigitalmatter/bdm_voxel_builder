@@ -1499,11 +1499,12 @@ class Agent:
             x, y, z = self.normal_vector
             v2 = Vector(x, y, 0)
             v2.unitize()
+            x, y, _ = v2
             z = sin(radians(self.max_build_angle)) * -1
             x = cos(radians(self.max_build_angle)) * x
             y = cos(radians(self.max_build_angle)) * y
             v = Vector(x, y, z)
-            print(f"adjusted_nozzle_angle {v.angle(Vector(0,0,-1))}")
+            # print(f"adjusted_nozzle_angle {v.angle(Vector(0,0,-1), True)}")
         elif not world_z:
             v = self.normal_vector
             v.invert()
