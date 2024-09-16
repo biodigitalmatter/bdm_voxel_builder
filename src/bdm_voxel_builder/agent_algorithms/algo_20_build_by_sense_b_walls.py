@@ -57,6 +57,8 @@ overhang = 0.45
 move_up = 0
 move_towards_newly_built = 0.1
 start_to_build_new_volume_chance = 0.1
+max_shell_thickness = 15
+deploy_anywhere = False
 
 
 # CREATE AGENT TYPES
@@ -78,9 +80,7 @@ basic_agent.inactive_step_count_limit = None
 basic_agent.sense_radius = 3
 basic_agent.build_random_chance = 0.01
 basic_agent.build_random_gain = 0
-basic_agent.pref_build_angle = 25
-basic_agent.pref_build_angle_gain = 0
-basic_agent.max_shell_thickness = 15
+basic_agent.max_shell_thickness = max_shell_thickness
 basic_agent.max_build_angle = 30
 basic_agent.overhang_density = overhang
 
