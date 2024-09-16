@@ -33,78 +33,65 @@ from bdm_voxel_builder.helpers.geometry import transfrom_index_map_to_plane
 class Agent:
     """Object based voxel builder, a guided random_walker"""
 
-    initial_pose: npt.NDArray[np.int_] | None = None
-    compass_array = None
-    leave_trace: bool = True
     space_grid = None
-    track_grid = None
     ground_grid = None
-    move_history = []
-    save_move_history = True
-    track_flag = None
-    step_counter = 0
-    passive_counter = 0
 
-    id = 0
-    build_h = 2
-    build_random_chance = 0.1
-    build_random_gain = 0.6
-    pref_build_angle = 20
-    pref_build_angle_gain = 0
-    max_build_angle = 90
+    def __init__(self):
+        self.initial_pose: npt.NDArray[np.int_] | None = None
+        self.leave_trace: bool = True
 
-    _cube_array = []
-    _climb_style = ""
-    _build_chance = 0
-    _erase_chance = 0
-    _die_chance = 0
-    _build_limit = 1
-    _erase_limit = 1
+        self.track_grid = None
+        self.move_history = []
+        self.save_move_history = True
+        self.track_flag = None
+        self.step_counter = 0
+        self.passive_counter = 0
 
-    walk_radius = 4
-    min_walk_radius = 0
-    build_radius = 3
-    sense_radius = 5
-    move_map = None
-    build_map = None
-    sense_map = None
-    sense_inplane_map = None
-    sense_depth_map = None
-    sense_overhang_map = None
-    sense_nozzle_map = None
-    sense_topology_bool = True
+        self.id = 0
 
-    min_build_density = 0
-    max_build_density = 1
-    build_limit_mod_by_density = [0.5, -0.5, 0.5]
-    build_by_density = False
-    build_by_density_random_factor = 0
-    max_shell_thickness = 15
-    overhang_density = 0.5
+        self.build_h = 2
+        self.build_random_chance = 0.1
+        self.build_random_gain = 0.6
+        self.max_build_angle = 90
 
-    move_mod_z = 0
-    move_mod_random = 0.1
-    move_mod_follow = 1
+        self.walk_radius = 4
+        self.min_walk_radius = 0
+        self.build_radius = 3
+        self.sense_radius = 5
+        self.move_map = None
+        self.build_map = None
+        self.sense_map = None
+        self.sense_inplane_map = None
+        self.sense_depth_map = None
+        self.sense_overhang_map = None
+        self.sense_nozzle_map = None
+        self.sense_topology_bool = True
 
-    build_limit = 1
-    erase_limit = 1
-    reset_after_build = False
-    reset_after_erase = False
+        self.min_build_density = 0
+        self.max_build_density = 1
+        self.build_limit_mod_by_density = [0.5, -0.5, 0.5]
+        self.build_by_density = False
+        self.build_by_density_random_factor = 0
+        self.max_shell_thickness = 15
+        self.overhang_density = 0.5
 
-    build_probability = 0.5
-    build_prob_rand_range = [0.25, 0.75]
-    erase_gain_random_range = [0.25, 0.75]
+        self.move_mod_z = 0
+        self.move_mod_random = 0.1
+        self.move_mod_follow = 1
 
-    inactive_step_count_limit = None
+        self.reset_after_build = False
+        self.reset_after_erase = False
 
-    last_move_vector = []
-    move_turn_degree = None
+        self.inactive_step_count_limit = None
 
-    _normal_vector = Vector(0, 0, -1)
-    _pose = None
-    agent_type_summary = "basic"
+        self.last_move_vector = []
+        self.move_turn_degree = None
 
-    _fab_plane = None
+        self._normal_vector = Vector(0, 0, -1)
+        self._pose = None
+        self.agent_type_summary = "basic"
+
+        self._fab_plane = None
 
     def __post_init__(self):
         self._pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
@@ -1516,6 +1503,7 @@ class Agent:
             x = cos(radians(self.max_build_angle)) * x
             y = cos(radians(self.max_build_angle)) * y
             v = Vector(x, y, z)
+            print(f"adjusted_nozzle_angle {v.angle(Vector(0,0,-1))}")
         elif not world_z:
             v = self.normal_vector
             v.invert()
