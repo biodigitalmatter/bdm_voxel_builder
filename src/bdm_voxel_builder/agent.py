@@ -1,7 +1,7 @@
 import random as r
 from copy import copy
 from dataclasses import dataclass
-from math import ceil, trunc
+from math import ceil, cos, radians, sin, trunc
 
 import numpy as np
 import numpy.typing as npt
@@ -31,7 +31,7 @@ from bdm_voxel_builder.helpers.geometry import transfrom_index_map_to_plane
 
 @dataclass
 class Agent:
-    """Object based voxel walker"""
+    """Object based voxel builder, a guided random_walker"""
 
     initial_pose: npt.NDArray[np.int_] | None = None
     compass_array = None
@@ -79,7 +79,8 @@ class Agent:
     build_limit_mod_by_density = [0.5, -0.5, 0.5]
     build_by_density = False
     build_by_density_random_factor = 0
-    max_shell_thickness = 5
+    max_shell_thickness = 15
+    overhang_density = 0.5
 
     move_mod_z = 0
     move_mod_random = 0.1
@@ -99,7 +100,7 @@ class Agent:
     last_move_vector = []
     move_turn_degree = None
 
-    _normal_vector = Vector(0, 0, 1)
+    _normal_vector = Vector(0, 0, -1)
     _pose = None
     agent_type_summary = "basic"
 
@@ -174,11 +175,12 @@ class Agent:
     @property
     def normal_vector(self):
         """unit vector pointing towards surrounding mass centroid
-        surrounding: sense_map"""
+        surrounding volume(ground_grid) within sense_map"""
         return self.calculate_normal_vector()
 
     @property
     def normal_angle(self):
+        """angle of self.normal_vector and -World.Z"""
         v = self.get_normal_angle()
         return v
 
@@ -463,7 +465,7 @@ class Agent:
                 density = np.count_nonzero(values) / len(values)
             else:
                 density = sum(values) / len(values)
-        else: 
+        else:
             density = 0
         if print_:
             print(f"grid values:\n{values}\n")
@@ -471,15 +473,18 @@ class Agent:
         return density
 
     def get_array_density_by_oriented_index_map(
-        self, array: np.ndarray, index_map, print_=False, nonzero=False
+        self,
+        array: np.ndarray,
+        index_map,
+        print_=False,
+        nonzero=False,
+        density_of_original_index_map=False,
     ):
         """return clay density"""
         values = get_values_by_index_map(array, index_map, [0, 0, 0], return_list=True)
-        if len(values) > 0:
-            if nonzero:
-                density = np.count_nonzero(values) / len(values)
-            else:
-                density = sum(values) / len(values)
+        n = len(index_map) if density_of_original_index_map else len(values)
+        if n > 0:
+            density = np.count_nonzero(values) / n if nonzero else sum(values) / n
         else:
             density = 0
 
@@ -1366,7 +1371,7 @@ class Agent:
             self.move_map, self.pose, self.space_grid.grid_size
         )
         return map
-    
+
     def get_map_in_place(self):
         map = index_map_move_and_clip(
             self.move_map, self.pose, self.space_grid.grid_size
@@ -1443,13 +1448,15 @@ class Agent:
                 self._normal_vector = average_vector
                 return average_vector
             else:
-                print("zero length vector")
-                self._normal_vector = Vector(0, 0, 1)
+                print("normal vector calculation problem, average_vector.length = 0")
+                self._normal_vector = Vector(0, 0, -1)
                 return self._normal_vector
 
         else:  # bug. originated from somewhere else. I think its fixed
-            print(f"empty list error >> use previous normal. pose: {self.pose}")
-            self._normal_vector = self._normal_vector = Vector(0, 0, 1)
+            print(
+                f"normal vector calculation problem. empty value list in array selection in pose: {self.pose}"
+            )
+            self._normal_vector = Vector(0, 0, -1)
             return self._normal_vector
 
     def orient_index_map(self, index_map, new_origin=None, normal=None):
@@ -1497,15 +1504,24 @@ class Agent:
         return self.orient_index_map(self.sense_depth_map)
 
     def orient_sense_overhang_map(self):
-        map = self.orient_index_map(
-            self.sense_overhang_map, normal=Vector(0,0,1)
-        )
+        map = self.orient_index_map(self.sense_overhang_map, normal=Vector(0, 0, 1))
         return map
-    
-    def orient_sense_nozzle_map(self):
-        map = self.orient_index_map(
-            self.sense_nozzle_map, normal=Vector(0,0,1)
-        )
+
+    def orient_sense_nozzle_map(self, world_z=False):
+        if not world_z and 180 > self.normal_angle > self.max_build_angle:
+            x, y, z = self.normal_vector
+            v2 = Vector(x, y, 0)
+            v2.unitize()
+            z = sin(radians(self.max_build_angle)) * -1
+            x = cos(radians(self.max_build_angle)) * x
+            y = cos(radians(self.max_build_angle)) * y
+            v = Vector(x, y, z)
+        elif not world_z:
+            v = self.normal_vector
+            v.invert()
+        else:
+            v = Vector(0, 0, 1)
+        map = self.orient_index_map(self.sense_nozzle_map, normal=v)
         return map
 
     def orient_sense_inplane_map(self):

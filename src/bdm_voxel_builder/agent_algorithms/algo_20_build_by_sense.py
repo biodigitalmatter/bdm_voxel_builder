@@ -1,9 +1,8 @@
-import os
 import random as r
 from dataclasses import dataclass
 
 import numpy as np
-from compas import json_dump, json_dumps
+from compas import json_dumps
 from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
@@ -27,7 +26,6 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_sa
 def make_ground_mockup(grid_size):
     a, b, c = grid_size
 
-
     base_layer = [0, a, 0, b, 0, 10]
     base_layer = np.array(base_layer, dtype=np.int32)
 
@@ -38,6 +36,7 @@ def make_ground_mockup(grid_size):
         mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
         mockup_ground[mask] = 1
     return mockup_ground
+
 
 def make_init_box_mockup(grid_size):
     a, b, c = grid_size
@@ -120,7 +119,9 @@ agent_type_dicts = [agent_dict_A]
 
 agent_type_distribution = [1]
 
-print('started')
+print("started")
+
+
 @dataclass
 class Algo20_Build(AgentAlgorithm):
     """
@@ -257,12 +258,8 @@ class Algo20_Build(AgentAlgorithm):
             flip_colors=True,
         )
 
-                    # update walk region
-        self.update_offset_regions(
-            ground.array, scan.array
-        )
-
-
+        # update walk region
+        self.update_offset_regions(ground.array, scan.array)
 
         # WRAP ENVIRONMENT
         grids = {
@@ -284,7 +281,9 @@ class Algo20_Build(AgentAlgorithm):
         # grids["centroids"].decay()
         grids["built_volume"].decay()
         diffuse_diffusive_grid(
-            grids["follow_grid"], emmission_array=grids["built_volume"].array, blocking_grids=[grids['ground']]
+            grids["follow_grid"],
+            emmission_array=grids["built_volume"].array,
+            blocking_grids=[grids["ground"]],
         )
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
@@ -519,18 +518,19 @@ class Algo20_Build(AgentAlgorithm):
             build_probability = bp_random + bp_angle_factor + bp_shell_topology
         # print(f"build_probability:{build_probability}")
         return build_probability
-    
+
     def update_offset_regions(self, ground_array, scan_array):
         self.region_legal_move = get_surrounding_offset_region(
             arrays=[ground_array],
             offset_thickness=self.walk_region_thickness,
         )
-        if self.deploy_anywhere: self.region_deploy_agent = self.region_legal_move
+        if self.deploy_anywhere:
+            self.region_deploy_agent = self.region_legal_move
         else:
             self.region_deploy_agent = get_surrounding_offset_region(
                 arrays=[scan_array],
                 offset_thickness=self.walk_region_thickness,
-                exclude_arrays=[ground_array]
+                exclude_arrays=[ground_array],
             )
 
     # ACTION FUNCTION
@@ -559,7 +559,8 @@ class Algo20_Build(AgentAlgorithm):
 
             # update offset regions
             self.update_offset_regions(
-                ground_array=state.grids["ground"].array, scan_array=state.grids['scan'].array
+                ground_array=state.grids["ground"].array,
+                scan_array=state.grids["scan"].array,
             )
 
             # reset if

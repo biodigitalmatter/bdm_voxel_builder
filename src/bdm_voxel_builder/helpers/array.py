@@ -350,13 +350,14 @@ def index_map_move_and_clip(
 def clip_index_map(
     index_map_: np.ndarray,
     bounds: tuple[int, int, int] = None,
+    erase_out_of_bound_indices: bool = False,
 ):
     index_map = index_map_.copy()
-    index_map_clipped_into_bounds = np.clip(index_map, [0, 0, 0], bounds - np.array([1, 1, 1]))
-
-    mask = index_map_clipped_into_bounds == index_map
-    same = np.all(mask, axis=1)
-    index_map_clipped = index_map[same]
+    index_map_clipped = np.clip(index_map, [0, 0, 0], bounds - np.array([1, 1, 1]))
+    if erase_out_of_bound_indices:
+        mask = index_map_clipped == index_map
+        same = np.all(mask, axis=1)
+        index_map_clipped = index_map[same]
     return index_map_clipped
 
 
@@ -783,7 +784,7 @@ def mask_index_map_by_nonzero(
     return filled_surrounding_indices
 
 
-def get_surrounding_offset_region(arrays, offset_thickness=1, exclude_arrays = None):
+def get_surrounding_offset_region(arrays, offset_thickness=1, exclude_arrays=None):
     """returns surrounding volumetric region of several volumes in given thickness"""
     arrays = np.array(arrays, np.int_)
     walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
