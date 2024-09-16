@@ -52,15 +52,26 @@ def make_init_box_mockup(grid_size):
     return mockup_ground
 
 
-# ultimate_parameters - walls_A
-overhang = 0.45
-move_up = 1
+# ultimate_parameters - walls_B
+overhang = 0.35
+move_up = 0.4
 move_towards_newly_built = 100
 start_to_build_new_volume_chance = 0.01
 max_shell_thickness = 15
 deploy_anywhere = False
 add_initial_box = False
-reset = False
+reset = True
+
+
+# # ultimate_parameters - walls_A
+# overhang = 0.45
+# move_up = 1
+# move_towards_newly_built = 100
+# start_to_build_new_volume_chance = 0.01
+# max_shell_thickness = 15
+# deploy_anywhere = False
+# add_initial_box = False
+# reset = False
 
 # CREATE AGENT TYPES
 
@@ -136,7 +147,7 @@ class Algo20_Build_b(AgentAlgorithm):
     seed_iterations: int = n
 
     walk_region_thickness = 1
-    deploy_anywhere = False  # only on the initial scan volume
+    deploy_anywhere = deploy_anywhere  # only on the initial scan volume
 
     # import scan
     import_scan = False
@@ -539,7 +550,7 @@ class Algo20_Build_b(AgentAlgorithm):
             arrays=[ground_array],
             offset_thickness=self.walk_region_thickness,
         )
-        if self.deploy_anywhere:
+        if not self.deploy_anywhere:
             self.region_deploy_agent = self.region_legal_move
         else:
             self.region_deploy_agent = get_surrounding_offset_region(

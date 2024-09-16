@@ -795,3 +795,18 @@ def get_surrounding_offset_region(arrays, offset_thickness=1, exclude_arrays=Non
         exclude_region = np.clip(np.sum(arrays, axis=0), 0, 1)
         offset_region -= exclude_region
     return offset_region
+
+
+def count_neighbors(array, int_=True):
+    array = np.clip(array(array, dtype=np.int_), 0, 1)
+
+    padded_array = np.pad(array, pad_width=1, mode="constant", constant_values=0)
+    summed_array = padded_array.copy()
+
+    shifts = [-1, 1, -1, 1, -1, 1]
+    axii = [0, 0, 1, 1, 2, 2]
+    for shift, axis in zip(shifts, axii):  # noqa: B905
+        rolled_array = np.roll(padded_array, shift, axis)
+        summed_array += rolled_array
+    neighbor_count_array = summed_array[1:-1, 1:-1, 1:-1]
+    return neighbor_count_array
