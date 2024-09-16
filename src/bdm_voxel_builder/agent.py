@@ -88,13 +88,14 @@ class Agent:
         self.move_turn_degree = None
 
         self._normal_vector = Vector(0, 0, -1)
-        self._pose = None
+        self._pose: npt.NDArray[np.int_] | None = None
         self.agent_type_summary = "basic"
 
         self._fab_plane = None
 
     def __post_init__(self):
         self._pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
+        self.pose = self._pose
 
     @property
     def pose(self):

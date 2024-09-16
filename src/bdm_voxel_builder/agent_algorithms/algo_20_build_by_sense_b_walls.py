@@ -55,10 +55,10 @@ def make_init_box_mockup(grid_size):
 # ultimate_parameters - walls_B
 overhang = 0.35
 move_up = 0.4
-move_towards_newly_built = 100
+move_towards_newly_built = 0
 start_to_build_new_volume_chance = 0.01
 max_shell_thickness = 15
-deploy_anywhere = False
+deploy_anywhere = True
 add_initial_box = False
 reset = True
 
@@ -72,55 +72,6 @@ reset = True
 # deploy_anywhere = False
 # add_initial_box = False
 # reset = False
-
-# CREATE AGENT TYPES
-
-basic_agent = Agent()
-# TYPE A
-basic_agent.agent_type_summary = "A work_on_shell_and_edge"
-# movement settings
-basic_agent.walk_radius = 4
-basic_agent.move_mod_z = move_up
-basic_agent.move_mod_random = 1
-basic_agent.move_mod_follow = move_towards_newly_built
-# build settings
-basic_agent.build_radius = 3
-basic_agent.build_h = 3
-basic_agent.reset_after_build = reset
-basic_agent.inactive_step_count_limit = None
-# sensor settings
-basic_agent.sense_radius = 3
-basic_agent.build_random_chance = 0.01
-basic_agent.build_random_gain = 0
-basic_agent.max_shell_thickness = max_shell_thickness
-basic_agent.max_build_angle = 30
-basic_agent.overhang_density = overhang
-
-# create shape maps
-basic_agent.move_map = index_map_sphere(
-    basic_agent.walk_radius, basic_agent.min_walk_radius
-)
-basic_agent.build_map = index_map_cylinder(
-    basic_agent.build_radius, basic_agent.build_h, 0, -1
-)
-basic_agent.sense_map = index_map_sphere(basic_agent.sense_radius)
-basic_agent.sense_inplane_map = index_map_cylinder(
-    radius=3, height=2, min_radius=0, z_lift=1
-)
-basic_agent.sense_depth_map = index_map_cylinder(
-    1, basic_agent.max_shell_thickness * 2, 0, 1
-)
-basic_agent.sense_overhang_map = index_map_cylinder(radius=1, height=1, z_lift=-1)
-
-basic_agent.sense_nozzle_map = index_map_cylinder(radius=0, height=40, z_lift=0)
-# __dict__
-agent_dict_A = basic_agent.__dict__.copy()
-# dict list
-# agent_type_dicts = [agent_dict_A, agent_dict_B, agent_dict_C]
-agent_type_dicts = [agent_dict_A]
-agent_type_distribution = [1]
-
-print("started")
 
 
 @dataclass
@@ -302,31 +253,75 @@ class Algo20_Build_b(AgentAlgorithm):
         agents = []
 
         # generate agents based on agent_type_dicts
-        d = np.array(agent_type_distribution)
-        sum_ = np.sum(d)
-        d_normalized = d * 1 / sum_
-        # print(d_normalized)
+        categories = ["a", "b"]
+        category_sizes = [1, 0.1]
+        d = np.array(category_sizes)
+        d_normalized = d * 1 / np.sum(d)
         id = 0
-        for i, n in enumerate(d_normalized):
-            print(i, n)
+        for category, n in enumerate(d_normalized):
+            print(category, n)
             type_size = int(n * self.agent_count)
             # print(type_size)
             for _j in range(type_size):
-                data_dict = agent_type_dicts[i]
-                # print("type:", data_dict["agent_type_summary"])
-                # create object
-                # print("id in the loop", id)
-                agent = Agent()
-                agent.__dict__ = data_dict
+                basic_agent = Agent()
+                # TYPE A
+                basic_agent.agent_type_summary = categories[category]
+                # movement settings
+                basic_agent.walk_radius = 4
+                basic_agent.move_mod_z = move_up
+                basic_agent.move_mod_random = 1
+                basic_agent.move_mod_follow = move_towards_newly_built
+                # build settings
+                basic_agent.build_radius = 3
+                basic_agent.build_h = 3
+                basic_agent.reset_after_build = reset
+                basic_agent.inactive_step_count_limit = None
+                # sensor settings
+                basic_agent.sense_radius = 3
+                basic_agent.build_random_chance = 0.01
+                basic_agent.build_random_gain = 0
+                basic_agent.max_shell_thickness = max_shell_thickness
+                basic_agent.max_build_angle = 30
+                basic_agent.overhang_density = overhang
+
+                # ALTER VERSIONS
+                if category == 1:
+                    basic_agent.sense_radius = 6
+
+                # create shape maps
+                basic_agent.move_map = index_map_sphere(
+                    basic_agent.walk_radius, basic_agent.min_walk_radius
+                )
+                basic_agent.build_map = index_map_cylinder(
+                    basic_agent.build_radius, basic_agent.build_h, 0, -1
+                )
+                basic_agent.sense_map = index_map_sphere(basic_agent.sense_radius)
+                basic_agent.sense_inplane_map = index_map_cylinder(
+                    radius=3, height=2, min_radius=0, z_lift=1
+                )
+                basic_agent.sense_depth_map = index_map_cylinder(
+                    1, basic_agent.max_shell_thickness * 2, 0, 1
+                )
+                basic_agent.sense_overhang_map = index_map_cylinder(
+                    radius=1, height=1, z_lift=-1
+                )
+
+                basic_agent.sense_nozzle_map = index_map_cylinder(
+                    radius=0, height=40, z_lift=0
+                )
+
                 # set grids
-                agent.space_grid = agent_space
-                agent.track_grid = track
-                agent.ground_grid = ground_grid
-                agent.id = id
-                print(f"created agent_{agent.id}")
+                basic_agent.space_grid = agent_space
+                basic_agent.track_grid = track
+                basic_agent.ground_grid = ground_grid
+                basic_agent.id = id
+                print(f"created agent_{basic_agent.id}")
+
                 # deploy agent
-                agent.deploy_in_region(self.region_deploy_agent)
-                agents.append(agent)
+                basic_agent.deploy_in_region(self.region_deploy_agent)
+
+                # append
+                agents.append(basic_agent)
                 id += 1
 
         return agents
@@ -570,7 +565,7 @@ class Algo20_Build_b(AgentAlgorithm):
         # BUILD
         build_probability = self.get_agent_build_probability(agent, state)
         print(
-            f"""{agent.pose} """  # noqa: E501
+            f"""agent_{agent.id}, {agent.pose} """  # noqa: E501
         )
         if build_probability > r.random():
             print(
