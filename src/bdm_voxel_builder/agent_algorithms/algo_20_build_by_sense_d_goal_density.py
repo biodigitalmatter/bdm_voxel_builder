@@ -27,18 +27,18 @@ overhang_density = 0.35
 move_up = 0
 move_random = 1
 follow_goal = 0.05
-follow_built = 0.5
+follow_built = 2
 
 build_next_to_bool = True
 sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = [-0.2, 0.4]  # (no, yes)
+build_probability_next_to = [0, 0.2]  # (no, yes)
 build_probability_too_dense = [0, -10]  # (no, yes)
 
-goal_density__modifier_A = 0.15
-goal_density__modifier_B = 0.4
+goal_density__modifier_A = 0
+goal_density__modifier_B = 0.25
 
 max_build_density = 0.5
 wall_radar_radius = 15
@@ -230,6 +230,7 @@ class Algo20_Build_d(AgentAlgorithm):
 
     def update_environment(self, state: Environment, **kwargs):
         grids = state.grids
+        grids["built_volume"].decay()
         if follow_built > 0:
             emmision_array = (
                 grids["goal_density"].array * follow_goal
