@@ -12,11 +12,11 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # grid_size = [200, 200, 100]
 grid_size = [100, 100, 50]
 
-iterations = 100
-agent_count = 10
-save_interval = 100
-visualize_interval = 10
-name = f"algo_20_test_c_i{iterations}a{agent_count}"
+iterations = 3000
+agent_count = 30
+save_interval = 50
+visualize_interval = 1000
+name = f"algo_20_test_c_follow_new_build_next_to_i{iterations}a{agent_count}"
 skip = ("agent_space", "ground", "follow_grid")
 config = Config(
     iterations=iterations,

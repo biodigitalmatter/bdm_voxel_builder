@@ -25,9 +25,11 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_sa
 # ultimate_parameters - test_1 - absolut random build
 overhang = 0.35
 move_up = 0
-follow_newly_built = 0
+follow_newly_built = 1000
 sense_topology = False
-start_to_build_new_volume_chance = 0.01
+build_next_to_bool = True
+build_next_to_gain = 0.6
+build_absolut_random_chance = 0.01
 max_shell_thickness = 15
 deploy_anywhere = True
 add_initial_box = False
@@ -41,8 +43,11 @@ class Algo20_Build_c(AgentAlgorithm):
 
     the agents build based on sensor feedback
     overhang
-    wall thickness
     print_nozzle access
+
+    20_c:
+    build next to
+    no topology sensation
 
     """
 
@@ -241,14 +246,18 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.inactive_step_count_limit = None
                 # sensor settings
                 basic_agent.sense_radius = 3
-                basic_agent.build_random_chance = 0.5
+                basic_agent.build_random_chance = build_absolut_random_chance
                 basic_agent.build_random_gain = 1
                 basic_agent.max_shell_thickness = max_shell_thickness
                 basic_agent.max_build_angle = 30
                 basic_agent.overhang_density = overhang
 
-                # TEST TODO
+                # NEW
+                basic_agent.build_next_to_bool = build_next_to_bool
+                basic_agent.build_next_to_gain = build_next_to_gain
+
                 basic_agent.sense_topology_bool = sense_topology
+                basic_agent.start_to_build_new_volume_chance = 0.01
 
                 # ALTER VERSIONS
                 if category == 1:
@@ -281,7 +290,7 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.track_grid = track
                 basic_agent.ground_grid = ground_grid
                 basic_agent.id = id
-                print(f"created agent_{basic_agent.id}")
+                # print(f"created agent_{basic_agent.id}")
 
                 # deploy agent
                 basic_agent.deploy_in_region(self.region_deploy_agent)
@@ -450,16 +459,26 @@ class Algo20_Build_c(AgentAlgorithm):
                 bp_random = agent.build_random_gain
             else:
                 bp_random = 0
+            if agent.build_next_to_bool:
+                built_volume = state.grids["built_volume"]
+                build_map = agent.orient_move_map()
+                built_density = agent.get_array_density_by_oriented_index_map(
+                    built_volume.array, build_map, nonzero=True
+                )
+                if built_density < 0.05:  # noqa: SIM108
+                    bp_shell_topology = 0
+                else:
+                    bp_shell_topology = agent.build_next_to_gain
 
             if agent.sense_topology_bool:
-                build = state.grids["built_volume"]
+                built_volume = state.grids["built_volume"]
                 move_map = agent.orient_move_map()
                 built_density = agent.get_array_density_by_oriented_index_map(
-                    build.array, move_map, nonzero=True
+                    built_volume.array, move_map, nonzero=True
                 )
                 # TOPOLOGY SENSATION:
                 if built_density < 0.05:  # noqa: SIM108
-                    topology_gain_inplane = start_to_build_new_volume_chance
+                    topology_gain_inplane = agent.start_to_build_new_volume_chance
                 else:
                     topology_gain_inplane = 0.8
                 topology_gain_edge = 0.8
@@ -530,16 +549,10 @@ class Algo20_Build_c(AgentAlgorithm):
         """
         # BUILD
         build_probability = self.get_agent_build_probability(agent, state)
-        print(
-            f"""agent_{agent.id}, {agent.pose} """  # noqa: E501
-        )
-        if build_probability > r.random():
-            print(
-                f"""\n## agent_{agent.id} - {agent.pose} ##\n{agent.agent_type_summary}\n {agent.normal_vector}"""  # noqa: E501
-            )
-            print(f"build_probability = {build_probability}")
 
-            print(f"angle {agent.normal_angle}")
+        if build_probability > r.random():
+            print(f"""## agent_{agent.id} built at {agent.pose}""")
+            print(f"## build_probability = {build_probability}")
 
             # build
             self.build(agent, state)

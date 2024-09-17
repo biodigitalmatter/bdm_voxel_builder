@@ -296,6 +296,26 @@ def index_map_cylinder(radius, height, min_radius=0, z_lift=0):
     return index_map.transpose()
 
 
+def index_map_sphere_half_quarter(
+    radius: float, min_radius: float = None
+) -> np.ndarray[np.int32]:
+    r = int(np.ceil(radius)) + 1
+    indices = np.indices([r, r, r])
+    norm = np.linalg.norm(indices, axis=0)
+    # print(l)
+    mask = norm <= radius
+    if min_radius:
+        mask2 = norm >= min_radius
+        mask = np.logical_and(mask, mask2)
+    # print(mask)
+    # print(indices)
+    x = indices[0][mask]
+    y = indices[1][mask]
+    z = indices[2][mask]
+    sphere_array = np.array([x, y, z], dtype=np.int32)
+    return sphere_array.transpose()
+
+
 def index_map_sphere_scale_NU(
     radius=1.5,
     min_radius=None,
