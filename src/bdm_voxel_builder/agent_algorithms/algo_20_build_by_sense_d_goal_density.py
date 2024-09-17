@@ -26,18 +26,19 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_sa
 overhang_density = 0.35
 move_up = 0
 move_random = 1
-follow_goal_density = 1
+follow_goal = 0.5
+follow_built = 2
 
-build_next_to_bool = True
+build_next_to_bool = False
 sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = [-0.1, 0.5]  # (no, yes)
+build_probability_next_to = [0, 0.8]  # (no, yes)
 build_probability_too_dense = [0, -10]  # (no, yes)
 
 goal_density__modifier_A = 0.15
-goal_density__modifier_B = 1.5
+goal_density__modifier_B = 0.8
 
 max_build_density = 0.5
 wall_radar_radius = 15
@@ -71,7 +72,7 @@ class Algo20_Build_d(AgentAlgorithm):
 
     # global settings
 
-    n = 50 if follow_goal_density else 1
+    n = 50 if follow_built else 1
     seed_iterations: int = n
 
     walk_region_thickness = 1
@@ -229,9 +230,10 @@ class Algo20_Build_d(AgentAlgorithm):
 
     def update_environment(self, state: Environment, **kwargs):
         grids = state.grids
-        if follow_goal_density > 0:
+        if follow_built > 0:
             emmision_array = (
-                grids["goal_density"].array * 0.5 + grids["built_volume"].array * 0.9
+                grids["goal_density"].array * follow_goal
+                + grids["built_volume"].array * follow_built
             )  # noqa: E501
             diffuse_diffusive_grid(
                 grids["follow_grid"],
@@ -264,7 +266,7 @@ class Algo20_Build_d(AgentAlgorithm):
                 basic_agent.walk_radius = 4
                 basic_agent.move_mod_z = move_up
                 basic_agent.move_mod_random = move_random
-                basic_agent.move_mod_follow = follow_goal_density
+                basic_agent.move_mod_follow = 1
                 # build settings
                 basic_agent.build_radius = 3
                 basic_agent.build_h = 3
@@ -284,7 +286,7 @@ class Algo20_Build_d(AgentAlgorithm):
                 basic_agent.sense_wall_radar_bool = sense_wall_radar_bool
                 basic_agent.sense_goal_density = sense_goal_density
                 basic_agent.wall_radar_radius = 5
-                basic_agent.build_probability_wall_radar = build_probability_too_dense
+                basic_agent.build_probability_too_dense = build_probability_too_dense
 
                 basic_agent.max_build_density = max_build_density
 
@@ -462,6 +464,8 @@ class Algo20_Build_d(AgentAlgorithm):
                     bp_build_next_to = agent.build_probability_next_to[0]
                 else:
                     bp_build_next_to = agent.build_probability_next_to[1]
+            else:
+                bp_build_next_to = 0
 
             # BUILD BY WALL RADAR
             if agent.sense_wall_radar_bool:
@@ -471,11 +475,9 @@ class Algo20_Build_d(AgentAlgorithm):
                     ground.array, wall_radar_map, nonzero=True
                 )
                 if radar_density < agent.max_build_density:  # walking on wall
-                    bp_wall_radar = agent.build_probability_wall_radar[0]
+                    bp_wall_radar = agent.build_probability_too_dense[0]
                 else:
-                    bp_wall_radar = agent.build_probability_wall_radar[1]
-
-            build_probability = bp_random + bp_build_next_to + bp_wall_radar
+                    bp_wall_radar = agent.build_probability_too_dense[1]
 
             # BUILD BY GOAL DENSITY
             if agent.sense_goal_density:
@@ -486,9 +488,10 @@ class Algo20_Build_d(AgentAlgorithm):
                         goal_density.array, sense_map, nonzero=False
                     )
                 )
+                # print(bp_goal_density_modifier)
 
             build_probability = (
-                bp_random + bp_build_next_to * bp_goal_density_modifier + bp_wall_radar
+                bp_random + bp_build_next_to + bp_goal_density_modifier + bp_wall_radar
             )
         # print(f"build_probability:{build_probability}")
         return build_probability
