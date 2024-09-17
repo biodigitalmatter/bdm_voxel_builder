@@ -299,6 +299,7 @@ def index_map_cylinder(radius, height, min_radius=0, z_lift=0):
 def index_map_sphere_half_quarter(
     radius: float, min_radius: float = None
 ) -> np.ndarray[np.int32]:
+    """half quarter sphere mask, center in [0,0,0]"""
     r = int(np.ceil(radius)) + 1
     indices = np.indices([r, r, r])
     norm = np.linalg.norm(indices, axis=0)
@@ -314,6 +315,28 @@ def index_map_sphere_half_quarter(
     z = indices[2][mask]
     sphere_array = np.array([x, y, z], dtype=np.int32)
     return sphere_array.transpose()
+
+
+# TODO
+def index_map_cylinder_quarter(radius, height, min_radius=0, z_lift=0):
+    """quarter cylinder mask, center in [0,0,0]"""
+    r = int(np.ceil(radius)) + 1
+    x, y, z = np.indices([r, r, height])
+    z += z_lift
+    distance = np.linalg.norm([x, y], axis=0)
+
+    if min_radius > 0:
+        mask = np.logical_and(distance <= radius, distance >= min_radius)
+    else:
+        mask = distance <= radius
+
+    # print(f"mask {mask}")
+    indices = [x, y, z]
+    x = indices[0][mask]
+    y = indices[1][mask]
+    z = indices[2][mask]
+    index_map = np.array([x, y, z], dtype=np.int32)
+    return index_map.transpose()
 
 
 def index_map_sphere_scale_NU(

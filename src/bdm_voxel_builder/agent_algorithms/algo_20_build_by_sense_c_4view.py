@@ -23,13 +23,14 @@ from bdm_voxel_builder.helpers.array import (
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_savepath
 
 # ultimate_parameters - test_1 - absolut random build
-overhang = 0.35
+overhang_density = 0.35
 move_up = 0
-follow_newly_built = 1000
-sense_topology = False
+move_random = 1
+follow_newly_built = 10
+sense_shell_topology = False
 build_next_to_bool = True
-build_next_to_gain = 0.6
-build_absolut_random_chance = 0.01
+build_probability_next_to = 1
+build_probability_absolut_random = 0.001
 max_shell_thickness = 15
 deploy_anywhere = True
 add_initial_box = False
@@ -237,7 +238,7 @@ class Algo20_Build_c(AgentAlgorithm):
                 # movement settings
                 basic_agent.walk_radius = 4
                 basic_agent.move_mod_z = move_up
-                basic_agent.move_mod_random = 1
+                basic_agent.move_mod_random = move_random
                 basic_agent.move_mod_follow = follow_newly_built
                 # build settings
                 basic_agent.build_radius = 3
@@ -246,17 +247,17 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.inactive_step_count_limit = None
                 # sensor settings
                 basic_agent.sense_radius = 3
-                basic_agent.build_random_chance = build_absolut_random_chance
+                basic_agent.build_random_chance = build_probability_absolut_random
                 basic_agent.build_random_gain = 1
                 basic_agent.max_shell_thickness = max_shell_thickness
                 basic_agent.max_build_angle = 30
-                basic_agent.overhang_density = overhang
+                basic_agent.overhang_density = overhang_density
 
                 # NEW
                 basic_agent.build_next_to_bool = build_next_to_bool
-                basic_agent.build_next_to_gain = build_next_to_gain
+                basic_agent.build_probability_next_to = build_probability_next_to
 
-                basic_agent.sense_topology_bool = sense_topology
+                basic_agent.sense_shell_topology_bool = sense_shell_topology
                 basic_agent.start_to_build_new_volume_chance = 0.01
 
                 # ALTER VERSIONS
@@ -354,6 +355,13 @@ class Algo20_Build_c(AgentAlgorithm):
         move_z_coordinate *= agent.move_mod_z
         random_map_values *= agent.move_mod_random
         follow_map *= agent.move_mod_follow
+        # print(f"follow_map min:{np.min(follow_map)} max: {np.max(follow_map)}")
+        # print(
+        #     f"radnom_map min:{np.min(random_map_values)} max: {np.max(random_map_values)}"
+        # )
+        # print(
+        #     f"move_z_coordinate min:{np.min(move_z_coordinate)} max: {np.max(move_z_coordinate)}"
+        # )
         if built_density < 0.1:
             follow_map *= 10000000
 
@@ -459,18 +467,21 @@ class Algo20_Build_c(AgentAlgorithm):
                 bp_random = agent.build_random_gain
             else:
                 bp_random = 0
+
+            # BUILD NEXT TO built
             if agent.build_next_to_bool:
                 built_volume = state.grids["built_volume"]
                 build_map = agent.orient_move_map()
                 built_density = agent.get_array_density_by_oriented_index_map(
                     built_volume.array, build_map, nonzero=True
                 )
-                if built_density < 0.05:  # noqa: SIM108
+                if built_density < 0.001:  # noqa: SIM108
                     bp_shell_topology = 0
                 else:
-                    bp_shell_topology = agent.build_next_to_gain
+                    print(f"built_density = {built_density}")
+                    bp_shell_topology = agent.build_probability_next_to
 
-            if agent.sense_topology_bool:
+            if agent.sense_shell_topology_bool:
                 built_volume = state.grids["built_volume"]
                 move_map = agent.orient_move_map()
                 built_density = agent.get_array_density_by_oriented_index_map(
@@ -518,8 +529,6 @@ class Algo20_Build_c(AgentAlgorithm):
                     print("\nEDGE ")
                 else:
                     bp_shell_topology = 0
-            else:
-                bp_shell_topology = 0
 
             build_probability = bp_random + bp_shell_topology
         # print(f"build_probability:{build_probability}")
