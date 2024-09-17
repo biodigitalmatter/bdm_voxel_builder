@@ -27,11 +27,17 @@ overhang_density = 0.35
 move_up = 0
 move_random = 1
 follow_newly_built = 10
-sense_shell_topology = False
+
 build_next_to_bool = True
-build_probability_next_to = 1
+sense_wall_radar_bool = True
+
 build_probability_absolut_random = 0.001
-max_shell_thickness = 15
+build_probability_next_to = 1
+build_probability_wall_radar_low = 0.5
+build_probability_wall_radar_high = -2
+max_radar_density = 0.33
+
+wall_radar_radius = 15
 deploy_anywhere = True
 add_initial_box = False
 reset = True
@@ -249,7 +255,6 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.sense_radius = 3
                 basic_agent.build_random_chance = build_probability_absolut_random
                 basic_agent.build_random_gain = 1
-                basic_agent.max_shell_thickness = max_shell_thickness
                 basic_agent.max_build_angle = 30
                 basic_agent.overhang_density = overhang_density
 
@@ -257,8 +262,13 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.build_next_to_bool = build_next_to_bool
                 basic_agent.build_probability_next_to = build_probability_next_to
 
-                basic_agent.sense_shell_topology_bool = sense_shell_topology
-                basic_agent.start_to_build_new_volume_chance = 0.01
+                basic_agent.sense_wall_radar_bool = sense_wall_radar_bool
+                basic_agent.wall_radar_radius = 5
+                basic_agent.build_probability_wall_radar = [
+                    build_probability_wall_radar_low,
+                    build_probability_wall_radar_high,
+                ]
+                basic_agent.max_radar_density = max_radar_density
 
                 # ALTER VERSIONS
                 if category == 1:
@@ -272,18 +282,16 @@ class Algo20_Build_c(AgentAlgorithm):
                     basic_agent.build_radius, basic_agent.build_h, 0, -1
                 )
                 basic_agent.sense_map = index_map_sphere(basic_agent.sense_radius)
-                basic_agent.sense_inplane_map = index_map_cylinder(
-                    radius=3, height=2, min_radius=0, z_lift=1
-                )
-                basic_agent.sense_depth_map = index_map_cylinder(
-                    1, basic_agent.max_shell_thickness * 2, 0, 1
-                )
+
                 basic_agent.sense_overhang_map = index_map_cylinder(
                     radius=1, height=1, z_lift=-1
                 )
 
                 basic_agent.sense_nozzle_map = index_map_cylinder(
                     radius=0, height=40, z_lift=0
+                )
+                basic_agent.sense_wall_radar_map = index_map_cylinder(
+                    radius=basic_agent.wall_radar_radius, height=1, z_lift=0
                 )
 
                 # set grids
@@ -418,18 +426,18 @@ class Algo20_Build_c(AgentAlgorithm):
         # move_map_grid.array = set_value_by_index_map(
         #     move_map_grid.array, agent.orient_sense_map()
         # )
-        sense_maps_grid.array = set_value_by_index_map(
-            sense_maps_grid.array, agent.orient_sense_inplane_map()
-        )
-        sense_maps_grid.array = set_value_by_index_map(
-            sense_maps_grid.array, agent.orient_sense_depth_map()
-        )
-        move_map_grid.array = set_value_by_index_map(
-            move_map_grid.array, agent.orient_sense_overhang_map()
-        )
-        move_map_grid.array = set_value_by_index_map(
-            move_map_grid.array, agent.orient_sense_nozzle_map()
-        )
+        # sense_maps_grid.array = set_value_by_index_map(
+        #     sense_maps_grid.array, agent.orient_sense_inplane_map()
+        # )
+        # sense_maps_grid.array = set_value_by_index_map(
+        #     sense_maps_grid.array, agent.orient_sense_depth_map()
+        # )
+        # move_map_grid.array = set_value_by_index_map(
+        #     move_map_grid.array, agent.orient_sense_overhang_map()
+        # )
+        # move_map_grid.array = set_value_by_index_map(
+        #     move_map_grid.array, agent.orient_sense_nozzle_map()
+        # )
 
         print(f"built at: {agent.pose}")
 
@@ -476,61 +484,24 @@ class Algo20_Build_c(AgentAlgorithm):
                     built_volume.array, build_map, nonzero=True
                 )
                 if built_density < 0.001:  # noqa: SIM108
-                    bp_shell_topology = 0
+                    bp_build_next_to = 0
                 else:
                     print(f"built_density = {built_density}")
-                    bp_shell_topology = agent.build_probability_next_to
+                    bp_build_next_to = agent.build_probability_next_to
 
-            if agent.sense_shell_topology_bool:
-                built_volume = state.grids["built_volume"]
-                move_map = agent.orient_move_map()
-                built_density = agent.get_array_density_by_oriented_index_map(
-                    built_volume.array, move_map, nonzero=True
-                )
-                # TOPOLOGY SENSATION:
-                if built_density < 0.05:  # noqa: SIM108
-                    topology_gain_inplane = agent.start_to_build_new_volume_chance
-                else:
-                    topology_gain_inplane = 0.8
-                topology_gain_edge = 0.8
-                # topology sensor values
-                shell_planarity_max_fill = 0.75
-                shell_thickness_max_fill = 0.6
-                edge_depth_min_fill = 0.2
-                # wall thickness and shell edge
+            # BUILD BY WALL RADAR
+            if agent.sense_wall_radar_bool:
                 ground = state.grids["ground"]
-                sense_depth_map = agent.orient_sense_depth_map()
-                depth_density = agent.get_array_density_by_oriented_index_map(
-                    ground.array,
-                    sense_depth_map,
-                    nonzero=True,
-                    density_of_original_index_map=True,
+                wall_radar_map = agent.orient_sense_wall_radar_map()
+                radar_density = agent.get_array_density_by_oriented_index_map(
+                    ground.array, wall_radar_map, nonzero=True
                 )
-                sense_inplane_map = agent.orient_sense_inplane_map()
-                inplane_density = agent.get_array_density_by_oriented_index_map(
-                    ground.array, sense_inplane_map, nonzero=True
-                )
-                # access topology type
-                if inplane_density >= shell_planarity_max_fill:  # walking on wall
-                    if depth_density > shell_thickness_max_fill:
-                        # too thick wall
-                        bp_shell_topology = topology_gain_inplane * -1
-                        # print("THICK SHELL")
-                    elif depth_density <= shell_thickness_max_fill:
-                        # thin wall >> build
-                        bp_shell_topology = topology_gain_inplane
-                        print("\nTHIN SHELL")
-                elif (
-                    inplane_density < shell_planarity_max_fill
-                    and depth_density >= edge_depth_min_fill
-                ):
-                    # being on ridge edge of the shell
-                    bp_shell_topology = topology_gain_edge
-                    print("\nEDGE ")
+                if radar_density < agent.max_radar_density:  # walking on wall
+                    bp_wall_radar = agent.build_probability_wall_radar[0]
                 else:
-                    bp_shell_topology = 0
+                    bp_wall_radar = agent.build_probability_wall_radar[1]
 
-            build_probability = bp_random + bp_shell_topology
+            build_probability = bp_random + bp_build_next_to + bp_wall_radar
         # print(f"build_probability:{build_probability}")
         return build_probability
 

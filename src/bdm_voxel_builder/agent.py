@@ -62,6 +62,7 @@ class Agent:
         self.build_map = None
         self.sense_map = None
         self.sense_inplane_map = None
+        self.sense_wall_radar_map = None
         self.sense_depth_map = None
         self.sense_overhang_map = None
         self.sense_nozzle_map = None
@@ -1490,6 +1491,9 @@ class Agent:
 
     def orient_sense_depth_map(self):
         return self.orient_index_map(self.sense_depth_map)
+
+    def orient_sense_wall_radar_map(self):
+        return self.orient_index_map(self.sense_wall_radar_map, normal=Vector(0, 0, 1))
 
     def orient_sense_overhang_map(self):
         map = self.orient_index_map(self.sense_overhang_map, normal=Vector(0, 0, 1))
