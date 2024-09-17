@@ -33,12 +33,11 @@ sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = [-0.4, 0.1]  # (no, yes)
-build_probability_too_dense = [0, -2]  # (no, yes)
+build_probability_next_to = [-0.1, 0.5]  # (no, yes)
+build_probability_too_dense = [0, -10]  # (no, yes)
 
-goal_density_A = -0.25
-goal_density_B = 0.5
-build_probability_goal_density_ratio = 1
+goal_density__modifier_A = 0.15
+goal_density__modifier_B = 1.5
 
 max_build_density = 0.5
 wall_radar_radius = 15
@@ -202,10 +201,10 @@ class Algo20_Build_d(AgentAlgorithm):
 
         # define goal density
         goal_density.array += make_goal_density_box_mockup_A(
-            self.grid_size, goal_density_A
+            self.grid_size, goal_density__modifier_A
         )
         goal_density.array += make_goal_density_box_mockup_B(
-            self.grid_size, goal_density_B
+            self.grid_size, goal_density__modifier_B
         )
 
         # update walk region
@@ -287,9 +286,6 @@ class Algo20_Build_d(AgentAlgorithm):
                 basic_agent.wall_radar_radius = 5
                 basic_agent.build_probability_wall_radar = build_probability_too_dense
 
-                basic_agent.build_probability_goal_density_ratio = (
-                    build_probability_goal_density_ratio
-                )
                 basic_agent.max_build_density = max_build_density
 
                 # ALTER VERSIONS
@@ -465,7 +461,6 @@ class Algo20_Build_d(AgentAlgorithm):
                 if built_density < 0.001:  # noqa: SIM108
                     bp_build_next_to = agent.build_probability_next_to[0]
                 else:
-                    print(f"built_density = {built_density}")
                     bp_build_next_to = agent.build_probability_next_to[1]
 
             # BUILD BY WALL RADAR
@@ -486,15 +481,14 @@ class Algo20_Build_d(AgentAlgorithm):
             if agent.sense_goal_density:
                 goal_density = state.grids["goal_density"]
                 sense_map = agent.orient_sense_map()
-                goal_density = agent.get_array_density_by_oriented_index_map(
-                    goal_density.array, sense_map, nonzero=False
-                )
-                bp_goal_density = (
-                    goal_density * agent.build_probability_goal_density_ratio
+                bp_goal_density_modifier = (
+                    agent.get_array_density_by_oriented_index_map(
+                        goal_density.array, sense_map, nonzero=False
+                    )
                 )
 
             build_probability = (
-                bp_random + bp_build_next_to + bp_wall_radar + bp_goal_density
+                bp_random + bp_build_next_to * bp_goal_density_modifier + bp_wall_radar
             )
         # print(f"build_probability:{build_probability}")
         return build_probability
