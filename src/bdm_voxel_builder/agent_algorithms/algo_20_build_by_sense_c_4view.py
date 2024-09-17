@@ -22,40 +22,11 @@ from bdm_voxel_builder.helpers.array import (
 )
 from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_savepath
 
-
-def make_ground_mockup(grid_size):
-    a, b, c = grid_size
-
-    base_layer = [0, a, 0, b, 0, 5]
-    base_layer = np.array(base_layer, dtype=np.int32)
-
-    mockup_ground = np.zeros(grid_size)
-    ground_zones = [base_layer]
-    # ground_zones = [base_layer]
-    for zone in ground_zones:
-        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
-        mockup_ground[mask] = 1
-    return mockup_ground
-
-
-def make_init_box_mockup(grid_size):
-    a, b, c = grid_size
-    box_1 = [a / 2, a / 2 + 3, b / 2, b / 2 + 3, 5, 13]
-    box_1 = np.array(box_1, dtype=np.int32)
-
-    mockup_ground = np.zeros(grid_size)
-    ground_zones = [box_1]
-    # ground_zones = [base_layer]
-    for zone in ground_zones:
-        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
-        mockup_ground[mask] = 1
-    return mockup_ground
-
-
-# ultimate_parameters - walls_B
+# ultimate_parameters - test_1 - absolut random build
 overhang = 0.35
-move_up = 0.4
-move_towards_newly_built = 100
+move_up = 0
+follow_newly_built = 0
+sense_topology = False
 start_to_build_new_volume_chance = 0.01
 max_shell_thickness = 15
 deploy_anywhere = True
@@ -63,23 +34,15 @@ add_initial_box = False
 reset = True
 
 
-# # ultimate_parameters - walls_A
-# overhang = 0.45
-# move_up = 1
-# move_towards_newly_built = 100
-# start_to_build_new_volume_chance = 0.01
-# max_shell_thickness = 15
-# deploy_anywhere = False
-# add_initial_box = False
-# reset = False
-
-
 @dataclass
-class Algo20_Build_b(AgentAlgorithm):
+class Algo20_Build_c(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo 20
 
-    the agents randomly build until a density is reached in a radius
+    the agents build based on sensor feedback
+    overhang
+    wall thickness
+    print_nozzle access
 
     """
 
@@ -94,7 +57,7 @@ class Algo20_Build_b(AgentAlgorithm):
 
     # global settings
 
-    n = 50 if move_towards_newly_built else 1
+    n = 50 if follow_newly_built else 1
     seed_iterations: int = n
 
     walk_region_thickness = 1
@@ -238,7 +201,7 @@ class Algo20_Build_b(AgentAlgorithm):
         pass
         # grids["centroids"].decay()
         grids["built_volume"].decay()
-        if move_towards_newly_built > 0:
+        if follow_newly_built > 0:
             diffuse_diffusive_grid(
                 grids["follow_grid"],
                 emmission_array=grids["built_volume"].array,
@@ -270,7 +233,7 @@ class Algo20_Build_b(AgentAlgorithm):
                 basic_agent.walk_radius = 4
                 basic_agent.move_mod_z = move_up
                 basic_agent.move_mod_random = 1
-                basic_agent.move_mod_follow = move_towards_newly_built
+                basic_agent.move_mod_follow = follow_newly_built
                 # build settings
                 basic_agent.build_radius = 3
                 basic_agent.build_h = 3
@@ -278,11 +241,14 @@ class Algo20_Build_b(AgentAlgorithm):
                 basic_agent.inactive_step_count_limit = None
                 # sensor settings
                 basic_agent.sense_radius = 3
-                basic_agent.build_random_chance = 0.01
-                basic_agent.build_random_gain = 0
+                basic_agent.build_random_chance = 0.5
+                basic_agent.build_random_gain = 1
                 basic_agent.max_shell_thickness = max_shell_thickness
                 basic_agent.max_build_angle = 30
                 basic_agent.overhang_density = overhang
+
+                # TEST TODO
+                basic_agent.sense_topology_bool = sense_topology
 
                 # ALTER VERSIONS
                 if category == 1:
@@ -620,3 +586,32 @@ class Algo20_Build_b(AgentAlgorithm):
         if agent.inactive_step_count_limit:  # noqa: SIM102
             if agent.step_counter >= agent.inactive_step_count_limit:
                 agent.deploy_in_region(self.region_deploy_agent)
+
+
+def make_ground_mockup(grid_size):
+    a, b, c = grid_size
+
+    base_layer = [0, a, 0, b, 0, 5]
+    base_layer = np.array(base_layer, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [base_layer]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = 1
+    return mockup_ground
+
+
+def make_init_box_mockup(grid_size):
+    a, b, c = grid_size
+    box_1 = [a / 2, a / 2 + 3, b / 2, b / 2 + 3, 5, 13]
+    box_1 = np.array(box_1, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [box_1]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = 1
+    return mockup_ground

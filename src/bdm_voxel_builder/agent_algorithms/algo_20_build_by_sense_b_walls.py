@@ -55,7 +55,7 @@ def make_init_box_mockup(grid_size):
 # ultimate_parameters - walls_B
 overhang = 0.35
 move_up = 0.4
-move_towards_newly_built = 100
+follow_newly_built = 100
 start_to_build_new_volume_chance = 0.01
 max_shell_thickness = 15
 deploy_anywhere = True
@@ -66,7 +66,7 @@ reset = True
 # # ultimate_parameters - walls_A
 # overhang = 0.45
 # move_up = 1
-# move_towards_newly_built = 100
+# follow_newly_built = 100
 # start_to_build_new_volume_chance = 0.01
 # max_shell_thickness = 15
 # deploy_anywhere = False
@@ -79,7 +79,10 @@ class Algo20_Build_b(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo 20
 
-    the agents randomly build until a density is reached in a radius
+    the agents build based on sensor feedback
+    overhang
+    wall thickness
+    print_nozzle access
 
     """
 
@@ -94,7 +97,7 @@ class Algo20_Build_b(AgentAlgorithm):
 
     # global settings
 
-    n = 50 if move_towards_newly_built else 1
+    n = 50 if follow_newly_built else 1
     seed_iterations: int = n
 
     walk_region_thickness = 1
@@ -238,7 +241,7 @@ class Algo20_Build_b(AgentAlgorithm):
         pass
         # grids["centroids"].decay()
         grids["built_volume"].decay()
-        if move_towards_newly_built > 0:
+        if follow_newly_built > 0:
             diffuse_diffusive_grid(
                 grids["follow_grid"],
                 emmission_array=grids["built_volume"].array,
@@ -270,7 +273,7 @@ class Algo20_Build_b(AgentAlgorithm):
                 basic_agent.walk_radius = 4
                 basic_agent.move_mod_z = move_up
                 basic_agent.move_mod_random = 1
-                basic_agent.move_mod_follow = move_towards_newly_built
+                basic_agent.move_mod_follow = follow_newly_built
                 # build settings
                 basic_agent.build_radius = 3
                 basic_agent.build_h = 3

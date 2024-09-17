@@ -1,9 +1,7 @@
 # ruff: noqa: F401
-from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_a_vortex import (
-    Algo20_Build_a,
-)
-from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_b_walls import (
-    Algo20_Build_b,
+
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_c_4view import (
+    Algo20_Build_c,
 )
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
@@ -11,20 +9,19 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # setup 2 test
 # grid_size = [300, 250, 150]
 
-grid_size = [200, 200, 100]
-# grid_size = [100, 100, 80]
+# grid_size = [200, 200, 100]
+grid_size = [100, 100, 50]
 
-iterations = 20000
-agent_count = 50
-save_interval = 50
-visualize_interval = 10000
-name = f"algo_20_b_walls_B_follow100_i{iterations}a{agent_count}"
-# skip = ("agent_space", 'ground', 'follow_grid', 'move_map_grid')
-skip = ("agent_space", "follow_grid")
+iterations = 100
+agent_count = 10
+save_interval = 100
+visualize_interval = 10
+name = f"algo_20_test_c_i{iterations}a{agent_count}"
+skip = ("agent_space", "ground", "follow_grid")
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo20_Build_b(
+    algo=Algo20_Build_c(
         agent_count=agent_count,
         grid_size=grid_size,
         name=name,
