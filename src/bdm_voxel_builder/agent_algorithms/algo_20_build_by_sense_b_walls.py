@@ -55,7 +55,7 @@ def make_init_box_mockup(grid_size):
 # ultimate_parameters - walls_B
 overhang = 0.35
 move_up = 0.4
-move_towards_newly_built = 0
+move_towards_newly_built = 100
 start_to_build_new_volume_chance = 0.01
 max_shell_thickness = 15
 deploy_anywhere = True
