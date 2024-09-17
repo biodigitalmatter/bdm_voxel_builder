@@ -26,16 +26,19 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_sa
 overhang_density = 0.35
 move_up = 0
 move_random = 1
-follow_newly_built = 10
+follow_goal_density = 1
 
 build_next_to_bool = True
 sense_wall_radar_bool = True
+sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = 1
-build_probability_wall_radar_low = 0.5
-build_probability_wall_radar_high = -2
+build_probability_next_to = 0.45
+build_probability_normal_density = 0
+build_probability_too_dense = -2
 max_radar_density = 0.33
+build_probability_goal_density_ratio = 0.8
+
 
 wall_radar_radius = 15
 deploy_anywhere = False
@@ -44,7 +47,7 @@ reset = True
 
 
 @dataclass
-class Algo20_Build_c(AgentAlgorithm):
+class Algo20_Build_d(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo 20
 
@@ -52,10 +55,9 @@ class Algo20_Build_c(AgentAlgorithm):
     overhang
     print_nozzle access
 
-    20_c:
+    20_d:
     build next to
-    no topology sensation
-
+    build more in goal density
     """
 
     agent_count: int
@@ -69,7 +71,7 @@ class Algo20_Build_c(AgentAlgorithm):
 
     # global settings
 
-    n = 50 if follow_newly_built else 1
+    n = 50 if follow_goal_density else 1
     seed_iterations: int = n
 
     walk_region_thickness = 1
@@ -176,6 +178,14 @@ class Algo20_Build_c(AgentAlgorithm):
             decay_ratio=1 / 10e12,
             gradient_resolution=10e22,
         )
+        goal_density = DiffusiveGrid(
+            name="goal_density",
+            grid_size=self.grid_size,
+            color=Color.from_rgb255(232, 226, 211),
+            flip_colors=True,
+            decay_ratio=1 / 10e12,
+            gradient_resolution=10e22,
+        )
         sense_maps_grid = DiffusiveGrid(
             name="sense_maps_grid",
             grid_size=self.grid_size,
@@ -188,6 +198,10 @@ class Algo20_Build_c(AgentAlgorithm):
             color=Color.from_rgb255(180, 180, 195),
             flip_colors=True,
         )
+
+        # define goal density
+        goal_density.array += make_goal_density_box_mockup_A(self.grid)
+        goal_density.array += make_goal_density_box_mockup_B(self.grid)
 
         # update walk region
         self.update_offset_regions(ground.array.copy(), scan.array.copy())
@@ -205,18 +219,19 @@ class Algo20_Build_c(AgentAlgorithm):
             "scan": scan,
             "sense_maps_grid": sense_maps_grid,
             "move_map_grid": move_map_grid,
+            "goal_density": goal_density,
         }
         return grids
 
     def update_environment(self, state: Environment, **kwargs):
         grids = state.grids
-        pass
-        # grids["centroids"].decay()
-        grids["built_volume"].decay()
-        if follow_newly_built > 0:
+        if follow_goal_density > 0:
+            emmision_array = (
+                grids["goal_density"].array * 0.5 + grids["built_volume"].array * 0.9
+            )  # noqa: E501
             diffuse_diffusive_grid(
                 grids["follow_grid"],
-                emmission_array=grids["built_volume"].array,
+                emmission_array=emmision_array,
                 blocking_grids=[grids["ground"]],
                 grade=False,
             )
@@ -245,7 +260,7 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.walk_radius = 4
                 basic_agent.move_mod_z = move_up
                 basic_agent.move_mod_random = move_random
-                basic_agent.move_mod_follow = follow_newly_built
+                basic_agent.move_mod_follow = follow_goal_density
                 # build settings
                 basic_agent.build_radius = 3
                 basic_agent.build_h = 3
@@ -263,11 +278,15 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.build_probability_next_to = build_probability_next_to
 
                 basic_agent.sense_wall_radar_bool = sense_wall_radar_bool
+                basic_agent.sense_goal_density = sense_goal_density
                 basic_agent.wall_radar_radius = 5
                 basic_agent.build_probability_wall_radar = [
-                    build_probability_wall_radar_low,
-                    build_probability_wall_radar_high,
+                    build_probability_normal_density,
+                    build_probability_too_dense,
                 ]
+                basic_agent.build_probability_goal_density_ratio = (
+                    build_probability_goal_density_ratio
+                )
                 basic_agent.max_radar_density = max_radar_density
 
                 # ALTER VERSIONS
@@ -309,30 +328,6 @@ class Algo20_Build_c(AgentAlgorithm):
                 id += 1
 
         return agents
-
-    def calculate_move_values_random_and_Z(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-        move_map_in_place = agent.move_map_in_place
-
-        # random map
-        map_size = len(move_map_in_place)
-        random_map_values = np.random.random(map_size) + 0.5
-
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
-
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
-        move_values = move_z_coordinate + random_map_values  # + follow_map
-        return move_values
 
     def calculate_move_values_random_and_Z_f(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -400,8 +395,6 @@ class Algo20_Build_c(AgentAlgorithm):
         built_volume = state.grids["built_volume"]
         centroids = state.grids["centroids"]
         ground = state.grids["ground"]
-        sense_maps_grid = state.grids["sense_maps_grid"]
-        move_map_grid = state.grids["move_map_grid"]
 
         x, y, z = agent.pose
 
@@ -421,23 +414,6 @@ class Algo20_Build_c(AgentAlgorithm):
             build_map,
             value=1,
         )
-
-        # update grids for index_map visualisation
-        # move_map_grid.array = set_value_by_index_map(
-        #     move_map_grid.array, agent.orient_sense_map()
-        # )
-        # sense_maps_grid.array = set_value_by_index_map(
-        #     sense_maps_grid.array, agent.orient_sense_inplane_map()
-        # )
-        # sense_maps_grid.array = set_value_by_index_map(
-        #     sense_maps_grid.array, agent.orient_sense_depth_map()
-        # )
-        # move_map_grid.array = set_value_by_index_map(
-        #     move_map_grid.array, agent.orient_sense_overhang_map()
-        # )
-        # move_map_grid.array = set_value_by_index_map(
-        #     move_map_grid.array, agent.orient_sense_nozzle_map()
-        # )
 
         print(f"built at: {agent.pose}")
 
@@ -502,6 +478,21 @@ class Algo20_Build_c(AgentAlgorithm):
                     bp_wall_radar = agent.build_probability_wall_radar[1]
 
             build_probability = bp_random + bp_build_next_to + bp_wall_radar
+
+            # BUILD BY GOAL DENSITY
+            if agent.sense_goal_density:
+                goal_density = state.grids["goal_density"]
+                sense_map = agent.orient_sense_map()
+                goal_density = agent.get_array_density_by_oriented_index_map(
+                    goal_density.array, sense_map, nonzero=False
+                )
+                bp_goal_density = (
+                    goal_density * agent.build_probability_goal_density_ratio
+                )
+
+            build_probability = (
+                bp_random + bp_build_next_to + bp_wall_radar + bp_goal_density
+            )
         # print(f"build_probability:{build_probability}")
         return build_probability
 
@@ -607,4 +598,32 @@ def make_init_box_mockup(grid_size):
     for zone in ground_zones:
         mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
         mockup_ground[mask] = 1
+    return mockup_ground
+
+
+def make_goal_density_box_mockup_B(grid_size, value=0.3):
+    a, b, c = grid_size
+    box_1 = [a / 3, a / 2, b / 3, b / 2, 0, c]
+    box_1 = np.array(box_1, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [box_1]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = value
+    return mockup_ground
+
+
+def make_goal_density_box_mockup_A(grid_size, value=0.8):
+    a, b, c = grid_size
+    box_1 = [a / 3, a / 2, b / 3 * 2, b / 3 * 2, 0, c / 2]
+    box_1 = np.array(box_1, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [box_1]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = value
     return mockup_ground
