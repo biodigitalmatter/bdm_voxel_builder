@@ -29,7 +29,7 @@ class Algo15_Build(AgentAlgorithm):
     agent_count: int
     clipping_box: cg.Box
     name: str = "algo_15"
-    relevant_data_grids: str = "density"
+    relevant_data_grids: str = "built_volume"
     grid_to_dump: str = "built_centroids"
 
     seed_iterations: int = 1
@@ -159,7 +159,7 @@ class Algo15_Build(AgentAlgorithm):
             "ground": ground,
             "track": track,
             "built_centroids": built_centroids,
-            "density": density,
+            "built_volume": built_volume,
             "follow_grid": follow_grid,
         }
         return grids
@@ -217,6 +217,8 @@ class Algo15_Build(AgentAlgorithm):
     def build(self, agent: Agent, state: Environment, build_limit=0.5):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
 
+        self.print_dot_counter += 1
+
         density = state.grids["density"]
         built_centroids = state.grids["built_centroids"]
 
@@ -243,7 +245,7 @@ class Algo15_Build(AgentAlgorithm):
 
         if agent.build_by_density:
             # check density
-            arr = state.grids["density"].array
+            arr = state.grids["built_volume"].array
             build_limit = agent.get_build_limit_by_density_range(
                 arr, self.density_check_radius, nonzero=True
             )

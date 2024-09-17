@@ -736,15 +736,6 @@ def get_normal_vector(
     return v_hat
 
 
-def get_surrounding_offset_region(arrays, offset_thickness=1):
-    """returns surrounding volumetric region of several volumes in given thickness"""
-    arrays = np.array(arrays)
-    walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
-    walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)
-    offset_region = walk_on_array_offset - walk_on_array
-    return offset_region
-
-
 def mask_index_map_by_nonzero(
     array=None, origin: tuple[int, int, int] = None, sense_range_or_radius=None
 ):
@@ -761,3 +752,31 @@ def mask_index_map_by_nonzero(
     localized_sense_map = get_localized_map(sense_map, origin)
     filled_surrounding_indices = localized_sense_map[x.reshape([x.size])]
     return filled_surrounding_indices
+
+
+def get_surrounding_offset_region(arrays, offset_thickness=1, exclude_arrays=None):
+    """returns surrounding volumetric region of several volumes in given thickness"""
+    arrays = np.array(arrays, np.int_)
+    walk_on_array = np.clip(np.sum(arrays, axis=0), 0, 1)
+    walk_on_array_offset = offset_array_radial(walk_on_array, offset_thickness)
+    offset_region = walk_on_array_offset - walk_on_array
+    if not exclude_arrays:
+        arrays = np.array(arrays, np.int_)
+        exclude_region = np.clip(np.sum(arrays, axis=0), 0, 1)
+        offset_region -= exclude_region
+    return offset_region
+
+
+def count_neighbors(array, int_=True):
+    array = np.clip(array(array, dtype=np.int_), 0, 1)
+
+    padded_array = np.pad(array, pad_width=1, mode="constant", constant_values=0)
+    summed_array = padded_array.copy()
+
+    shifts = [-1, 1, -1, 1, -1, 1]
+    axii = [0, 0, 1, 1, 2, 2]
+    for shift, axis in zip(shifts, axii):  # noqa: B905
+        rolled_array = np.roll(padded_array, shift, axis)
+        summed_array += rolled_array
+    neighbor_count_array = summed_array[1:-1, 1:-1, 1:-1]
+    return neighbor_count_array

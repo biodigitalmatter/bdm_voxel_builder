@@ -1,24 +1,57 @@
+import os
 import random as r
 from dataclasses import dataclass
 
-import compas.geometry as cg
 import numpy as np
-from compas import json_dumps
+from compas import json_dump, json_dumps
 from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
+from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid, Grid
-from bdm_voxel_builder.helpers import (
-    get_nth_newest_file_in_folder,
-    get_savepath,
+from bdm_voxel_builder.grid import DiffusiveGrid
+from bdm_voxel_builder.grid.base import Grid
+from bdm_voxel_builder.helpers.array import (
+    get_mask_zone_xxyyzz,
     get_surrounding_offset_region,
+    get_values_by_index_map,
     index_map_cylinder,
     index_map_sphere,
+    set_value_by_index_map,
 )
+from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_savepath
+
+
+def make_ground_mockup(grid_size):
+    a, b, c = grid_size
+
+
+    base_layer = [0, a, 0, b, 0, 10]
+    base_layer = np.array(base_layer, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [base_layer]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = 1
+    return mockup_ground
+
+def make_init_box_mockup(grid_size):
+    a, b, c = grid_size
+    box_1 = [a / 2, a / 2 + 3, b / 2, b / 2 + 3, 10, 13]
+    box_1 = np.array(box_1, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [box_1]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = 1
+    return mockup_ground
+
 
 # CREATE AGENT TYPES
 
@@ -87,11 +120,9 @@ agent_type_dicts = [agent_dict_A]
 
 agent_type_distribution = [1]
 
-print("started")
-
-
+print('started')
 @dataclass
-class Algo20_Build(AgentAlgorithm):
+class Algo20_Build_a(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo 20
 
@@ -100,7 +131,7 @@ class Algo20_Build(AgentAlgorithm):
     """
 
     agent_count: int
-    clipping_box: cg.Box
+    grid_size: int | tuple[int, int, int]
     name: str = "algo_20"
     relevant_data_grids: str = "ground"
     grid_to_dump: str = "ground"
@@ -120,8 +151,6 @@ class Algo20_Build(AgentAlgorithm):
     import_scan = False
     dir_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
 
-    print_dot_counter = 0
-
     # save fab_planes
     fab_planes = []
     fab_planes_file_path = get_savepath(
@@ -135,7 +164,7 @@ class Algo20_Build(AgentAlgorithm):
         Run in __post_init__ since @dataclass creates __init__ method"""
         super().__init__(
             agent_count=self.agent_count,
-            clipping_box=self.clipping_box,
+            grid_size=self.grid_size,
             grid_to_dump=self.grid_to_dump,
             name=self.name,
         )
@@ -148,47 +177,59 @@ class Algo20_Build(AgentAlgorithm):
         returns: grids
 
         """
-        iterations = int(kwargs["iterations"])
-
-        if self.import_scan:
-            scan_arr = get_nth_newest_file_in_folder(self.dir_solid_npy)
-        else:
-            scan_arr = make_ground_mockup(clipping_box=self.clipping_box)
-
-        scan = Grid.from_numpy(
-            scan_arr,
-            clipping_box=self.clipping_box,
+        iterations = kwargs.get("iterations")
+        ground = DiffusiveGrid(
+            name="ground",
+            grid_size=self.grid_size,
+            color=Color.from_rgb255(97, 92, 97),
+        )
+        scan = DiffusiveGrid(
             name="scan",
+            grid_size=self.grid_size,
             color=Color.from_rgb255(210, 220, 230),
         )
+        if self.import_scan:
+            file_path = get_nth_newest_file_in_folder(self.dir_solid_npy)
+            loaded_grid = Grid.from_npy(file_path).array
+            loaded_grid = np.array(
+                loaded_grid, dtype=np.float64
+            )  # TODO set dtype in algo_11_a_self.import_scan.py  # noqa: E501
 
-        ground = scan.copy()
-        ground.name = "ground"
-        ground.color = Color.from_rgb255(97, 92, 97)
+            # the imported array is already cropped to the BBOX of interest
+
+            self.grid_size = np.shape(loaded_grid)
+            scan.array = loaded_grid
+        else:
+            scan.array = make_ground_mockup(self.grid_size)
+            scan.array = make_init_box_mockup(self.grid_size)
 
         # IMPORT SCAN
-        agent_space = Grid(
+        ground.array = scan.array.copy()
+        print(f"ground grid_size = {ground.grid_size}")
+
+        agent_space = DiffusiveGrid(
             name="agent_space",
-            clipping_box=self.clipping_box,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(34, 116, 240),
         )
         track = DiffusiveGrid(
             name="track",
-            clipping_box=self.clipping_box,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(34, 116, 240),
             decay_ratio=1 / 10000,
         )
         centroids = DiffusiveGrid(
             name="centroids",
-            clipping_box=self.clipping_box,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(252, 25, 0),
             flip_colors=True,
             decay_ratio=1 / 10000,
             decay_linear_value=1 / (iterations * 10),
         )
-        density = DiffusiveGrid(
-            name="density",
-            clipping_box=self.clipping_box,
+        self.print_dot_counter = 0
+        built_volume = DiffusiveGrid(
+            name="built_volume",
+            grid_size=self.grid_size,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
             decay_ratio=1 / 1000,
@@ -197,29 +238,31 @@ class Algo20_Build(AgentAlgorithm):
 
         follow_grid = DiffusiveGrid(
             name="follow_grid",
-            clipping_box=self.clipping_box,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
             decay_ratio=1 / 1000000,
             gradient_resolution=1000000000000,
         )
-        sense_maps_grid = Grid(
+        sense_maps_grid = DiffusiveGrid(
             name="sense_maps_grid",
-            clipping_box=self.clipping_box,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(200, 195, 0),
             flip_colors=True,
         )
-        move_map_grid = Grid(
+        move_map_grid = DiffusiveGrid(
             name="move_map_grid",
-            clipping_box=self.clipping_box,
+            grid_size=self.grid_size,
             color=Color.from_rgb255(180, 180, 195),
             flip_colors=True,
         )
 
-        # init legal_move_mask
-        self.region_legal_move = get_surrounding_offset_region(
-            [ground.to_numpy()], self.walk_region_thickness
+                    # update walk region
+        self.update_offset_regions(
+            ground.array.copy(), scan.array.copy()
         )
+
+
 
         # WRAP ENVIRONMENT
         grids = {
@@ -241,16 +284,14 @@ class Algo20_Build(AgentAlgorithm):
         # grids["centroids"].decay()
         grids["built_volume"].decay()
         diffuse_diffusive_grid(
-            grids["follow_grid"],
-            emmission_array=grids["built_volume"].array,
-            blocking_grids=[grids["ground"]],
+            grids["follow_grid"], emmission_array=grids["built_volume"].array, blocking_grids=[grids['ground']]
         )
 
-    def setup_agents(self, state: Environment):
-        agent_space = state.grids["agent"]
-        track = state.grids["track"]
-        ground_grid = state.grids["ground"]
-        agents: list[Agent] = []
+    def setup_agents(self, grids: dict[str, DiffusiveGrid]):
+        agent_space = grids["agent"]
+        track = grids["track"]
+        ground_grid = grids["ground"]
+        agents = []
 
         # generate agents based on agent_type_dicts
         d = np.array(agent_type_distribution)
@@ -286,6 +327,76 @@ class Algo20_Build(AgentAlgorithm):
         print("pref_build_angle_gain", agents[0].pref_build_angle_gain)
 
         return agents
+
+    def calculate_move_values_random_and_Z(self, agent: Agent, state: Environment):
+        """moves agents in a calculated direction
+        calculate weigthed sum of slices of grids makes the direction_cube
+        check and excludes illegal moves by replace values to -1
+        move agent
+        return True if moved, False if not or in ground
+        """
+        move_map_in_place = agent.move_map_in_place
+
+        # random map
+        map_size = len(move_map_in_place)
+        random_map_values = np.random.random(map_size) + 0.5
+
+        # global direction preference
+        move_z_coordinate = (
+            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
+        )
+
+        # MOVE PREFERENCE SETTINGS
+        move_z_coordinate *= agent.move_mod_z
+        random_map_values *= agent.move_mod_random
+        move_values = move_z_coordinate + random_map_values  # + follow_map
+        return move_values
+
+    def calculate_move_values_random_and_Z_f(self, agent: Agent, state: Environment):
+        """moves agents in a calculated direction
+        calculate weigthed sum of slices of grids makes the direction_cube
+        check and excludes illegal moves by replace values to -1
+        move agent
+        return True if moved, False if not or in ground
+        """
+        move_map_in_place = agent.move_map_in_place
+
+        # random map
+        random_map_values = np.random.random(len(move_map_in_place)) + 0.5
+
+        # global direction preference
+        move_z_coordinate = (
+            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
+        )
+
+        # follow pheromones
+        follow_map = get_values_by_index_map(
+            state.grids["follow_grid"].array, agent.move_map, agent.pose
+        )
+
+        # MOVE PREFERENCE SETTINGS
+        move_z_coordinate *= agent.move_mod_z
+        random_map_values *= agent.move_mod_random
+        follow_map *= agent.move_mod_follow
+
+        move_values = move_z_coordinate + random_map_values + follow_map
+
+        return move_values
+
+    def get_legal_move_mask(self, agent: Agent, state: Environment):
+        """moves agents in a calculated direction
+        calculate weigthed sum of slices of grids makes the direction_cube
+        check and excludes illegal moves by replace values to -1
+        move agent
+        return True if moved, False if not or in ground
+        """
+
+        # legal move mask
+        filter = get_values_by_index_map(
+            self.region_legal_move, agent.move_map, agent.pose, dtype=np.float64
+        )
+        legal_move_mask = filter == 1
+        return legal_move_mask
 
     def build(self, agent: Agent, state: Environment):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
@@ -408,23 +519,22 @@ class Algo20_Build(AgentAlgorithm):
             build_probability = bp_random + bp_angle_factor + bp_shell_topology
         # print(f"build_probability:{build_probability}")
         return build_probability
-
+    
     def update_offset_regions(self, ground_array, scan_array):
         self.region_legal_move = get_surrounding_offset_region(
             arrays=[ground_array],
             offset_thickness=self.walk_region_thickness,
         )
-        if self.deploy_anywhere:
-            self.region_deploy_agent = self.region_legal_move
+        if self.deploy_anywhere: self.region_deploy_agent = self.region_legal_move
         else:
             self.region_deploy_agent = get_surrounding_offset_region(
                 arrays=[scan_array],
                 offset_thickness=self.walk_region_thickness,
-                exclude_arrays=[ground_array],
+                exclude_arrays=[ground_array.copy()]
             )
 
     # ACTION FUNCTION
-    def agent_action(self, agent: Agent, state: Environment):
+    def agent_action(self, agent, state: Environment):
         """
         GET_PROPABILITY
         BUILD
@@ -447,10 +557,9 @@ class Algo20_Build(AgentAlgorithm):
             # build
             self.build(agent, state)
 
-            # update walk region
-            self.region_legal_move = get_surrounding_offset_region(
-                [state.grids["ground"].to_numpy(), state.grids["density"].to_numpy()],
-                self.walk_region_thickness,
+            # update offset regions
+            self.update_offset_regions(
+                ground_array=state.grids["ground"].array.copy(), scan_array=state.grids['scan'].array.copy()
             )
 
             # reset if
@@ -465,15 +574,13 @@ class Algo20_Build(AgentAlgorithm):
                     pass
         # MOVE
         # check collision
-        collision = agent.check_solid_collision(
-            [state.grids["density"], state.grids["ground"]]
-        )
+        collision = agent.check_solid_collision([state.grids["built_volume"].array])
         # move
         if not collision:
-            move_values = agent.calculate_move_values_random__z_based()
-            move_map_in_place = agent.get_localized_move_map()
+            move_values = self.calculate_move_values_random_and_Z_f(agent, state)
+            move_map_in_place = agent.move_map_in_place
 
-            legal_move_mask = agent.get_localized_move_mask(self.region_legal_move)
+            legal_move_mask = self.get_legal_move_mask(agent, state)
 
             agent.move_by_index_map(
                 index_map_in_place=move_map_in_place[legal_move_mask],
