@@ -15,7 +15,6 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
-    clip_index_map,
     clip_indices_to_grid_size,
     get_array_density_from_zone_xxyyzz,
     get_array_density_using_map,
@@ -27,7 +26,7 @@ from bdm_voxel_builder.helpers import (
     random_choice_index_from_best_n,
     transform_index_map_to_plane,
 )
-from bdm_voxel_builder.helpers.array import get_values_using_map
+from bdm_voxel_builder.helpers.array import get_values_using_index_map
 
 
 @dataclass
@@ -101,7 +100,7 @@ class Agent:
     _normal_vector = cg.Vector(0, 0, 1)
 
     def __post_init__(self):
-        self.pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
+        self._pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
 
     @property
     def pose(self):
@@ -684,7 +683,7 @@ class Agent:
                 else:
                     if not fly:
                         # check all nbs
-                        nbs_values = get_values_using_map(
+                        nbs_values = get_values_using_index_map(
                             solid_array, agent_size_index_map, nb_pose
                         )
                         if np.sum(nbs_values) == 0:
@@ -704,7 +703,7 @@ class Agent:
 
     def get_localized_move_mask(self, array: npt.NDArray[np.float_]):
         localized_move_map = self.get_localized_move_map()
-        filter = get_values_using_map(array, localized_move_map, self.pose)
+        filter = get_values_using_index_map(array, localized_move_map, self.pose)
 
         legal_move_mask = filter == 1
 
@@ -1345,7 +1344,7 @@ class Agent:
 
     def get_nonzero_map_in_sense_range(self, ground_array=None, radius=None):
         if not ground_array:
-            array = self.ground_grid.array
+            array = self.ground_grid.to_numpy()
         sense_map = self.sense_map.copy() if not radius else index_map_sphere(radius)
         filled_surrounding_indices = mask_index_map_by_nonzero(
             array, self.pose.tolist(), sense_map

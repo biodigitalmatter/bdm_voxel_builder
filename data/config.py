@@ -16,7 +16,6 @@ clipping_box = cg.Box.from_diagonal(([0, 0, 0], grid_size))
 
 config = Config(
     iterations=iterations,
-    grid_size=grid_size,
     clipping_box=clipping_box,
     algo=Algo20_Build(
         agent_count=agent_count,

@@ -129,7 +129,7 @@ def get_array_density_using_map(
     array: npt.NDArray, map_, origin=(0, 0, 0), nonzero=False
 ):
     """return clay density"""
-    values = get_values_using_map(array, map_, origin)
+    values = get_values_using_index_map(array, map_, origin)
 
     if nonzero:
         density = np.count_nonzero(values) / len(values)
@@ -354,17 +354,17 @@ def get_localized_map(
     return localized_map
 
 
-def get_values_using_map(
+def get_values_using_index_map(
     array: np.ndarray,
-    map: npt.NDArray[np.int_],
+    index_map: npt.NDArray[np.int_],
     origin: tuple[int, int, int] | None = None,
     clipping_box: cg.Box | None = None,
 ):
     if origin is None:
         origin = (0, 0, 0)
-    map = get_localized_map(map, origin, clipping_box=clipping_box)
+    index_map = get_localized_map(index_map, origin, clipping_box=clipping_box)
 
-    return array[map]
+    return array[tuple(index_map.transpose())]
 
 
 def set_value_using_map(
@@ -754,7 +754,7 @@ def mask_index_map_by_nonzero(
         if isinstance(sense_range_or_radius, float | int)
         else sense_range_or_radius.copy()
     )
-    values = get_values_using_map(array, sense_map, origin)
+    values = get_values_using_index_map(array, sense_map, origin)
 
     x = np.argwhere(values != 0)
 

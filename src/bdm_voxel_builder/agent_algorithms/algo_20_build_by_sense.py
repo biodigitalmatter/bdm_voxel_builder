@@ -86,8 +86,10 @@ class Algo20_Build(AgentAlgorithm):
     walk_region_thickness = 1
 
     # import scan
-    import_scan = True
+    import_scan = False
     dir_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
+
+    print_dot_counter = 0
 
     def __post_init__(self):
         """Initialize values held in parent class.
@@ -95,7 +97,7 @@ class Algo20_Build(AgentAlgorithm):
         Run in __post_init__ since @dataclass creates __init__ method"""
         super().__init__(
             agent_count=self.agent_count,
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             grid_to_dump=self.grid_to_dump,
             name=self.name,
         )
@@ -108,85 +110,74 @@ class Algo20_Build(AgentAlgorithm):
         returns: grids
 
         """
-        iterations = kwargs.get("iterations")
-        ground = DiffusiveGrid(
-            name="ground",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(97, 92, 97),
-        )
-        scan = DiffusiveGrid(
+        iterations = int(kwargs["iterations"])
+
+        if self.import_scan:
+            scan_arr = get_nth_newest_file_in_folder(self.dir_solid_npy)
+        else:
+            scan_arr = make_ground_mockup(clipping_box=self.clipping_box)
+
+        scan = Grid.from_numpy(
+            scan_arr,
+            clipping_box=self.clipping_box,
             name="scan",
-            grid_size=self.grid_size,
             color=Color.from_rgb255(210, 220, 230),
         )
-        if self.import_scan:
-            file_path = get_nth_newest_file_in_folder(self.dir_solid_npy)
-            loaded_grid = Grid.from_npy(file_path).array
-            loaded_grid = np.array(
-                loaded_grid, dtype=np.float64
-            )  # TODO set dtype in algo_11_a_self.import_scan.py  # noqa: E501
 
-            # the imported array is already cropped to the BBOX of interest
-
-            self.grid_size = np.shape(loaded_grid)
-            scan.array = loaded_grid
-        else:
-            scan.array = make_ground_mockup(self.grid_size)
+        ground = scan.copy()
+        ground.name = "ground"
+        ground.color = Color.from_rgb255(97, 92, 97)
 
         # IMPORT SCAN
-        ground.array = scan.array
-        print(f"ground grid_size = {ground.grid_size}")
-
-        agent_space = DiffusiveGrid(
+        agent_space = Grid(
             name="agent_space",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(34, 116, 240),
         )
         track = DiffusiveGrid(
             name="track",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(34, 116, 240),
             decay_ratio=1 / 10000,
         )
         centroids = DiffusiveGrid(
             name="centroids",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(252, 25, 0),
             flip_colors=True,
             decay_ratio=1 / 10000,
             decay_linear_value=1 / (iterations * 10),
         )
-        self.print_dot_counter = 0
         density = DiffusiveGrid(
             name="density",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
             decay_ratio=1 / 10000,
         )
         follow_grid = DiffusiveGrid(
             name="follow_grid",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
             decay_ratio=1 / 10000,
         )
-        sense_maps_grid = DiffusiveGrid(
+        sense_maps_grid = Grid(
             name="sense_maps_grid",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(200, 195, 0),
             flip_colors=True,
         )
-        move_map_grid = DiffusiveGrid(
+        move_map_grid = Grid(
             name="move_map_grid",
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             color=Color.from_rgb255(180, 180, 195),
             flip_colors=True,
         )
 
         # init legal_move_mask
         self.region_legal_move = get_surrounding_offset_region(
-            [ground.array], self.walk_region_thickness
+            [ground.to_numpy()], self.walk_region_thickness
         )
 
         # WRAP ENVIRONMENT
@@ -210,10 +201,10 @@ class Algo20_Build(AgentAlgorithm):
         # grids["density"].decay()
         # diffuse_diffusive_grid(grids.follow_grid, )
 
-    def setup_agents(self, grids: dict[str, DiffusiveGrid]):
-        agent_space = grids["agent"]
-        track = grids["track"]
-        ground_grid = grids["ground"]
+    def setup_agents(self, state: Environment):
+        agent_space = state.grids["agent"]
+        track = state.grids["track"]
+        ground_grid = state.grids["ground"]
         agents: list[Agent] = []
 
         # generate agents based on agent_type_dicts
@@ -347,7 +338,7 @@ class Algo20_Build(AgentAlgorithm):
         return build_probability
 
     # ACTION FUNCTION
-    def agent_action(self, agent, state: Environment):
+    def agent_action(self, agent: Agent, state: Environment):
         """
         GET_PROPABILITY
         BUILD
@@ -369,7 +360,7 @@ class Algo20_Build(AgentAlgorithm):
 
             # update walk region
             self.region_legal_move = get_surrounding_offset_region(
-                [state.grids["ground"].array, state.grids["density"].array],
+                [state.grids["ground"].to_numpy(), state.grids["density"].to_numpy()],
                 self.walk_region_thickness,
             )
             # reset if
@@ -385,14 +376,14 @@ class Algo20_Build(AgentAlgorithm):
         # MOVE
         # check collision
         collision = agent.check_solid_collision(
-            [state.grids["density"].array, state.grids["ground"].array]
+            [state.grids["density"], state.grids["ground"]]
         )
         # move
         if not collision:
-            move_values = self.calculate_move_values_random_and_Z(agent, state)
-            move_map_in_place = agent.move_map_in_place
+            move_values = agent.calculate_move_values_random__z_based()
+            move_map_in_place = agent.get_localized_move_map()
 
-            legal_move_mask = self.get_legal_move_mask(agent, state)
+            legal_move_mask = agent.get_localized_move_mask(self.region_legal_move)
 
             agent.move_by_index_map(
                 index_map_in_place=move_map_in_place[legal_move_mask],
