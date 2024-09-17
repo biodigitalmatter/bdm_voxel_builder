@@ -145,8 +145,8 @@ class Agent:
 
         else:  # bug. originated from somewhere else. I think its fixed
             print(
-                "normal vector calculation problem." + 
-                f"empty value list in array selection in pose: {self.pose}"
+                "normal vector calculation problem."
+                + f"empty value list in array selection in pose: {self.pose}"
             )
             self._normal_vector = self._normal_vector = cg.Vector.Zaxis().inverted()
             return self._normal_vector
