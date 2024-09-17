@@ -26,19 +26,19 @@ from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_sa
 overhang_density = 0.35
 move_up = 0
 move_random = 1
-follow_goal = 0.5
-follow_built = 2
+follow_goal = 0.05
+follow_built = 0.5
 
-build_next_to_bool = False
+build_next_to_bool = True
 sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = [0, 0.8]  # (no, yes)
+build_probability_next_to = [-0.2, 0.4]  # (no, yes)
 build_probability_too_dense = [0, -10]  # (no, yes)
 
 goal_density__modifier_A = 0.15
-goal_density__modifier_B = 0.8
+goal_density__modifier_B = 0.4
 
 max_build_density = 0.5
 wall_radar_radius = 15
@@ -617,7 +617,7 @@ def make_goal_density_box_mockup_B(grid_size, value=1):
 
 def make_goal_density_box_mockup_A(grid_size, value=1):
     a, b, c = grid_size
-    box_1 = [a / 5, a / 2, b / 5, b / 5 * 4, 0, c / 2]
+    box_1 = [a / 5, a / 2, b / 5, b / 5 * 4, 0, c]
     box_1 = np.array(box_1, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
