@@ -38,7 +38,7 @@ build_probability_wall_radar_high = -2
 max_radar_density = 0.33
 
 wall_radar_radius = 15
-deploy_anywhere = True
+deploy_anywhere = False
 add_initial_box = False
 reset = True
 
@@ -510,7 +510,7 @@ class Algo20_Build_c(AgentAlgorithm):
             arrays=[ground_array],
             offset_thickness=self.walk_region_thickness,
         )
-        if not self.deploy_anywhere:
+        if self.deploy_anywhere:
             self.region_deploy_agent = self.region_legal_move
         else:
             self.region_deploy_agent = get_surrounding_offset_region(
