@@ -7,7 +7,7 @@ import numpy as np
 import numpy.typing as npt
 from compas.files import PLY
 
-from bdm_voxel_builder.helpers import sort_pts_by_values
+from bdm_voxel_builder.helpers.array import clip_index_map_to_box, sort_pts_by_values
 
 
 def box_from_corner_frame(frame: cg.Frame, xsize: float, ysize: float, zsize: float):
@@ -135,6 +135,7 @@ def transform_index_map_to_plane(
     index_map: np.array = None,
     new_origin: tuple[float, float, float] = None,
     normal_vector: tuple[float, float, float] = None,
+    clipping_box: cg.Box = None,
 ):
     """
     transform an index map from World_XY to Plane(new_origin, normal_vector)
@@ -158,6 +159,9 @@ def transform_index_map_to_plane(
 
     index_map_pointcloud.transform(T)
     index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int32)
+
+    if clipping_box:
+        return clip_index_map_to_box(index_map_oriented, clipping_box)
     return index_map_oriented
 
 

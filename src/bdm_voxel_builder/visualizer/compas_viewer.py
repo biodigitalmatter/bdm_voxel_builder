@@ -10,8 +10,13 @@ from bdm_voxel_builder.visualizer.base import Visualizer
 class CompasViewerVisualizer(Visualizer):
     FILE_SUFFIX = ".json"
 
-    def __init__(self, save_file=False, skip_grids: tuple[str] | None = None):
-        super().__init__(save_file, skip_grids=skip_grids)
+    def __init__(
+        self,
+        save_file: bool = False,
+        should_show: bool = True,
+        skip_grids: tuple[str] | None = None,
+    ):
+        super().__init__(save_file, should_show=should_show, skip_grids=skip_grids)
 
         self.viewer = Viewer()
         self.scene = self.viewer.scene

@@ -7,6 +7,7 @@ from compas.colors import Color
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import (
@@ -30,9 +31,11 @@ class Algo15_Build(AgentAlgorithm):
     clipping_box: cg.Box
     name: str = "algo_15"
     relevant_data_grids: str = "built_volume"
-    grid_to_dump: str = "built_centroids"
+    grid_to_dump: str = "built_volume"
 
     seed_iterations: int = 1
+
+    import_scan: bool = False
 
     # directory import
     dir_scan_import = REPO_DIR / "data/live/build_grid/01_scanned"
@@ -97,9 +100,13 @@ class Algo15_Build(AgentAlgorithm):
 
         assert isinstance(xform, cg.Transformation | None)
 
-        file_path = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
+        if self.import_scan:
+            scan_arr = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
+        else:
+            scan_arr = make_ground_mockup(self.clipping_box)
+
         scan = Grid.from_numpy(
-            file_path,
+            scan_arr,
             clipping_box=self.clipping_box,
             name="scan",
             color=Color.from_rgb255(210, 220, 230),
@@ -131,7 +138,7 @@ class Algo15_Build(AgentAlgorithm):
             decay_ratio=1 / 10000,
             decay_linear_value=1 / (iterations * 10),
         )
-        density = DiffusiveGrid(
+        built_volume = DiffusiveGrid(
             name="density",
             clipping_box=self.clipping_box,
             xform=xform,
@@ -219,7 +226,7 @@ class Algo15_Build(AgentAlgorithm):
 
         self.print_dot_counter += 1
 
-        density = state.grids["density"]
+        density = state.grids["built_volume"]
         built_centroids = state.grids["built_centroids"]
 
         # update print dot array
@@ -245,7 +252,7 @@ class Algo15_Build(AgentAlgorithm):
 
         if agent.build_by_density:
             # check density
-            arr = state.grids["built_volume"].array
+            arr = state.grids["built_volume"].to_numpy()
             build_limit = agent.get_build_limit_by_density_range(
                 arr, self.density_check_radius, nonzero=True
             )
@@ -261,7 +268,7 @@ class Algo15_Build(AgentAlgorithm):
             self.region_legal_move = get_surrounding_offset_region(
                 [
                     state.grids["ground"].to_numpy(),
-                    state.grids["density"].to_numpy(),
+                    state.grids["built_volume"].to_numpy(),
                 ],
                 self.walk_region_thickness,
             )
@@ -279,7 +286,7 @@ class Algo15_Build(AgentAlgorithm):
         # MOVE
         # check collision
         collision = agent.check_solid_collision(
-            [state.grids["density"], state.grids["ground"]]
+            [state.grids["built_volume"], state.grids["ground"]]
         )
         # move
         if not collision:

@@ -4,15 +4,9 @@ import numpy as np
 from bdm_voxel_builder.helpers import get_mask_zone_xxyyzz
 
 
-def get_any_voxel_in_region(index_map_array, non_zero=True):
-    """returns a random index where...
-    nonzero:
-        index_map_array != 0
-    else:
-        index_map_array == 1
-    """
-
-    if non_zero:
+def get_any_index_of_mask(index_map_array, nonzero=True):
+    """Returns a random index of a mask array"""
+    if nonzero:
         indices = np.argwhere(index_map_array != 0)
     else:
         indices = np.argwhere(index_map_array == 1)

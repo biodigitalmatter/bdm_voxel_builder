@@ -12,10 +12,12 @@ class Visualizer(abc.ABC):
     def __init__(
         self,
         save_file=False,
+        should_show: bool = True,
         bbox: Box | None = None,
         skip_grids: tuple[str] | None = None,
     ):
         self.should_save_file = save_file
+        self.should_show = should_show
         self.bbox = bbox
 
         self.grids: list[Grid] = []

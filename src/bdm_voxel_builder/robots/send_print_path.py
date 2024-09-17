@@ -26,7 +26,7 @@ def send_program_dots(
     planes: list[cg.Frame],
     speed: float = 100,
     movel: bool = True,
-    zone: rrc.Zone=rrc.zone.Z5,
+    zone: rrc.Zone = rrc.zone.Z5,
     print_IO=0,
     dir_IO=0,
     wait_time=1,
@@ -113,7 +113,7 @@ def extrude_and_wait(
     frame: cg.Frame,
     speed: float,
     motion_type: rrc.Motion,
-    zone: rrc.Zone=rrc.Zone.FINE,
+    zone: rrc.Zone = rrc.Zone.FINE,
     wait_time: float = 0.5,
     wait_time_after: float = 0.0,
 ):

@@ -125,11 +125,15 @@ def get_mask_zone_xxyyzz(
     return mask
 
 
-def get_array_density_using_map(
-    array: npt.NDArray, map_, origin=(0, 0, 0), nonzero=False
+def get_array_density_using_index_map(
+    array: npt.NDArray,
+    map_,
+    origin=(0, 0, 0),
+    clipping_box: cg.Box = None,
+    nonzero=False,
 ):
     """return clay density"""
-    values = get_values_using_index_map(array, map_, origin)
+    values = get_values_using_index_map(array, map_, origin, clipping_box)
 
     if nonzero:
         density = np.count_nonzero(values) / len(values)
@@ -328,7 +332,7 @@ def index_map_sphere_scale_NU(
     return arr.transpose()
 
 
-def clip_map_to_box(
+def clip_index_map_to_box(
     array: np.ndarray[np.int_], bbox: cg.Box | tuple[tuple[float]]
 ) -> np.ndarray:
     if not isinstance(bbox, cg.Box):
@@ -339,18 +343,22 @@ def clip_map_to_box(
         a_min = list(a_min)
         a_max = list(a_max)
 
-    clipped = np.clip(array, a_min=a_min, a_max=a_max).round().astype(np.int_)
-    return np.unique(clipped, axis=0)
+    a_max = np.array(a_max) - 1
+
+    new_index_map = array.clip(a_min, a_max)
+    np.floor(new_index_map, out=new_index_map)
+
+    return np.unique(new_index_map.astype(np.int_, copy=False), axis=0)
 
 
-def get_localized_map(
-    map_: npt.NDArray,
+def get_localized_index_map(
+    index_map: npt.NDArray,
     origin: tuple[int, int, int],
     clipping_box: cg.Box | tuple[tuple[float]] | None = None,
 ):
-    localized_map = map_ + np.array(origin, dtype=np.int_)
+    localized_map = index_map + np.array(origin, dtype=np.int_)
     if clipping_box:
-        localized_map = clip_map_to_box(localized_map, clipping_box)
+        localized_map = clip_index_map_to_box(localized_map, clipping_box)
     return localized_map
 
 
@@ -362,7 +370,7 @@ def get_values_using_index_map(
 ):
     if origin is None:
         origin = (0, 0, 0)
-    index_map = get_localized_map(index_map, origin, clipping_box=clipping_box)
+    index_map = get_localized_index_map(index_map, origin, clipping_box=clipping_box)
 
     return array[tuple(index_map.transpose())]
 
@@ -374,7 +382,7 @@ def set_value_using_map(
     clipping_box: cg.Box | list[tuple[float]] | None = None,
     value=1.0,
 ):
-    localized_map = get_localized_map(map_, origin, clipping_box=clipping_box)
+    localized_map = get_localized_index_map(map_, origin, clipping_box=clipping_box)
 
     array[localized_map] = value
     return array
@@ -610,7 +618,7 @@ def extrude_array_in_direction_expanding(
         array = array[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        array = np.clip(array, 0, 1)
+        array.clip(0, 1, out=array)
 
     return array
 
@@ -642,7 +650,7 @@ def extrude_array_linear(
         new_array += array_step[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        new_array = np.clip(new_array, 0, 1)
+        new_array.clip(0, 1, out=new_array)
 
     return new_array
 
@@ -676,7 +684,7 @@ def extrude_array_along_vector(
     array = new_array[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        array = np.clip(array, 0, 1)
+        array.clip(0, 1, out=array)
 
     return array
 
@@ -708,7 +716,7 @@ def extrude_array_along_vector_b(
         array += array_step[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        array = np.clip(array, 0, 1)
+        array.clip(0, 1, out=array)
 
     return array
 
@@ -737,7 +745,10 @@ def get_normal_vector(
 
 
 def mask_index_map_by_nonzero(
-    array=None, origin: tuple[int, int, int] = None, sense_range_or_radius=None
+    array: npt.NDArray,
+    origin: tuple[int, int, int] = (0, 0, 0),
+    sense_range_or_radius: float | npt.NDArray[np.int_] | None = None,
+    clipping_box: cg.Box | None = None,
 ):
     """return nonzero indices in location"""
     sense_map = (
@@ -745,11 +756,15 @@ def mask_index_map_by_nonzero(
         if isinstance(sense_range_or_radius, float | int)
         else sense_range_or_radius.copy()
     )
-    values = get_values_using_index_map(array, sense_map, origin)
+    values = get_values_using_index_map(
+        array, sense_map, origin, clipping_box=clipping_box
+    )
 
     x = np.argwhere(values != 0)
 
-    localized_sense_map = get_localized_map(sense_map, origin)
+    localized_sense_map = get_localized_index_map(
+        sense_map, origin, clipping_box=clipping_box
+    )
     filled_surrounding_indices = localized_sense_map[x.reshape([x.size])]
     return filled_surrounding_indices
 

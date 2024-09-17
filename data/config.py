@@ -1,7 +1,7 @@
 # ruff: noqa: F401
 import compas.geometry as cg
 
-from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense import Algo20_Build
+from bdm_voxel_builder.agent_algorithms.algo_15_build_density_2 import Algo15_Build
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
@@ -10,8 +10,9 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
 # grid_size = [200, 200, 80]
 grid_size = [100, 100, 80]
+grid_size = [500, 500, 500]
 
-iterations = 400
+iterations = 3
 agent_count = 40
 save_interval = 50
 visualize_interval = 500
@@ -23,12 +24,12 @@ skip = ("agent_space", "follow_grid")
 config = Config(
     iterations=iterations,
     clipping_box=clipping_box,
-    algo=Algo20_Build(
+    algo=Algo15_Build(
         agent_count=agent_count,
         name=name,
         clipping_box=clipping_box,
     ),
-    visualizer=CompasViewerVisualizer(save_file=True, skip_grids=skip),
     save_interval=save_interval,
+    visualizer=None,
     visualize_interval=visualize_interval,
 )

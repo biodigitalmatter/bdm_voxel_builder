@@ -1,6 +1,6 @@
 import math
 import os
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from copy import deepcopy
 from typing import Self
 
@@ -10,8 +10,14 @@ import numpy.typing as npt
 import pyopenvdb as vdb
 import pypcd4
 from compas.colors import Color
+from more_itertools import grouper
 
-from bdm_voxel_builder.helpers import get_localized_map, remap
+from bdm_voxel_builder import TEMP_DIR, get_direction_dictionary
+from bdm_voxel_builder.helpers import (
+    get_localized_index_map,
+    get_savepath,
+    xform_to_vdb,
+)
 
 
 class Grid:
@@ -25,29 +31,14 @@ class Grid:
         flip_colors: bool = False,
     ):
         self.clipping_box = clipping_box
-        self.xform = xform or cg.Transformation()
         self.color = color or Color.black()
 
         self.vdb = grid or vdb.FloatGrid()
+        self.xform = xform or cg.Transformation()
+
         self.name = name or "grid"
 
         self.flip_colors = flip_colors
-
-    def get_color_array(self):
-        r, g, b = self.color.rgb
-        array = self.to_numpy()
-        colors = np.copy(array)
-        min_ = np.min(array)
-        max_ = np.max(array)
-        colors = remap(colors, output_domain=[0, 1], input_domain=[min_, max_])
-        if self.flip_colors:
-            colors = 1 - colors
-
-        reds = np.reshape(colors * (r), newshape=array.shape)
-        greens = np.reshape(colors * (g), newshape=array.shape)
-        blues = np.reshape(colors * (b), newshape=array.shape)
-
-        return np.concatenate((reds, greens, blues), axis=3)
 
     @property
     def clipping_box(self):
@@ -78,6 +69,15 @@ class Grid:
     def name(self, value: str):
         self.vdb.name = value
 
+    @property
+    def xform(self) -> cg.Transformation:
+        return self._xform
+
+    @xform.setter
+    def xform(self, value: cg.Transformation):
+        self._xform = value
+        self.vdb.transform = xform_to_vdb(value)
+
     def copy(self, name: str | None = None):
         new_copy = deepcopy(self)
         new_copy.name = name or self.name
@@ -106,17 +106,17 @@ class Grid:
         for index, value in zip(indices, values, strict=True):
             accessor.setValueOn(index, value)
 
-    def set_value_using_map_and_origin(
+    def set_value_using_index_map(
         self,
-        map: np.ndarray,
-        origin: tuple[int, int, int],
+        index_map: npt.NDArray[np.int_],
+        origin: tuple[int, int, int] = (0, 0, 0),
         values: list[float] | float = 1.0,
     ):
-        localized_map = get_localized_map(map, origin)
+        localized_map = get_localized_index_map(index_map, origin)
         self.set_values(localized_map, values)
 
     def set_values_using_array(self, array: np.ndarray, origin=None):
-        self.vdb.copyFromArray(array=array, ijk=(origin))
+        self.vdb.copyFromArray(array=array, ijk=origin)
 
     def set_values_in_zone_xxyyzz(
         self, zone_xxyyzz: tuple[int, int, int, int, int, int], value=1.0
@@ -127,7 +127,9 @@ class Grid:
         input:
             zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
         """
-        bmin, bmax = zone_xxyyzz[:3], zone_xxyyzz[3:]
+        xbounds, ybounds, zbounds = grouper(zone_xxyyzz, 2)
+        bmin = [xbounds[0], ybounds[0], zbounds[0]]
+        bmax = [xbounds[1], ybounds[1], zbounds[1]]
         self.vdb.fill(bmin, bmax, value, active=True)
 
     def get_active_voxels(self) -> npt.NDArray:
@@ -138,6 +140,30 @@ class Grid:
 
     def get_number_of_active_voxels(self) -> int:
         return self.vdb.activeVoxelCount()
+
+    def get_neighbors(
+        self, ijk: tuple[int, int, int], radius: int = 1
+    ) -> Iterable[tuple[int, int, int]]:
+        if radius != 1:
+            raise NotImplementedError("Only radius 1 is supported")
+
+        for direction in get_direction_dictionary().values():
+            neighbor = tuple(map(sum, zip(ijk, direction, strict=True)))
+            yield neighbor
+
+    def get_active_neighbors(
+        self, ijk: tuple[int, int, int], radius: int = 1
+    ) -> Iterable[tuple[int, int, int]]:
+        if radius != 1:
+            raise NotImplementedError("Only radius 1 is supported")
+
+        for neighbor in self.get_neighbors(ijk, radius=radius):
+            if self.vdb.getConstAccessor().isValueOn(neighbor):
+                yield neighbor
+
+    def set_values_for_neighbors(self, ijk: tuple[int, int, int], value: float):
+        for neighbor in self.get_neighbors(ijk):
+            self.set_value(neighbor, value)
 
     def get_pointcloud(self):
         return cg.Pointcloud(self.get_active_voxels())
@@ -166,6 +192,15 @@ class Grid:
         self.vdb.copyToArray(arr)
 
         return arr
+
+    def save_vdb(self, dir: os.PathLike = TEMP_DIR):
+        path = get_savepath(dir, ".vdb", note=f"grid_{self.name}")
+
+        grid = self.vdb.deepCopy()
+
+        # rotate the grid to make Y up for vdb_view and houdini
+        # grid.transform.rotate(-math.pi / 2, vdb.Axis.X)
+        vdb.write(str(path), grids=[grid])
 
     @classmethod
     def from_numpy(
