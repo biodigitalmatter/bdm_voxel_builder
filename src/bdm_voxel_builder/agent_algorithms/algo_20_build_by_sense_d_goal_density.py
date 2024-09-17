@@ -33,13 +33,12 @@ sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = 0.45
+build_probability_next_to = 0.25
 build_probability_normal_density = 0
 build_probability_too_dense = -2
-max_radar_density = 0.33
-build_probability_goal_density_ratio = 0.8
+build_probability_goal_density_ratio = 1
 
-
+max_build_density = 0.33
 wall_radar_radius = 15
 deploy_anywhere = False
 add_initial_box = False
@@ -200,8 +199,8 @@ class Algo20_Build_d(AgentAlgorithm):
         )
 
         # define goal density
-        goal_density.array += make_goal_density_box_mockup_A(self.grid)
-        goal_density.array += make_goal_density_box_mockup_B(self.grid)
+        goal_density.array += make_goal_density_box_mockup_A(self.grid_size, 0.2)
+        goal_density.array += make_goal_density_box_mockup_B(self.grid_size, 0.6)
 
         # update walk region
         self.update_offset_regions(ground.array.copy(), scan.array.copy())
@@ -287,7 +286,7 @@ class Algo20_Build_d(AgentAlgorithm):
                 basic_agent.build_probability_goal_density_ratio = (
                     build_probability_goal_density_ratio
                 )
-                basic_agent.max_radar_density = max_radar_density
+                basic_agent.max_build_density = max_build_density
 
                 # ALTER VERSIONS
                 if category == 1:
@@ -472,7 +471,7 @@ class Algo20_Build_d(AgentAlgorithm):
                 radar_density = agent.get_array_density_by_oriented_index_map(
                     ground.array, wall_radar_map, nonzero=True
                 )
-                if radar_density < agent.max_radar_density:  # walking on wall
+                if radar_density < agent.max_build_density:  # walking on wall
                     bp_wall_radar = agent.build_probability_wall_radar[0]
                 else:
                     bp_wall_radar = agent.build_probability_wall_radar[1]
@@ -601,9 +600,9 @@ def make_init_box_mockup(grid_size):
     return mockup_ground
 
 
-def make_goal_density_box_mockup_B(grid_size, value=0.3):
+def make_goal_density_box_mockup_B(grid_size, value=1):
     a, b, c = grid_size
-    box_1 = [a / 3, a / 2, b / 3, b / 2, 0, c]
+    box_1 = [a / 2, a / 3 * 2, b / 3, b / 3 * 2, 0, c]
     box_1 = np.array(box_1, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
@@ -615,9 +614,9 @@ def make_goal_density_box_mockup_B(grid_size, value=0.3):
     return mockup_ground
 
 
-def make_goal_density_box_mockup_A(grid_size, value=0.8):
+def make_goal_density_box_mockup_A(grid_size, value=1):
     a, b, c = grid_size
-    box_1 = [a / 3, a / 2, b / 3 * 2, b / 3 * 2, 0, c / 2]
+    box_1 = [a / 3, a / 2, b / 3, b / 3 * 2, 0, c / 2]
     box_1 = np.array(box_1, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)

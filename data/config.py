@@ -3,6 +3,9 @@
 from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_c_4view import (
     Algo20_Build_c,
 )
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_d_goal_density import (
+    Algo20_Build_d,
+)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
@@ -12,16 +15,16 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # grid_size = [200, 200, 100]
 grid_size = [100, 100, 50]
 
-iterations = 20000
-agent_count = 30
+iterations = 5000
+agent_count = 10
 save_interval = 100
-visualize_interval = 5000
-name = f"algo_20_test_c_wall_radar_deploy_anywhere_False_i{iterations}a{agent_count}"
+visualize_interval = 100
+name = f"algo_20_test_d_i{iterations}a{agent_count}"
 skip = ("agent_space", "ground", "follow_grid")
 config = Config(
     iterations=iterations,
     grid_size=grid_size,
-    algo=Algo20_Build_c(
+    algo=Algo20_Build_d(
         agent_count=agent_count,
         grid_size=grid_size,
         name=name,
