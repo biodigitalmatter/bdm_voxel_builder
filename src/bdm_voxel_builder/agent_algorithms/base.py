@@ -1,28 +1,32 @@
 import abc
 
-import numpy as np
+import compas.geometry as cg
+
+from bdm_voxel_builder.environment import Environment
+from bdm_voxel_builder.grid.diffusive_grid import DiffusiveGrid
 
 
 class AgentAlgorithm(abc.ABC):
     def __init__(
         self,
         agent_count: int,
-        grid_size: int | tuple[int, int, int],
         grid_to_dump: str,
-        name: str = None,
+        clipping_box: cg.Box,
+        name: str | None = None,
+        grids_to_decay: list[str] | None = None,
     ) -> None:
         self.agent_count = agent_count
         self.grid_to_dump = grid_to_dump
+        self.clipping_box = clipping_box
         self.name = name
-
-        if isinstance(grid_size, int | float):
-            grid_size = np.array([grid_size, grid_size, grid_size], dtype=np.int32)
-        elif isinstance(grid_size, list | tuple):
-            grid_size = np.array(grid_size, dtype=np.int32)
-        if np.min(grid_size) < 1:
-            raise ValueError("grid_size must be nonzero and positive")
-        self.grid_size = grid_size.tolist()
+        self.grids_to_decay = grids_to_decay
 
     @abc.abstractmethod
-    def setup_agents(self):
+    def setup_agents(self, state: Environment):
         raise NotImplementedError
+
+    def update_environment(self, state: Environment):
+        for grid_name in self.grids_to_decay or []:
+            grid = state.grids[grid_name]
+            assert isinstance(grid, DiffusiveGrid)
+            grid.decay()

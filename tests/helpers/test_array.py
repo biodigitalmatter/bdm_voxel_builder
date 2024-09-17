@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from bdm_voxel_builder.agent_algorithms.common import get_any_voxel_in_region
+from bdm_voxel_builder.agent_algorithms.common import get_any_index_of_mask
 from bdm_voxel_builder.helpers.array import get_mask_zone_xxyyzz, index_map_sphere
 
 
@@ -31,12 +31,12 @@ def test_get_mask_zone_xxyyzz():
 def test_get_any_voxel_in_region():
     # test 1
     array_1 = np.array([[0, 0, 0], [0, 0, 0], [0, 1, 0]])
-    x, y = get_any_voxel_in_region(array_1)
+    x, y = get_any_index_of_mask(array_1)
     assert x == 2 and y == 1
 
     # test 2
     array_2 = np.array([[1, 1, 0, 1, 1], [1, 1, 0, 0, 0], [0, 0, 0, 0, 0]])
-    index = get_any_voxel_in_region(array_2)
+    index = get_any_index_of_mask(array_2)
     result = array_2[*index]
     assert result == 1
 

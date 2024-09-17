@@ -1,16 +1,15 @@
 import enum
+from typing import Self
 
+import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
+import pyopenvdb as vdb
 from compas.colors import Color
 from compas.geometry import Box
 
 from bdm_voxel_builder.grid import Grid
-from bdm_voxel_builder.helpers import (
-    crop_array,
-    get_mask_zone_xxyyzz,
-)
-from bdm_voxel_builder.helpers.math import remap
+from bdm_voxel_builder.helpers import crop_array
 
 
 class GravityDir(enum.Enum):
@@ -25,9 +24,11 @@ class GravityDir(enum.Enum):
 class DiffusiveGrid(Grid):
     def __init__(
         self,
-        grid_size: int | tuple[int, int, int] | Box = None,
-        name: str = None,
-        color: Color = None,
+        name: str,
+        clipping_box: Box,
+        xform: cg.Transformation | None = None,
+        color: Color | None = None,
+        grid: vdb.GridBase = None,
         diffusion_ratio: float = 0.12,
         diffusion_random_factor: float = 0.0,
         decay_random_factor: float = 0.0,
@@ -36,18 +37,18 @@ class DiffusiveGrid(Grid):
         emission_factor: float = 0.1,
         gradient_resolution: float = 0.0,
         flip_colors: bool = False,
-        emmision_array: npt.NDArray = None,
+        emission_array: npt.NDArray | None = None,
         gravity_dir: GravityDir = GravityDir.DOWN,
         gravity_ratio: float = 0.0,
         voxel_crop_range=(0, 1),
     ):
-        if isinstance(grid_size, int):
-            grid_size = np.array([grid_size] * 3, dtype=np.int32)
-
         super().__init__(
-            grid_size,
             name=name,
+            clipping_box=clipping_box,
+            xform=xform,
             color=color,
+            grid=grid,
+            flip_colors=flip_colors,
         )
         self.diffusion_ratio = diffusion_ratio
         self.diffusion_random_factor = diffusion_random_factor
@@ -56,54 +57,18 @@ class DiffusiveGrid(Grid):
         self.decay_ratio = decay_ratio
         self.emission_factor = emission_factor
         self.gradient_resolution = gradient_resolution
-        self.flip_colors = flip_colors
-        self.emmision_array = emmision_array
+        self.emission_array = emission_array
         self.gravity_dir = gravity_dir
         self.gravity_ratio = gravity_ratio
         self.voxel_crop_range = voxel_crop_range
         self.iteration_counter: int = 0
 
-    @property
-    def color_array(self):
-        r, g, b = self.color.rgb
-        colors = np.copy(self.array)
-        min_ = np.min(self.array)
-        max_ = np.max(self.array)
-        colors = remap(colors, output_domain=[0, 1], input_domain=[min_, max_])
-        if self.flip_colors:
-            colors = 1 - colors
-
-        newshape = self.grid_size + [1]
-        # TODO check if  self.grid_size is a tuple...
-
-        reds = np.reshape(colors * (r), newshape=newshape)
-        greens = np.reshape(colors * (g), newshape=newshape)
-        blues = np.reshape(colors * (b), newshape=newshape)
-
-        return np.concatenate((reds, greens, blues), axis=3)
-
-    def conditional_fill(self, condition="<", value=0.5, override_self=False):
-        """returns new voxel_array with 0,1 values based on condition"""
-        if condition == "<":
-            mask_inv = self.array < value
-        elif condition == ">":
-            mask_inv = self.array > value
-        elif condition == "<=":
-            mask_inv = self.array <= value
-        elif condition == ">=":
-            mask_inv = self.array >= value
-        a = np.zeros_like(self.array)
-        a[mask_inv] = 0
-        if override_self:
-            self.array = a
-        return a
-
     def grade(self):
         if self.gradient_resolution == 0:
             pass
         else:
-            self.array = (
-                np.int32(self.array * self.gradient_resolution)
+            self.vdb.mapOn(
+                lambda value: round(value * self.gradient_resolution)
                 / self.gradient_resolution
             )
 
@@ -116,6 +81,8 @@ class DiffusiveGrid(Grid):
         delta_x = -a(x-y)
         where 0 <= a <= 1/6
         """
+        array = self.to_numpy()
+
         if limit_by_Hirsh:
             self.diffusion_ratio = max(0, self.diffusion_ratio)
             self.diffusion_ratio = min(1 / 6, self.diffusion_ratio)
@@ -124,7 +91,7 @@ class DiffusiveGrid(Grid):
         axes = [0, 0, 1, 1, 2, 2]
         # order: left, right, front
         # diffuse per six face_neighbors
-        total_diffusions = np.zeros_like(self.array)
+        total_diffusions = np.zeros_like(array)
 
         # if isinstance(self.grid_size, int):
         #     self.grid_size = [self.grid_size, self.grid_size, self.grid_size]
@@ -133,7 +100,7 @@ class DiffusiveGrid(Grid):
 
         for i in range(6):
             # y: shift neighbor
-            y = np.copy(self.array)
+            y = np.copy(array)
             y = np.roll(y, shifts[i % 2], axis=axes[i])
             if not reintroduce_on_the_other_end:  # TODO do it with np.pad
                 e = self.grid_size[axes[i]] - 1
@@ -161,12 +128,12 @@ class DiffusiveGrid(Grid):
                 diff_ratio = self.diffusion_ratio
             else:
                 diff_ratio = self.diffusion_ratio * (
-                    1 - np.zeros_like(self.array) * self.diffusion_random_factor
+                    1 - np.zeros_like(array) * self.diffusion_random_factor
                 )
-            # summ up the diffusions per faces
-            total_diffusions += diff_ratio * (self.array - y)
-        self.array -= total_diffusions
-        return self.array
+            # sum up the diffusions per faces
+            total_diffusions += diff_ratio * (self.to_numpy() - y)
+
+        self.set_values_with_array(array - total_diffusions)
 
     def gravity_shift(self, reintroduce_on_the_other_end=False):
         """
@@ -177,14 +144,15 @@ class DiffusiveGrid(Grid):
         delta_x = -a(x-y)
         where 0 <= a <= 1/6
         """
+        array = self.to_numpy()
         shifts = [-1, 1]
         axes = [0, 0, 1, 1, 2, 2]
         # order: left, right, front
         # diffuse per six face_neighbors
-        total_diffusions = np.zeros_like(self.array)
+        total_diffusions = np.zeros_like(array)
         if self.gravity_ratio != 0:
             # y: shift neighbor
-            y = np.copy(self.array)
+            y = np.copy(array)
             y = np.roll(y, shifts[self.gravity_dir % 2], axis=axes[self.gravity_dir])
             if not reintroduce_on_the_other_end:
                 # TODO replace to padded array method
@@ -218,11 +186,9 @@ class DiffusiveGrid(Grid):
                         m[:][:][g - 1] = 0
                         y = m.transpose((1, 2, 0))
 
-            total_diffusions += self.gravity_ratio * (self.array - y) / 2
-            self.array -= total_diffusions
-        else:
-            pass
-        return self.array
+            total_diffusions += self.gravity_ratio * (array - y) / 2
+
+            self.set_values_with_array(array - total_diffusions)
 
     def emission_self(self, proportional=True):
         """updates array values based on self array values
@@ -230,7 +196,7 @@ class DiffusiveGrid(Grid):
 
         if proportional:  # proportional
             self.array += self.array * self.emission_factor
-        else:  # absolut
+        else:  # absolute
             self.array = np.where(
                 self.array != 0, self.array + self.emission_factor, self.array
             )
@@ -246,7 +212,7 @@ class DiffusiveGrid(Grid):
                 self.array + external_emission_array * factor,
                 self.array,
             )
-        else:  # absolut
+        else:  # absolute
             self.array = np.where(external_emission_array != 0, factor, self.array)
 
     def block_grids(self, other_grids: list[Grid]):
@@ -256,7 +222,10 @@ class DiffusiveGrid(Grid):
             grid.array = np.where(self.array == 1, 0 * grid.array, 1 * grid.array)
 
     def decay(self):
-        self.array -= self.array * self.decay_ratio
+        def decay_voxel(value):
+            return value - value * self.decay_ratio
+
+        self.vdb.mapOn(decay_voxel)
 
     def decay_linear(self):
         s, e = self.voxel_crop_range
@@ -267,25 +236,69 @@ class DiffusiveGrid(Grid):
     ):
         self.iteration_counter += 1
         # emission update
-        self.emmission_in()
+        self.emission_in()
         # decay
         self.decay()
         # diffuse
         self.diffuse(diffusion_limit_by_Hirsh, reintroduce_on_the_other_end)
         # emission_out
-        self.emmission_out_update()
+        self.emission_out_update()
 
-    def set_values_in_zone_xxyyzz(self, zone_xxyyzz, value=1, add_values=False):
-        """add or replace values within zone (including both end)
-        add_values == True: add values in self.array
-        add_values == False: replace values in self.array *default
-        input:
-            zone_xxyyzz = [x_start, x_end, y_start, y_end, z_start, z_end]
+    def diffuse_diffusive_grid(
+        self,
+        emission_array: npt.NDArray | list[npt.NDArray] | None = None,
+        blocking_grids: Self | list[Self] | None = None,
+        gravity_shift_bool: bool = False,
+        diffuse_bool: bool = True,
+        decay: bool = True,
+        decay_linear: bool = False,
+        grade=True,
+        n_iterations: int = 1,
+    ):
         """
-        if add_values:
-            zone = get_mask_zone_xxyyzz(self.grid_size, zone_xxyyzz, return_bool=False)
-            zone *= value
-            self.array += zone
-        else:
-            mask = get_mask_zone_xxyyzz(self.grid_size, zone_xxyyzz, return_bool=True)
-            self.array[mask] = value
+        DIFFUSE AND DECAY GRIDS
+        optionally multiple iterations
+        diffusion steps:
+
+        loads from emissive_grids
+        diffuse
+        apply gravity shift
+        decay_linear
+        decay_proportional
+        get_blocked_by (one or more grids)
+        apply gradient resolution
+
+        gravity direction: 0:left, 1:right, 2:front, 3:back, 4:down, 5:up"""
+        for _ in range(n_iterations):
+            if isinstance(emission_array, np.ndarray):
+                self.emission_intake(emission_array, 1, False)
+            elif isinstance(emission_array, list):
+                for i in range(emission_array):
+                    self.emission_intake(emission_array[i], 1, False)
+
+            # diffuse
+            if diffuse_bool:
+                self.diffuse()
+
+            # gravity
+            if gravity_shift_bool:
+                self.gravity_shift()
+
+            # decay
+            if decay_linear:
+                self.decay_linear()
+            elif decay:
+                self.decay()
+
+            # collision
+
+            if blocking_grids:
+                if isinstance(blocking_grids, list):
+                    for blocking_grid in blocking_grids:
+                        blocking_grid.block_grids([self])
+                else:
+                    blocking_grids.block_grids([self])
+
+            # apply gradient steps
+            if self.gradient_resolution != 0 and grade:
+                self.grade()

@@ -13,6 +13,7 @@ dependencies:
   - compas_rrc
   - invoke
   - matplotlib
+  - more-itertools
   - numpy
   - openvdb>=11.0.0
   - pypcd4

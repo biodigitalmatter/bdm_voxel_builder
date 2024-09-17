@@ -7,17 +7,22 @@ from bdm_voxel_builder.grid import Grid
 
 
 class Visualizer(abc.ABC):
-    FILE_SUFFIX: str = None
+    FILE_SUFFIX: str | None = None
 
     def __init__(
-        self, save_file=False, bbox: Box = None, skip_grids: tuple[str] = None
+        self,
+        save_file=False,
+        should_show: bool = True,
+        bbox: Box | None = None,
+        skip_grids: tuple[str] | None = None,
     ):
         self.should_save_file = save_file
+        self.should_show = should_show
         self.bbox = bbox
 
         self.grids: list[Grid] = []
 
-        self.skip_grids = skip_grids
+        self.skip_grids = skip_grids or ()
 
     @abc.abstractmethod
     def save_file(self, note=None):
