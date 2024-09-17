@@ -27,7 +27,7 @@ overhang_density = 0.35
 move_up = 0
 move_random = 1
 follow_goal = 0.05
-follow_built = 2
+follow_built = 0.5
 
 build_next_to_bool = True
 sense_wall_radar_bool = True
