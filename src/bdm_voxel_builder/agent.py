@@ -12,7 +12,6 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
-    get_array_density_using_index_map,
     get_localized_index_map,
     get_values_using_index_map,
     index_map_cylinder,
