@@ -15,7 +15,7 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # grid_size = [200, 200, 100]
 grid_size = [100, 100, 50]
 
-iterations = 5000
+iterations = 1000
 agent_count = 10
 save_interval = 100
 visualize_interval = 100

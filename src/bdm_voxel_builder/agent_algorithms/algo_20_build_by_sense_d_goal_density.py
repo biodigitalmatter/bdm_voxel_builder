@@ -33,12 +33,14 @@ sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = 0.25
-build_probability_normal_density = 0
-build_probability_too_dense = -2
+build_probability_next_to = [-0.4, 0.1]  # (no, yes)
+build_probability_too_dense = [0, -2]  # (no, yes)
+
+goal_density_A = -0.25
+goal_density_B = 0.5
 build_probability_goal_density_ratio = 1
 
-max_build_density = 0.33
+max_build_density = 0.5
 wall_radar_radius = 15
 deploy_anywhere = False
 add_initial_box = False
@@ -199,8 +201,12 @@ class Algo20_Build_d(AgentAlgorithm):
         )
 
         # define goal density
-        goal_density.array += make_goal_density_box_mockup_A(self.grid_size, 0.2)
-        goal_density.array += make_goal_density_box_mockup_B(self.grid_size, 0.6)
+        goal_density.array += make_goal_density_box_mockup_A(
+            self.grid_size, goal_density_A
+        )
+        goal_density.array += make_goal_density_box_mockup_B(
+            self.grid_size, goal_density_B
+        )
 
         # update walk region
         self.update_offset_regions(ground.array.copy(), scan.array.copy())
@@ -279,10 +285,8 @@ class Algo20_Build_d(AgentAlgorithm):
                 basic_agent.sense_wall_radar_bool = sense_wall_radar_bool
                 basic_agent.sense_goal_density = sense_goal_density
                 basic_agent.wall_radar_radius = 5
-                basic_agent.build_probability_wall_radar = [
-                    build_probability_normal_density,
-                    build_probability_too_dense,
-                ]
+                basic_agent.build_probability_wall_radar = build_probability_too_dense
+
                 basic_agent.build_probability_goal_density_ratio = (
                     build_probability_goal_density_ratio
                 )
@@ -459,10 +463,10 @@ class Algo20_Build_d(AgentAlgorithm):
                     built_volume.array, build_map, nonzero=True
                 )
                 if built_density < 0.001:  # noqa: SIM108
-                    bp_build_next_to = 0
+                    bp_build_next_to = agent.build_probability_next_to[0]
                 else:
                     print(f"built_density = {built_density}")
-                    bp_build_next_to = agent.build_probability_next_to
+                    bp_build_next_to = agent.build_probability_next_to[1]
 
             # BUILD BY WALL RADAR
             if agent.sense_wall_radar_bool:
@@ -602,7 +606,7 @@ def make_init_box_mockup(grid_size):
 
 def make_goal_density_box_mockup_B(grid_size, value=1):
     a, b, c = grid_size
-    box_1 = [a / 2, a / 3 * 2, b / 3, b / 3 * 2, 0, c]
+    box_1 = [a / 2, a / 5 * 4, b / 5, b / 5 * 4, 0, c * 0.7]
     box_1 = np.array(box_1, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
@@ -616,7 +620,7 @@ def make_goal_density_box_mockup_B(grid_size, value=1):
 
 def make_goal_density_box_mockup_A(grid_size, value=1):
     a, b, c = grid_size
-    box_1 = [a / 3, a / 2, b / 3, b / 3 * 2, 0, c / 2]
+    box_1 = [a / 5, a / 2, b / 5, b / 5 * 4, 0, c / 2]
     box_1 = np.array(box_1, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
