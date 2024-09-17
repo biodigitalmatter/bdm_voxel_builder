@@ -34,11 +34,12 @@ sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = [0, 0.2]  # (no, yes)
+build_probability_next_to = [0, 0.3]  # (no, yes)
 build_probability_too_dense = [0, -10]  # (no, yes)
 
-goal_density__modifier_A = 0
-goal_density__modifier_B = 0.25
+goal_density__modifier_A = -0.1
+goal_density__modifier_B = 0.35
+goal_density__modifier_C = -5
 
 max_build_density = 0.5
 wall_radar_radius = 15
@@ -206,6 +207,9 @@ class Algo20_Build_d(AgentAlgorithm):
         )
         goal_density.array += make_goal_density_box_mockup_B(
             self.grid_size, goal_density__modifier_B
+        )
+        goal_density.array += make_goal_density_box_mockup_B(
+            self.grid_size, goal_density__modifier_C
         )
 
         # update walk region
@@ -619,6 +623,20 @@ def make_goal_density_box_mockup_B(grid_size, value=1):
 def make_goal_density_box_mockup_A(grid_size, value=1):
     a, b, c = grid_size
     box_1 = [a / 5, a / 2, b / 5, b / 5 * 4, 0, c]
+    box_1 = np.array(box_1, dtype=np.int32)
+
+    mockup_ground = np.zeros(grid_size)
+    ground_zones = [box_1]
+    # ground_zones = [base_layer]
+    for zone in ground_zones:
+        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
+        mockup_ground[mask] = value
+    return mockup_ground
+
+
+def make_goal_density_box_mockup_C(grid_size, value=1):
+    a, b, c = grid_size
+    box_1 = [0, a / 5, 0, b / 5 * 4, 0, c]
     box_1 = np.array(box_1, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
