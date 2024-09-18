@@ -7,9 +7,11 @@ from compas_fab.backends.ros import RosClient
 from compas_rrc import AbbClient
 
 from bdm_voxel_builder import DATA_DIR
+from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder
 
 RUN_EXTRUDER_DO = "Local_IO_0_DO5"
 DIR_EXTRUDER_DO = "Local_IO_0_DO6"
+# RUN_PRESSURE = "Local_IO_0_DO2"
 
 
 def coerce_zone(zone):
@@ -23,10 +25,10 @@ def coerce_zone(zone):
 
 
 def send_program_dots(
-    planes: list[cg.Frame],
+    frames: list[cg.Frame],
     speed: float = 100,
     movel: bool = True,
-    zone: rrc.Zone=rrc.zone.Z5,
+    zone: rrc.Zone = 5,
     print_IO=0,
     dir_IO=0,
     wait_time=1,
@@ -36,8 +38,8 @@ def send_program_dots(
 ):
     run = True
 
-    # planes
-    planes = planes
+    # frames
+    frames = frames
 
     if tool_name is None:
         tool_name = "tool0"
@@ -67,13 +69,18 @@ def send_program_dots(
             client.send(rrc.SetAcceleration(100, 100))
             client.send(rrc.SetMaxSpeed(100, 150))
 
-            first_frame = planes[0].translated(cg.Vector.Zaxis() * 250)
+            # first_frame = frames[0].translated(cg.Vector.Zaxis() * 250)
 
             client.send(
-                rrc.MoveToFrame(first_frame, 100, rrc.Zone.Z5, rrc.Motion.JOINT)
+                rrc.MoveToJoints(
+                    [90, 30, 15, 45, -45, -45],
+                    0,
+                    speed=100,
+                    zone=rrc.Zone.FINE,
+                )
             )
 
-            for i, plane in enumerate(planes):
+            for i, plane in enumerate(frames):
                 sp = speed[i] if isinstance(speed, list) else speed
                 zo = zone[i] if isinstance(zone, list) else zone
                 wait_i = wait_time[i] if isinstance(wait_time, list) else wait_time
@@ -83,6 +90,11 @@ def send_program_dots(
                 frame = plane
                 print(f"send :: {i}")
                 print(f"next frame: {frame}")
+                print(f"io: {IO_5}")
+
+                # if i % 50 == 0:
+                #     client.send_and_wait(rrc.PrintText(f"Sent {i} planes"))
+                client.send(rrc.PrintText(f"no.: {i}"))
 
                 if dot_print_style:  # dot style print with z hop
                     if IO_5 == 0:
@@ -99,13 +111,47 @@ def send_program_dots(
                             motion_type,
                             wait_time=wait_i,
                             wait_time_after=0,
-                            z_hop=30,
+                            z_hop=45,
                         )
 
                 else:  # continuous print path
                     client.send(rrc.MoveToFrame(frame, sp, zo, motion_type))
                     client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=IO_5))
-                    client.send(rrc.SetDigital(io_name=DIR_EXTRUDER_DO, value=IO_6))
+                    # client.send(rrc.SetDigital(io_name=DIR_EXTRUDER_DO, value=IO_6))
+
+            # client.send(rrc.SetDigital(io_name=RUN_PRESSURE, value=0))
+
+
+def send_test_program(
+    frames: list[cg.Frame],
+    tool_name=None,
+    wobj_name=None,
+):
+    run = True
+
+    if run:
+        with RosClient() as ros_client:
+            print(ros_client)
+            client = AbbClient(ros=ros_client)
+            client.send(
+                rrc.MoveToJoints(
+                    [90, 30, 15, 45, -45, -45],
+                    0,
+                    speed=100,
+                    zone=rrc.Zone.FINE,
+                )
+            )
+            client.send(rrc.SetTool(tool_name))
+            client.send(rrc.SetWorkObject(wobj_name))
+            client.send(rrc.SetAcceleration(100, 100))
+            client.send(rrc.SetMaxSpeed(100, 150))
+
+            for i, plane in enumerate(frames):
+                print(f"send :: {i}")
+                print(f"next frame: {plane}")
+                client.send(rrc.MoveToFrame(plane, 100, rrc.Zone.Z5, rrc.Motion.LINEAR))
+
+            # client.send(rrc.SetDigital(io_name=RUN_PRESSURE, value=0))
 
 
 def extrude_and_wait(
@@ -113,7 +159,7 @@ def extrude_and_wait(
     frame: cg.Frame,
     speed: float,
     motion_type: rrc.Motion,
-    zone: rrc.Zone=rrc.Zone.FINE,
+    zone: rrc.Zone = rrc.Zone.FINE,
     wait_time: float = 0.5,
     wait_time_after: float = 0.0,
 ):
@@ -150,21 +196,21 @@ def extrude_with_z_hop(
     frame_above = frame.transformed(cg.Translation.from_vector(z_hop_vector))
 
     client.send(rrc.MoveToFrame(frame_above, speed, zone, motion_type))
-    client.send(rrc.MoveToFrame(frame, speed, zone, motion_type=motion_type))
+    client.send(rrc.MoveToFrame(frame, 25, zone, motion_type=motion_type))
     client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1))
     client.send(rrc.WaitTime(wait_time))
     client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0))
     if wait_time_after > 0:
         client.send(rrc.WaitTime(wait_time_after))
-    client.send(rrc.MoveToFrame(frame_above, speed, zone, motion_type))
+    client.send(rrc.MoveToFrame(frame_above, 25, zone, motion_type))
 
 
 if __name__ == "__main__":
     # get client object
-    file_name = "fab_data_cylinder_2_lutum.json"
-    filepath = DATA_DIR / "live" / "fab_data" / file_name
+    # file_name = "fab_data_cylinder_2_lutum.json"
+    # filepath = DATA_DIR / "live" / "fab_data" / file_name
 
-    # file = get_nth_newest_file_in_folder(DATA_DIR / "live" / "fab_data")
+    filepath = get_nth_newest_file_in_folder(DATA_DIR / "live" / "fab_data")
     print(f"import file: {filepath}")
 
     data = json_load(filepath)
@@ -177,20 +223,22 @@ if __name__ == "__main__":
     wait_time = data["wait_time"]
     zone = 5
 
-    tool_name = "t_lutum"
+    tool_name = "t_lutum_2"
     wobj_name = "wobj_bhg"
 
     dot_print_style = True
 
     send_program_dots(
-        frames,
-        speed,
-        movel,
-        zone,
-        print_IO,
-        dir_IO,
-        wait_time,
-        tool_name,
-        wobj_name,
-        dot_print_style,
+        frames=frames,
+        speed=100,
+        movel=True,
+        zone=None,
+        print_IO=print_IO,
+        dir_IO=0,
+        wait_time=wait_time,
+        tool_name=tool_name,
+        wobj_name=wobj_name,
+        dot_print_style=dot_print_style,
     )
+
+    # send_test_program(frames, tool_name, wobj_name)

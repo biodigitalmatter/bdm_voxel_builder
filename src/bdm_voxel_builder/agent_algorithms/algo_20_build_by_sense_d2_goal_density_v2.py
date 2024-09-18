@@ -34,10 +34,10 @@ sense_wall_radar_bool = True
 sense_goal_density = True
 
 build_probability_absolut_random = 0.001
-build_probability_next_to = [0, 0.3]  # (no, yes)
+build_probability_next_to = [-0.3, 0.3]  # (no, yes)
 build_probability_too_dense = [0, -10]  # (no, yes)
 
-goal_density__modifier_D = 2
+goal_density__modifier_D = 1.5
 
 max_build_density = 0.5
 wall_radar_radius = 15
@@ -47,7 +47,7 @@ reset = True
 
 
 @dataclass
-class Algo20_Build_d(AgentAlgorithm):
+class Algo20_Build_d2(AgentAlgorithm):
     """
     # Voxel Builder Algorithm: Algo 20
 
@@ -642,7 +642,7 @@ def make_goal_density_box_mockup_C(grid_size, value=1):
 
 def make_goal_density_box_mockup_D(grid_size, value=1):
     a, b, c = grid_size
-    box_1 = [a * 0.25, a * 0.75, b * 0.25, b * 0.75, 0, c]
+    box_1 = [a * 0.4, a * 0.6, b * 0.4, b * 0.6, 0, c]
     box_1 = np.array(box_1, dtype=np.int32)
 
     mockup_ground = np.zeros(grid_size)
