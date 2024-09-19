@@ -6,15 +6,9 @@ import click
 from bdm_voxel_builder import DATA_DIR
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.helpers import (
-    pointcloud_from_grid_array,
-    save_ndarray,
-    save_pointcloud,
-)
-from bdm_voxel_builder.visualizer.matplotlib import MPLVisualizer
 
 
-def simulate(frame, config: Config = None, sim_state: Environment = None):
+def simulate(config: Config, sim_state: Environment):
     algo = config.algo
     visualizer = config.visualizer
 
@@ -27,14 +21,13 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
         algo.agent_action(agent, sim_state)
 
     # 3. make frame for animation
-    if (
+    if visualizer and (
         sim_state.iteration_count % config.visualize_interval == 0
         or sim_state.iteration_count == config.iterations - 1
     ):
         visualizer.draw(iteration_count=sim_state.iteration_count)
 
     # 4. DUMP JSON
-    note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
     if (
         sim_state.iteration_count % config.save_interval == 0
@@ -54,8 +47,8 @@ def simulate(frame, config: Config = None, sim_state: Environment = None):
     sim_state.iteration_count += 1
 
 
-def _load_config(configfile: pathlib.Path) -> Config:
-    module_spec = importlib.util.spec_from_file_location("config", configfile)
+def _load_config(config_file: pathlib.Path) -> Config:
+    module_spec = importlib.util.spec_from_file_location("config", config_file)
     config_module = importlib.util.module_from_spec(module_spec)
     module_spec.loader.exec_module(config_module)
 
@@ -64,10 +57,10 @@ def _load_config(configfile: pathlib.Path) -> Config:
 
 @click.command()
 @click.argument(
-    "configfile", type=click.Path(exists=True), default=DATA_DIR / "config.py"
+    "config-file", type=click.Path(exists=True), default=DATA_DIR / "config.py"
 )
-def main(configfile):
-    config: Config = _load_config(configfile)
+def main(config_file):
+    config: Config = _load_config(config_file)
 
     algo = config.algo
     visualizer = config.visualizer
@@ -77,29 +70,23 @@ def main(configfile):
 
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
-    for grid in sim_state.grids.values():
-        if config.grids_to_visualize:
-            for grid_name in config.grids_to_visualize:
-                if grid.name == grid_name:
-                    visualizer.add_grid(grid)
-        else:
-            visualizer.add_grid(grid)
+    if visualizer:
+        for grid in sim_state.grids.values():
+            if config.grids_to_visualize:
+                for grid_name in config.grids_to_visualize:
+                    if grid.name == grid_name:
+                        visualizer.add_grid(grid)
+            else:
+                visualizer.add_grid(grid)
 
-    if isinstance(visualizer, MPLVisualizer) and visualizer.should_save_animation:
-        visualizer.setup_animation(
-            simulate, config=config, sim_state=sim_state, iterations=iterations
-        )
+    for _ in range(iterations):
+        simulate(config=config, sim_state=sim_state)
 
-        visualizer.save_animation(note=note)
+    if visualizer:
+        if visualizer.should_save_file:
+            visualizer.save_file(note=note)
 
-    else:
-        for _ in range(config.iterations):
-            simulate(None, config=config, sim_state=sim_state)
-
-        if visualizer:
-            if visualizer.should_save_file:
-                visualizer.save_file(note=note)
-
+        if visualizer.should_show:
             visualizer.show()
 
 

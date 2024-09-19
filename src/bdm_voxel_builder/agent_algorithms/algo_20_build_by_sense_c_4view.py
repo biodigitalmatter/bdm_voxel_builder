@@ -8,19 +8,18 @@ from compas.colors import Color
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.grid.base import Grid
-from bdm_voxel_builder.helpers.array import (
+from bdm_voxel_builder.grid import DiffusiveGrid, Grid
+from bdm_voxel_builder.helpers import (
     get_mask_zone_xxyyzz,
+    get_nth_newest_file_in_folder,
+    get_savepath,
     get_surrounding_offset_region,
-    get_values_by_index_map,
+    get_values_using_index_map,
     index_map_cylinder,
     index_map_sphere,
-    set_value_by_index_map,
+    set_value_using_index_map,
 )
-from bdm_voxel_builder.helpers.file import get_nth_newest_file_in_folder, get_savepath
 
 # ultimate_parameters - test_1 - absolut random build
 overhang_density = 0.35
@@ -214,9 +213,8 @@ class Algo20_Build_c(AgentAlgorithm):
         # grids["centroids"].decay()
         grids["built_volume"].decay()
         if follow_newly_built > 0:
-            diffuse_diffusive_grid(
-                grids["follow_grid"],
-                emmission_array=grids["built_volume"].array,
+            grids["follow_grid"].diffuse_diffusive_grid(
+                emission_array=grids["built_volume"].to_numpy(),
                 blocking_grids=[grids["ground"]],
                 grade=False,
             )
@@ -411,7 +409,7 @@ class Algo20_Build_c(AgentAlgorithm):
         # orient shape map
         build_map = agent.orient_build_map()
         # update built_volume_volume_array
-        built_volume.array = set_value_by_index_map(
+        built_volume.array = set_value_using_index_map(
             built_volume.array,
             build_map,
             value=1,

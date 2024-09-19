@@ -6,9 +6,8 @@ import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 from compas.files import PLY
-from compas.geometry import Frame, Plane, Point, Pointcloud, Transformation, Vector
 
-from bdm_voxel_builder.helpers import sort_pts_by_values
+from bdm_voxel_builder.helpers.array import clip_index_map_to_box, sort_pts_by_values
 
 
 def box_from_corner_frame(frame: cg.Frame, xsize: float, ysize: float, zsize: float):
@@ -120,6 +119,7 @@ def pointcloud_to_grid_array(
     grid_array = np.zeros(grid_size)
 
     indices = np.array(pointcloud.points).round().astype(np.int_)
+    indices = np.array(pointcloud.points).round().astype(np.int_)
 
     for i, j, k in indices:
         if np.max((i, j, k)) >= np.max(grid_size) or np.min((i, j, k)) < 0:
@@ -131,10 +131,11 @@ def pointcloud_to_grid_array(
 ### INDEX map transformations using compas.geometry.Transform
 
 
-def transfrom_index_map_to_plane(
+def transform_index_map_to_plane(
     index_map: np.array = None,
     new_origin: tuple[float, float, float] = None,
     normal_vector: tuple[float, float, float] = None,
+    clipping_box: cg.Box = None,
 ):
     """
     transform an index map from World_XY to Plane(new_origin, normal_vector)
@@ -150,20 +151,23 @@ def transfrom_index_map_to_plane(
         pass
     else:
         raise TypeError
-    index_map_pointcloud = Pointcloud(index_map)
+    index_map_pointcloud = cg.Pointcloud(index_map)
 
-    p = Plane(new_origin, normal_vector)
-    f = Frame.from_plane(p)
-    T = Transformation.from_frame(f)
+    p = cg.Plane(new_origin, normal_vector)
+    f = cg.Frame.from_plane(p)
+    T = cg.Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
     index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int32)
+
+    if clipping_box:
+        return clip_index_map_to_box(index_map_oriented, clipping_box)
     return index_map_oriented
 
 
-def transfrom_index_map_to_frame(
+def transform_index_map_to_frame(
     index_map: np.array = None,
-    frame: Frame = None,
+    frame: cg.Frame = None,
 ):
     """
     transform an index map from World_XY to Frame
@@ -178,10 +182,10 @@ def transfrom_index_map_to_frame(
         pass
     else:
         raise TypeError
-    index_map_pointcloud = Pointcloud(index_map)
+    index_map_pointcloud = cg.Pointcloud(index_map)
 
     f = frame
-    T = Transformation.from_frame(f)
+    T = cg.Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
     index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int32)
@@ -190,7 +194,7 @@ def transfrom_index_map_to_frame(
 
 def translate_index_map(
     index_map: np.array = None,
-    vector: tuple[float, float, float] | Point | Vector = None,
+    vector: tuple[float, float, float] | cg.Point | cg.Vector = None,
 ):
     """
     move index map to point
@@ -206,19 +210,16 @@ def translate_index_map(
         pass
     else:
         raise TypeError
-    index_map_pointcloud = Pointcloud(index_map)
+    index_map_pointcloud = cg.Pointcloud(index_map)
 
-    p = Plane(vector, [0, 0, 1])
-    f = Frame.from_plane(p)
+    p = cg.Plane(vector, [0, 0, 1])
+    f = cg.Frame.from_plane(p)
 
-    T = Transformation.from_frame(f)
+    T = cg.Transformation.from_frame(f)
 
     index_map_pointcloud.transform(T)
     index_map_oriented = np.array(index_map_pointcloud.points, dtype=np.int32)
     return index_map_oriented
-
-
-### generate array fills by trigonometric functions
 
 
 def gyroid_array(grid_size, scale=1, thickness_out=1, thickness_in=0):
@@ -226,9 +227,8 @@ def gyroid_array(grid_size, scale=1, thickness_out=1, thickness_in=0):
 
     isovalue = np.cos(x) * np.sin(y) + np.cos(y) * np.sin(z) + np.cos(z) * np.sin(z)
     isovalue *= scale
-    gyriod = np.where(isovalue <= thickness_out, 1, 0)
-    # gyriod = np.where(thickness_in <= isovalue <= thickness_out, 1, 0)
-    return gyriod
+    gyroid = np.where(isovalue <= thickness_out, 1, 0)
+    return gyroid
 
 
 def lidinoid_array(grid_size, thickness=1, scale=1):
@@ -250,7 +250,5 @@ def lidinoid_array(grid_size, thickness=1, scale=1):
 
     isovalue = thickness - isovalue
     mask = isovalue >= 0
-    gyriod = np.where(mask, 1, 0)
-    # gyriod = np.zeros_like(mask)[mask] = 1
-    # gyriod = np.array(gyriod, dtype=np.int32)
-    return gyriod
+    gyroid = np.where(mask is True, 1, 0)
+    return gyroid

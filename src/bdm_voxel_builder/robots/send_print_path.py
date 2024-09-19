@@ -28,7 +28,7 @@ def send_program_dots(
     frames: list[cg.Frame],
     speed: float = 100,
     movel: bool = True,
-    zone: rrc.Zone = 5,
+    zone: rrc.Zone = rrc.zone.Z5,
     print_IO=0,
     dir_IO=0,
     wait_time=1,

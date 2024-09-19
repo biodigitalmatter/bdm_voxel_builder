@@ -1,5 +1,6 @@
 import io
 import zipfile
+from collections import OrderedDict
 from pathlib import Path
 
 import requests
@@ -23,7 +24,8 @@ def get(file_name: str, force_redownload=False):
 
     if url is None and not filepath.exists():
         raise ValueError(
-            f"File {file_name} not found in the data directory, and no url scheme is available"
+            f"File {file_name} not found in the data directory,"
+            + "and no url scheme is available"
         )
 
     if not filepath.exists() or force_redownload:
@@ -40,3 +42,34 @@ def get(file_name: str, force_redownload=False):
 
 def get_teapot(force_redownload=False):
     return get("utahteapot.vdb")
+
+
+def get_direction_dictionary():
+    return OrderedDict(
+        [
+            (
+                "up",
+                (0, 0, 1),
+            ),
+            (
+                "left",
+                (-1, 0, 0),
+            ),
+            (
+                "down",
+                (0, 0, -1),
+            ),
+            (
+                "right",
+                (1, 0, 0),
+            ),
+            (
+                "front",
+                (0, -1, 0),
+            ),
+            (
+                "back",
+                (0, 1, 0),
+            ),
+        ]
+    )

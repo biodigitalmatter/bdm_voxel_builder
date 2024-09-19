@@ -1,20 +1,12 @@
 from math import ceil
 
+import compas.geometry as cg
 import numpy as np
 import numpy.typing as npt
 
-NB_INDEX_DICT = {
-    "up": np.asarray([0, 0, 1]),
-    "left": np.asarray([-1, 0, 0]),
-    "down": np.asarray([0, 0, -1]),
-    "right": np.asarray([1, 0, 0]),
-    "front": np.asarray([0, -1, 0]),
-    "back": np.asarray([0, 1, 0]),
-}
-
 
 def sort_pts_by_values(arr: npt.NDArray, multiply=1):
-    """returns sortedpts, values"""
+    """returns sorted points, values"""
     indices = np.indices(arr.shape)
     pt_location = np.logical_not(arr == 0)
     coordinates = []
@@ -33,10 +25,10 @@ def sort_pts_by_values(arr: npt.NDArray, multiply=1):
 
     # Extract the sorted nested list
 
-    sortedpts = [element[1] for element in sorted_paired_lists]
+    sorted_pts = [element[1] for element in sorted_paired_lists]
     values = [element[0] * multiply for element in sorted_paired_lists]
 
-    return sortedpts, values
+    return sorted_pts, values
 
 
 def create_random_array(shape: int | tuple[int]):
@@ -44,28 +36,6 @@ def create_random_array(shape: int | tuple[int]):
         shape = [shape] * 3
 
     return np.random.default_rng().random(shape)
-
-
-def get_cube_array_indices(self_contain=False):
-    """26 nb indices, ordered: top-middle-bottom"""
-    # horizontal
-    f = NB_INDEX_DICT["front"]
-    b = NB_INDEX_DICT["back"]
-    le = NB_INDEX_DICT["left"]
-    r = NB_INDEX_DICT["right"]
-    u = NB_INDEX_DICT["up"]
-    d = NB_INDEX_DICT["down"]
-    # first_story in level:
-    story_1 = [f + le, f, f + r, le, r, b + le, b, b + r]
-    story_0 = [i + d for i in story_1]
-    story_2 = [i + u for i in story_1]
-    if self_contain:
-        nbs_w_corners = (
-            story_2 + [u] + story_1 + [np.asarray([0, 0, 0])] + story_0 + [d]
-        )
-    else:
-        nbs_w_corners = story_2 + [u] + story_1 + story_0 + [d]
-    return nbs_w_corners
 
 
 def conditional_fill(array, condition="<", value=0.5):
@@ -118,7 +88,7 @@ def make_solid_box_xxyyzz(grid_size, x_min, x_max, y_min, y_max, z_min, z_max):
 
 def get_sub_array(array, offset_radius, center=None, format_values=None):
     """gets sub array around center, in 'offset_radius'
-    format values: returns sum '0', avarage '1', or all_values: 'None'"""
+    format values: returns sum '0', average '1', or all_values: 'None'"""
 
     x, y, z = center
     n = offset_radius
@@ -133,7 +103,7 @@ def get_sub_array(array, offset_radius, center=None, format_values=None):
 
 def get_mask_zone_xxyyzz(
     grid_size: tuple[int, int, int],
-    zone_xxyyzz: tuple[int, int, int, int, int, int],
+    zone_xxyyzz: list[int, int, int, int, int, int],
     return_bool=True,
 ):
     """gets 3D boolean array within zone (including both end)
@@ -153,6 +123,24 @@ def get_mask_zone_xxyyzz(
     if return_bool:
         return mask.astype(np.bool_)
     return mask
+
+
+def get_array_density_using_index_map(
+    array: npt.NDArray,
+    map_,
+    origin=(0, 0, 0),
+    clipping_box: cg.Box = None,
+    nonzero=False,
+):
+    """return clay density"""
+    values = get_values_using_index_map(array, map_, origin, clipping_box)
+
+    if nonzero:
+        density = np.count_nonzero(values) / len(values)
+    else:
+        density = sum(values) / len(values)
+
+    return density
 
 
 def get_array_density_from_zone_xxyyzz(
@@ -254,24 +242,29 @@ def index_map_box(box_size, box_min_size=None):
     return filtered_index_map
 
 
-def index_map_sphere(radius: float, min_radius: float = None) -> np.ndarray[np.int32]:
+def index_map_sphere(radius: float, min_radius: float | None = None):
+    """
+    The index_map_sphere function generates a 3D array of indices that represent
+    the coordinates within a sphere of a given radius. Optionally, it can also
+    filter out indices that fall within a minimum radius, creating a hollow
+    sphere effect.
+    """
     d = int(np.ceil(radius) * 2) + 1
-    x, y, z = np.indices([d, d, d])
+    x, y, z = xyz = np.indices([d, d, d])
     r2 = np.ceil(radius)
-    indices = [x - r2, y - r2, z - r2]
-    norm = np.linalg.norm(indices, axis=0)
-    # print(l)
-    mask = norm <= radius
+    indices = xyz - r2
+    norm_indices = np.linalg.norm(indices, axis=0)
+
+    mask = norm_indices <= radius
     if min_radius:
-        mask2 = norm >= min_radius
+        mask2 = norm_indices >= min_radius
         mask = np.logical_and(mask, mask2)
-    # print(mask)
-    # print(indices)
+
     x = indices[0][mask]
     y = indices[1][mask]
     z = indices[2][mask]
-    sphere_array = np.array([x, y, z], dtype=np.int32)
-    return sphere_array.transpose()
+    sphere_array = np.array([x, y, z], dtype=np.int_).transpose()
+    return sphere_array
 
 
 def index_map_cylinder(radius, height, min_radius=0, z_lift=0):
@@ -280,19 +273,24 @@ def index_map_cylinder(radius, height, min_radius=0, z_lift=0):
     z += z_lift
     r2 = np.ceil(radius)
     x, y, z = [x - r2, y - r2, z]
-    l1 = np.linalg.norm([x, y], axis=0)
+    xy_norm = np.linalg.norm([x, y], axis=0)
+    # print(l1)
 
-    if min_radius > 0:
-        mask = np.logical_and(l1 <= radius, l1 >= min_radius)
+    radius_condition = xy_norm <= radius
+
+    if min_radius:
+        radius_min_condition = xy_norm >= min_radius
+        mask = np.logical_and(radius_condition, radius_min_condition)
     else:
-        mask = l1 <= radius
+        mask = xy_norm <= radius
 
-    # print(f"mask {mask}")
     indices = [x, y, z]
     x = indices[0][mask]
     y = indices[1][mask]
     z = indices[2][mask]
-    index_map = np.array([x, y, z], dtype=np.int32)
+
+    index_map = np.array([x, y, z], dtype=np.int_)
+
     return index_map.transpose()
 
 
@@ -377,80 +375,59 @@ def index_map_sphere_scale_NU(
     return arr.transpose()
 
 
-def index_map_move_and_clip(
-    index_map_: np.ndarray,
-    move_to: tuple[int, int, int] = [0, 0, 0],
-    grid_size: tuple[int, int, int] = None,
-):
-    index_map = index_map_.copy()
-    index_map += np.int_(move_to)
-    if grid_size:
-        index_map = np.clip(index_map, [0, 0, 0], grid_size - np.array([1, 1, 1]))
-        index_map = np.unique(index_map, axis=0)
-    return index_map
-
-
-def clip_index_map(
-    index_map_: np.ndarray,
-    bounds: tuple[int, int, int] = None,
-    erase_out_of_bound_indices: bool = False,
-):
-    index_map = index_map_.copy()
-    index_map_clipped = np.clip(index_map, [0, 0, 0], bounds - np.array([1, 1, 1]))
-    if erase_out_of_bound_indices:
-        mask = index_map_clipped == index_map
-        same = np.all(mask, axis=1)
-        index_map_clipped = index_map[same]
-    return index_map_clipped
-
-
-def get_values_by_index_map(
-    array, index_map_, origin, return_list=False, dtype=np.float64
-):
-    """
-    Filters the values of a 3D NumPy array based on an index map.
-        numpy.ndarray: A 1D array containing the filtered values.
-    """
-    # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
-    index_map = index_map_.copy()
-    index_map += np.array(origin, dtype=np.int32)
-    # array = np.array(array, dtype=np.int32)
-    index_map = np.unique(
-        np.clip(
-            index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]), dtype=np.int32
-        ),
-        axis=0,
-    )
-    # print(f"index_map in get_value function: {index_map}")
-    indices = tuple(np.array(index_map).T)
-
-    # Extract the elements using advanced indexing
-    values = np.array(array[indices], dtype=dtype)
-    # print(origin, values)
-    # print(f"filtered values: {values}")
-
-    if return_list:
-        return values.tolist()
+def clip_index_map_to_box(
+    array: np.ndarray[np.int_], bbox: cg.Box | tuple[tuple[float]]
+) -> np.ndarray:
+    if not isinstance(bbox, cg.Box):
+        a_min, a_max = bbox
     else:
-        return values
+        a_min, a_max = bbox.diagonal
+        # cast to lists
+        a_min = list(a_min)
+        a_max = list(a_max)
+
+    a_max = np.array(a_max) - 1
+
+    new_index_map = array.clip(a_min, a_max)
+    np.floor(new_index_map, out=new_index_map)
+
+    return np.unique(new_index_map.astype(np.int_, copy=False), axis=0)
 
 
-def set_value_by_index_map(array, index_map_, origin=None, value=1):
-    """
-    Filters the values of a 3D NumPy array based on an index map.
-        numpy.ndarray: A 1D array containing the filtered values.
-    """
-    # Convert the index_map to a tuple of lists, suitable for NumPy advanced indexing
-    index_map = index_map_.copy()
-    if not origin:
-        origin = [0, 0, 0]
-    index_map += np.array(origin, dtype=np.int32)
-    index_map = np.unique(
-        (np.clip(index_map, [0, 0, 0], array.shape - np.array([1, 1, 1]))), axis=0
-    )
-    indices = tuple(np.array(index_map).T)
-    # Extract the elements using  indexing
-    array[indices] = value
+def get_localized_index_map(
+    index_map: npt.NDArray,
+    origin: tuple[int, int, int],
+    clipping_box: cg.Box | tuple[tuple[float]] | None = None,
+):
+    localized_map = index_map + np.array(origin, dtype=np.int_)
+    if clipping_box:
+        localized_map = clip_index_map_to_box(localized_map, clipping_box)
+    return localized_map
+
+
+def get_values_using_index_map(
+    array: np.ndarray,
+    index_map: npt.NDArray[np.int_],
+    origin: tuple[int, int, int] | None = None,
+    clipping_box: cg.Box | None = None,
+):
+    if origin is None:
+        origin = (0, 0, 0)
+    index_map = get_localized_index_map(index_map, origin, clipping_box=clipping_box)
+
+    return array[tuple(index_map.transpose())]
+
+
+def set_value_using_map(
+    array: np.ndarray,
+    map_: npt.NDArray[np.int_],
+    origin: tuple[int, int, int] = (0, 0, 0),
+    clipping_box: cg.Box | list[tuple[float]] | None = None,
+    value=1.0,
+):
+    localized_map = get_localized_index_map(map_, origin, clipping_box=clipping_box)
+
+    array[localized_map] = value
     return array
 
 
@@ -489,7 +466,7 @@ def clip_indices_to_grid_size(
     index: npt.NDArray | tuple[int], grid_size: tuple[int, int, int]
 ):
     """Clips indices (i, j, k) to grid size"""
-    return_nparray = isinstance(index, np.ndarray)
+    return_array = isinstance(index, np.ndarray)
 
     index = np.asarray(index)
 
@@ -517,7 +494,7 @@ def clip_indices_to_grid_size(
 
     clipped = np.clip(index, a_min=a_min, a_max=a_max)
 
-    if return_nparray:
+    if return_array:
         return clipped
     else:
         return clipped.tolist()
@@ -684,7 +661,7 @@ def extrude_array_in_direction_expanding(
         array = array[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        array = np.clip(array, 0, 1)
+        array.clip(0, 1, out=array)
 
     return array
 
@@ -716,7 +693,7 @@ def extrude_array_linear(
         new_array += array_step[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        new_array = np.clip(new_array, 0, 1)
+        new_array.clip(0, 1, out=new_array)
 
     return new_array
 
@@ -750,7 +727,7 @@ def extrude_array_along_vector(
     array = new_array[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        array = np.clip(array, 0, 1)
+        array.clip(0, 1, out=array)
 
     return array
 
@@ -782,7 +759,7 @@ def extrude_array_along_vector_b(
         array += array_step[pad:-pad, pad:-pad, pad:-pad]
 
     if clip_array:
-        array = np.clip(array, 0, 1)
+        array.clip(0, 1, out=array)
 
     return array
 
@@ -811,7 +788,10 @@ def get_normal_vector(
 
 
 def mask_index_map_by_nonzero(
-    array=None, origin: tuple[int, int, int] = None, sense_range_or_radius=None
+    array: npt.NDArray,
+    origin: tuple[int, int, int] = (0, 0, 0),
+    sense_range_or_radius: float | npt.NDArray[np.int_] | None = None,
+    clipping_box: cg.Box | None = None,
 ):
     """return nonzero indices in location"""
     sense_map = (
@@ -819,11 +799,16 @@ def mask_index_map_by_nonzero(
         if isinstance(sense_range_or_radius, float | int)
         else sense_range_or_radius.copy()
     )
-    sense_map_clipped = index_map_move_and_clip(sense_map, origin, array.shape)
-    values = get_values_by_index_map(array, sense_map, origin, return_list=False)
+    values = get_values_using_index_map(
+        array, sense_map, origin, clipping_box=clipping_box
+    )
+
     x = np.argwhere(values != 0)
 
-    filled_surrounding_indices = sense_map_clipped[x.reshape([x.size])]
+    localized_sense_map = get_localized_index_map(
+        sense_map, origin, clipping_box=clipping_box
+    )
+    filled_surrounding_indices = localized_sense_map[x.reshape([x.size])]
     return filled_surrounding_indices
 
 

@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 
+import compas.geometry as cg
+from compas.colors import Color
+
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid, Grid
-from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder
-from bdm_voxel_builder.helpers.file import save_ndarray
-from compas.colors import Color
+from bdm_voxel_builder.grid import Grid
+from bdm_voxel_builder.helpers import get_nth_newest_file_in_folder, save_ndarray
 
 
 @dataclass
@@ -22,7 +23,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
     """
 
     agent_count: int
-    grid_size: int | tuple[int, int, int]
+    clipping_box: cg.Box
     name: str = "algo_8_d"
     relevant_data_grids: str = "scan"
     grid_to_dump = "scan"
@@ -43,7 +44,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         Run in __post_init__ since @dataclass creates __init__ method"""
         super().__init__(
             agent_count=self.agent_count,
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             grid_to_dump=self.grid_to_dump,
             name=self.name,
         )
@@ -71,26 +72,14 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         # self.grid_size = shape
         # load npy
         file_path = get_nth_newest_file_in_folder(self.dir_scan_import_npy)
-        loaded_grid = Grid.from_npy(file_path)
+        loaded_grid = Grid.from_numpy(file_path, clipping_box=self.clipping_box)
 
-        # shape = loaded_grid.pad_array(
-        #     pad_width=5, values=0
-        # )  # TODO not sure is a good idea...
-        # self.grid_size = shape
+        scan = loaded_grid.copy()
+        scan.name = "scan"
 
-        scan = DiffusiveGrid(
-            name="scan",
-            grid_size=self.grid_size,
-        )
-        solid = DiffusiveGrid(
-            name="solid",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(125, 170, 185),
-        )
-
-        scan.array = loaded_grid.array
-
-        solid.array = scan.array.copy()
+        solid = loaded_grid.copy()
+        solid.name = "solid"
+        solid.color = Color.from_rgb255(125, 170, 185)
 
         # SOLID METHOD OPTIONS
         # solid.extrude_along_vector([-15, 3, -20], 5)
@@ -99,31 +88,17 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         # solid.offset_radial(3)
 
         # solid.extrude_from_point([100, 20, 120], 50)
-        save_ndarray(solid.array, note="", folder_path=self.dir_save_solid_npy)
+        save_ndarray(solid.to_numpy(), note="", folder_path=self.dir_save_solid_npy)
 
         grids = {"scan": scan, "solid": solid}
         return grids
 
     def update_environment(self, state: Environment):
-        # scan = state.grids["scan"]
-        # solid = state.grids["solid"]
-        # diffuse_diffusive_grid(
-        #     solid,
-        #     emmission_array=scan.array,
-        #     decay_linear=True,
-        #     decay=False,
-        #     grade=True,
-        #     gravity_shift_bool=True,
-        # )
-
         pass
 
-    def setup_agents(self, grids: dict[str, DiffusiveGrid]):
+    def setup_agents(self, state: Environment):
         agents = []
         return agents
-
-    def reset_agent(self, agent: Agent):
-        return False
 
     def move_agent(self, agent: Agent, state: Environment):
         moved = False

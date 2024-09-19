@@ -1,3 +1,5 @@
+# pyright: reportMissingImports=false
+# ruff: noqa: F401
 from bdm_voxel_builder.agent_algorithms.algo_8_e_build_ridge import Algo8eRidge
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
@@ -18,7 +20,7 @@ config = Config(
         name=name,
     ),
     visualizer=CompasViewerVisualizer(
-        save_file=True, skip_grids=("pheromon_move", "deploy_zone")
+        save_file=True, skip_grids=("pheromone_move", "deploy_zone")
     ),
     save_interval=interval,
     visualize_interval=interval,
