@@ -115,8 +115,8 @@ class Grid:
         localized_map = get_localized_index_map(index_map, origin)
         self.set_values(localized_map, values)
 
-    def set_values_using_array(self, array: np.ndarray, origin=None):
-        self.vdb.copyFromArray(array=array, ijk=origin)
+    def set_values_using_array(self, array: np.ndarray, origin=(0, 0, 0)):
+        self.vdb.copyFromArray(array, ijk=origin)
 
     def set_values_in_zone_xxyyzz(
         self, zone_xxyyzz: tuple[int, int, int, int, int, int], value=1.0
@@ -137,6 +137,19 @@ class Grid:
         list of coordinates
             shape = [3,n]"""
         return np.array([item.min for item in self.vdb.citerOnValues()], dtype=np.int_)
+
+    def get_active_voxels_values(self) -> npt.NDArray[np.float_]:
+        return np.array(
+            [item.value for item in self.vdb.citerOnValues()], dtype=np.float_
+        )
+
+    def iter_active_voxels(self) -> Iterable[tuple[int, int, int]]:
+        for item in self.vdb.citerOnValues():
+            yield item.min
+
+    def enumerate_active_voxels(self) -> Iterable[tuple[int, int, int], float]:
+        for item in self.vdb.citerOnValues():
+            yield item.min, item.value
 
     def get_number_of_active_voxels(self) -> int:
         return self.vdb.activeVoxelCount()
@@ -165,6 +178,15 @@ class Grid:
         for neighbor in self.get_neighbors(ijk):
             self.set_value(neighbor, value)
 
+    def map_values(self, func):
+        self.vdb.mapValues(func)
+
+    def map_on_active_voxels(self, func):
+        self.vdb.mapOnValues(func)
+
+    def map_on_inactive_voxels(self, func):
+        self.vdb.mapOffValues(func)
+
     def get_pointcloud(self):
         return cg.Pointcloud(self.get_active_voxels())
 
@@ -180,6 +202,14 @@ class Grid:
         for grid in grids:
             vdb = grid.vdb.deepCopy()
             self.vdb.combine(vdb, lambda a, b: max(a, b))
+
+    def block_grids(self, other_grids: list[Self]):
+        """acts as a solid obstacle, stopping diffusion of other grid
+        input list of grids"""
+        for grid in other_grids:
+            for ijk, value in self.enumerate_active_voxels():
+                if value == 1:
+                    grid.set_value(ijk, 0)
 
     def merged_with(self, other: Self):
         new = deepcopy(self)

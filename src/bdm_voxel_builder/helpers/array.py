@@ -241,6 +241,17 @@ def index_map_box(box_size, box_min_size=None):
 
     return filtered_index_map
 
+def index_map_box_xxyyzz(xxyyzz: tuple[int, int, int, int, int, int]):
+    x_min, x_max, y_min, y_max, z_min, z_max = xxyyzz
+
+    x = np.arange(x_min, x_max - 1)
+    y = np.arange(y_min, y_max -1)
+    z = np.arange(z_min, z_max -1)
+
+    x, y, z = np.meshgrid(x, y, z, indexing="ij")
+
+    return np.array([x.flatten(), y.flatten(), z.flatten()]).transpose()
+
 
 def index_map_sphere(radius: float, min_radius: float | None = None):
     """
@@ -418,7 +429,7 @@ def get_values_using_index_map(
     return array[tuple(index_map.transpose())]
 
 
-def set_value_using_map(
+def set_value_using_index_map(
     array: np.ndarray,
     map_: npt.NDArray[np.int_],
     origin: tuple[int, int, int] = (0, 0, 0),

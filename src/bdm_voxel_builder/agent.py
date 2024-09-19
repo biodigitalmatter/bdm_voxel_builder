@@ -412,7 +412,7 @@ class Agent:
             vectors.append(cg.Vector(x, y, z))
         return vectors
 
-    def orient_index_map(self, index_map):
+    def orient_index_map(self, index_map, normal: cg.Vector | None = None):
         """transforms shape map
         input:
         index_maps: list
@@ -421,7 +421,7 @@ class Agent:
         return transform_index_map_to_plane(
             index_map,
             self.pose,
-            self.get_normal_vector(),
+            normal or self.get_normal_vector(),
             clipping_box=self.space_grid.clipping_box,
         )
 
@@ -455,14 +455,14 @@ class Agent:
         return self.orient_index_map(self.sense_depth_map)
 
     def orient_sense_wall_radar_map(self):
-        return self.orient_index_map(self.sense_wall_radar_map, normal=Vector(0, 0, 1))
+        return self.orient_index_map(self.sense_wall_radar_map, normal=cg.Vector.Zaxis())
 
     def orient_sense_overhang_map(self):
         map = self.orient_index_map(self.sense_overhang_map, normal=cg.Vector(0, 0, 1))
         return map
 
     def orient_sense_nozzle_map(self, world_z=False):
-        if not world_z and 180 > self.normal_angle > self.max_build_angle:
+        if not world_z and 180 > self.get_normal_angle() > self.max_build_angle:
             x, y, z = self.get_normal_vector()
             v2 = cg.Vector(x, y, 0)
             v2.unitize()
@@ -473,10 +473,9 @@ class Agent:
             v = cg.Vector(x, y, z)
             # print(f"adjusted_nozzle_angle {v.angle(Vector(0,0,-1), True)}")
         elif not world_z:
-            v = self.normal_vector
-            v.invert()
+            v = self.get_normal_vector().inverted()
         else:
-            v = cg.Vector(0, 0, 1)
+            v = cg.Vector.Zaxis()
         map = self.orient_index_map(self.sense_nozzle_map, normal=v)
         return map
 

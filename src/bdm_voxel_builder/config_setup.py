@@ -16,3 +16,5 @@ class Config:
     save_interval: int = 100
     visualize_interval: int = 1
     grids_to_visualize: list[str] = None
+    mockup_scan: bool = False
+    add_initial_box: bool = False

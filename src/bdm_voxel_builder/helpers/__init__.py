@@ -12,6 +12,7 @@ from .array import (
     get_surrounding_offset_region,
     get_values_using_index_map,
     index_map_box,
+    index_map_box_xxyyzz,
     index_map_cube,
     index_map_cylinder,
     index_map_sphere,
@@ -23,6 +24,7 @@ from .array import (
     offset_array_radial,
     random_choice_index_from_best_n,
     random_choice_index_from_best_n_old,
+    set_value_using_index_map,
     sort_pts_by_values,
 )
 from .file import (

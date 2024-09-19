@@ -13,7 +13,6 @@ from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.grid.base import Grid
 from bdm_voxel_builder.helpers import (
-    get_mask_zone_xxyyzz,
     get_nth_newest_file_in_folder,
     get_savepath,
     get_surrounding_offset_region,
@@ -22,36 +21,6 @@ from bdm_voxel_builder.helpers import (
     index_map_sphere,
     set_value_by_index_map,
 )
-
-
-def make_ground_mockup(grid_size):
-    a, b, c = grid_size
-
-    base_layer = [0, a, 0, b, 0, 10]
-    base_layer = np.array(base_layer, dtype=np.int32)
-
-    mockup_ground = np.zeros(grid_size)
-    ground_zones = [base_layer]
-    # ground_zones = [base_layer]
-    for zone in ground_zones:
-        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
-        mockup_ground[mask] = 1
-    return mockup_ground
-
-
-def make_init_box_mockup(grid_size):
-    a, b, c = grid_size
-    box_1 = [a / 2, a / 2 + 3, b / 2, b / 2 + 3, 10, 13]
-    box_1 = np.array(box_1, dtype=np.int32)
-
-    mockup_ground = np.zeros(grid_size)
-    ground_zones = [box_1]
-    # ground_zones = [base_layer]
-    for zone in ground_zones:
-        mask = get_mask_zone_xxyyzz(grid_size, zone, return_bool=True)
-        mockup_ground[mask] = 1
-    return mockup_ground
-
 
 # CREATE AGENT TYPES
 

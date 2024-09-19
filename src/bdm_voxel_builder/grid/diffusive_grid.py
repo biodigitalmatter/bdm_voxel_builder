@@ -82,6 +82,7 @@ class DiffusiveGrid(Grid):
         where 0 <= a <= 1/6
         """
         array = self.to_numpy()
+        grid_size = array.shape
 
         if limit_by_Hirsh:
             self.diffusion_ratio = max(0, self.diffusion_ratio)
@@ -103,7 +104,7 @@ class DiffusiveGrid(Grid):
             y = np.copy(array)
             y = np.roll(y, shifts[i % 2], axis=axes[i])
             if not reintroduce_on_the_other_end:  # TODO do it with np.pad
-                e = self.grid_size[axes[i]] - 1
+                e = grid_size[axes[i]] - 1
                 # removing the values from the other end after rolling
                 if i == 0:
                     y[:][:][e] = 0
@@ -133,7 +134,7 @@ class DiffusiveGrid(Grid):
             # sum up the diffusions per faces
             total_diffusions += diff_ratio * (self.to_numpy() - y)
 
-        self.set_values_with_array(array - total_diffusions)
+        self.set_values_using_array(array - total_diffusions)
 
     def gravity_shift(self, reintroduce_on_the_other_end=False):
         """
@@ -201,25 +202,19 @@ class DiffusiveGrid(Grid):
                 self.array != 0, self.array + self.emission_factor, self.array
             )
 
-    def emission_intake(self, external_emission_array, factor, proportional=True):
+    def emission_intake(
+        self, external_emission_array: Grid, factor: float, proportional=True
+    ):
         """updates array values based on a given array
         and an emission factor ( multiply / linear )"""
+        indices = np.nonzero(external_emission_array)
+        values = external_emission_array[indices]
+        indices = np.transpose(indices)
 
-        if proportional:  # proportional
-            # self.array += external_emission_array * self.emission_factor
-            self.array = np.where(
-                external_emission_array != 0,
-                self.array + external_emission_array * factor,
-                self.array,
-            )
-        else:  # absolute
-            self.array = np.where(external_emission_array != 0, factor, self.array)
+        # proportional or absolute
+        new_values = values * factor if proportional else values
 
-    def block_grids(self, other_grids: list[Grid]):
-        """acts as a solid obstacle, stopping diffusion of other grid
-        input list of grids"""
-        for grid in other_grids:
-            grid.array = np.where(self.array == 1, 0 * grid.array, 1 * grid.array)
+        self.set_values(indices, new_values)
 
     def decay(self):
         def decay_voxel(value):
