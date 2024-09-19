@@ -524,7 +524,7 @@ class Algo20_Build_c(AgentAlgorithm):
                 smooth_density = agent.get_array_density_by_oriented_index_map(
                     ground.array, smoothing_map, nonzero=True
                 )
-                print(f'smoothing_density: {smooth_density}')
+                # print(f'smoothing_density: {smooth_density}')
                 if smooth_density < agent.min_density:
                     bp_smoothing = 0
                 if agent.smoothing_density_limits[0] <= smooth_density <= agent.smoothing_density_limits[1]:  # walking on wall

@@ -10,13 +10,13 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # grid_size = [300, 250, 150]
 
 # grid_size = [200, 200, 100]
-grid_size = [100, 100, 50]
+grid_size = [70,70,70]
 
-iterations = 10
-agent_count = 3
-save_interval = 10
-visualize_interval = 10
-name = f"algo_20_test_smoothing_i{iterations}a{agent_count}"
+iterations = 10000
+agent_count = 15
+save_interval = 100
+visualize_interval = 1000
+name = f"algo_20_c_smoothing_70x70_i{iterations}a{agent_count}"
 skip = ("agent_space", "ground", "follow_grid")
 config = Config(
     iterations=iterations,
