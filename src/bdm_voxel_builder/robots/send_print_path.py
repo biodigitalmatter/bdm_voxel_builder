@@ -28,7 +28,7 @@ def send_program_dots(
     frames: list[cg.Frame],
     speed: float = 100,
     movel: bool = True,
-    zone: rrc.Zone = rrc.zone.Z5,
+    zone: rrc.Zone = rrc.Zone.Z5,
     print_IO=0,
     dir_IO=0,
     wait_time=1,
@@ -111,7 +111,7 @@ def send_program_dots(
                             motion_type,
                             wait_time=wait_i,
                             wait_time_after=0,
-                            z_hop=45,
+                            z_hop=70,
                         )
 
                 else:  # continuous print path
@@ -144,7 +144,7 @@ def send_test_program(
             client.send(rrc.SetTool(tool_name))
             client.send(rrc.SetWorkObject(wobj_name))
             client.send(rrc.SetAcceleration(100, 100))
-            client.send(rrc.SetMaxSpeed(100, 150))
+            client.send(rrc.SetMaxSpeed(100, 250))
 
             for i, plane in enumerate(frames):
                 print(f"send :: {i}")
@@ -184,25 +184,33 @@ def extrude_with_z_hop(
     zone: rrc.Zone = rrc.Zone.Z5,
     wait_time: float = 0.5,
     wait_time_after: float = 0.0,
-    z_hop: float = 15.0,
+    z_hop: float = 45.0,
 ):
     z_hop_vector = frame.zaxis * z_hop
+    z_hop_approach_vector = frame.zaxis * 10
 
     # check if z_hop_vector is pointing in the right direction
     dot_product_with_z = frame.zaxis.dot(cg.Vector.Zaxis())
     if dot_product_with_z < 0:
         z_hop_vector.invert()
+        z_hop_approach_vector.invert()
 
     frame_above = frame.transformed(cg.Translation.from_vector(z_hop_vector))
+    frame_approach = frame.transformed(
+        cg.Translation.from_vector(z_hop_approach_vector)
+    )
 
-    client.send(rrc.MoveToFrame(frame_above, speed, zone, motion_type))
-    client.send(rrc.MoveToFrame(frame, 25, zone, motion_type=motion_type))
+    client.send(rrc.MoveToFrame(frame_above, speed, rrc.Zone.Z20, motion_type))
+    client.send(rrc.MoveToFrame(frame_approach, 40, rrc.Zone.Z5, motion_type))
+    client.send(rrc.MoveToFrame(frame, 25, rrc.Zone.Z5, motion_type=motion_type))
     client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=1))
     client.send(rrc.WaitTime(wait_time))
     client.send(rrc.SetDigital(io_name=RUN_EXTRUDER_DO, value=0))
     if wait_time_after > 0:
         client.send(rrc.WaitTime(wait_time_after))
-    client.send(rrc.MoveToFrame(frame_above, 25, zone, motion_type))
+    client.send(rrc.MoveToFrame(frame_approach, 40, rrc.Zone.Z5, motion_type))
+
+    client.send(rrc.MoveToFrame(frame_above, speed, rrc.Zone.Z20, motion_type))
 
 
 if __name__ == "__main__":
@@ -230,7 +238,7 @@ if __name__ == "__main__":
 
     send_program_dots(
         frames=frames,
-        speed=100,
+        speed=200,
         movel=True,
         zone=None,
         print_IO=print_IO,

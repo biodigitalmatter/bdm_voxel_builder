@@ -16,24 +16,19 @@ from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 # setup 2 test
 # grid_size = [300, 250, 150]
 
-grid_size = [200, 200, 100]
+# grid_size = [200, 200, 100]
 # grid_size = [100, 100, 50]
-# grid_size = [50, 50, 50]
+grid_size = [50, 50, 50]
 
-iterations = 40000
-agent_count = 30
-save_interval = 100
-visualize_interval = 10000
-name = f"algo_20_d2_big_i{iterations}a{agent_count}"
+iterations = 10000
+agent_count = 1
+name = f"algo_20_e_solo2_i{iterations}a{agent_count}"
 skip = ("agent_space", "ground", "follow_grid")
-agent_count = 40
 save_interval = 50
 visualize_interval = 500
-name = f"algo_20_b_walls_B_i{iterations}a{agent_count}"
 
 clipping_box = cg.Box.from_diagonal(([0, 0, 0], grid_size))
 # skip = ("agent_space", 'ground', 'follow_grid', 'move_map_grid')
-skip = ("agent_space", "follow_grid")
 config = Config(
     iterations=iterations,
     grid_size=grid_size,

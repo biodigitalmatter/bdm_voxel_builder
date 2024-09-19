@@ -43,7 +43,7 @@ smoothing_density_limits = [0.4, 0.8]
 
 deploy_anywhere = False
 add_initial_box = False
-reset = True
+reset = False
 
 
 @dataclass
