@@ -28,16 +28,20 @@ move_up = 0
 move_random = 1
 follow_newly_built = 10
 
-build_next_to_bool = True
+build_next_to_bool = False
 sense_wall_radar_bool = True
+sense_smoothing_map_bool = True
 
-build_probability_absolut_random = 0.001
-build_probability_next_to = 1
-build_probability_wall_radar_low = 0.5
-build_probability_wall_radar_high = -2
-max_radar_density = 0.33
+build_probability_absolut_random = 0
+build_probability_next_to = 0
+build_probability_wall_radar = [0, -2]
+max_radar_density = 0.5
+min_density = 0.2
+build_probability_smoothing = [0.5, 0.31]
+smoothing_density_limits = [0.4, 0.8]
 
-wall_radar_radius = 15
+
+
 deploy_anywhere = False
 add_initial_box = False
 reset = True
@@ -263,12 +267,17 @@ class Algo20_Build_c(AgentAlgorithm):
                 basic_agent.build_probability_next_to = build_probability_next_to
 
                 basic_agent.sense_wall_radar_bool = sense_wall_radar_bool
-                basic_agent.wall_radar_radius = 5
-                basic_agent.build_probability_wall_radar = [
-                    build_probability_wall_radar_low,
-                    build_probability_wall_radar_high,
-                ]
+                basic_agent.wall_radar_radius = 3 * basic_agent.build_radius
+                basic_agent.build_probability_wall_radar = build_probability_wall_radar
                 basic_agent.max_radar_density = max_radar_density
+
+                
+                # NEW
+                basic_agent.sense_smoothing_map_bool = sense_smoothing_map_bool
+                basic_agent.build_probability_smoothing = build_probability_smoothing
+                basic_agent.smoothing_density_limits = smoothing_density_limits
+                basic_agent.min_density = min_density
+                
 
                 # ALTER VERSIONS
                 if category == 1:
@@ -291,7 +300,10 @@ class Algo20_Build_c(AgentAlgorithm):
                     radius=0, height=40, z_lift=0
                 )
                 basic_agent.sense_wall_radar_map = index_map_cylinder(
-                    radius=basic_agent.wall_radar_radius, height=1, z_lift=0
+                    radius=basic_agent.build_radius * 3, height=1, z_lift=0
+                )
+                basic_agent.sense_smoothing_map = index_map_cylinder(
+                    radius = basic_agent.build_radius * 2, height=1, z_lift=0
                 )
 
                 # set grids
@@ -488,6 +500,8 @@ class Algo20_Build_c(AgentAlgorithm):
                 else:
                     print(f"built_density = {built_density}")
                     bp_build_next_to = agent.build_probability_next_to
+            else:
+                bp_build_next_to = 0
 
             # BUILD BY WALL RADAR
             if agent.sense_wall_radar_bool:
@@ -500,8 +514,26 @@ class Algo20_Build_c(AgentAlgorithm):
                     bp_wall_radar = agent.build_probability_wall_radar[0]
                 else:
                     bp_wall_radar = agent.build_probability_wall_radar[1]
+            else: bp_wall_radar = 0
 
-            build_probability = bp_random + bp_build_next_to + bp_wall_radar
+            # BUILD BY SMOOTHING_RADAR
+            if agent.sense_smoothing_map_bool:
+                ground = state.grids["ground"]
+                smoothing_map = agent.orient_index_map(agent.sense_smoothing_map , normal=[0,0,1]
+                )
+                smooth_density = agent.get_array_density_by_oriented_index_map(
+                    ground.array, smoothing_map, nonzero=True
+                )
+                print(f'smoothing_density: {smooth_density}')
+                if smooth_density < agent.min_density:
+                    bp_smoothing = 0
+                if agent.smoothing_density_limits[0] <= smooth_density <= agent.smoothing_density_limits[1]:  # walking on wall
+                    bp_smoothing = agent.build_probability_smoothing[0]
+                else:
+                    bp_smoothing = agent.build_probability_smoothing[1]
+            else: bp_smoothing = 0
+
+            build_probability = bp_random + bp_build_next_to + bp_wall_radar + bp_smoothing
         # print(f"build_probability:{build_probability}")
         return build_probability
 
