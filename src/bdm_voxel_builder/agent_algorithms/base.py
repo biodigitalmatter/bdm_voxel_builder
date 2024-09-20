@@ -3,7 +3,7 @@ import abc
 import compas.geometry as cg
 
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid.diffusive_grid import DiffusiveGrid
+from bdm_voxel_builder.grid import DiffusiveGrid
 
 
 class AgentAlgorithm(abc.ABC):
@@ -24,6 +24,9 @@ class AgentAlgorithm(abc.ABC):
     @abc.abstractmethod
     def setup_agents(self, state: Environment):
         raise NotImplementedError
+
+    def initialization(self, state: Environment, **kwargs):
+        pass
 
     def update_environment(self, state: Environment):
         for grid_name in self.grids_to_decay or []:

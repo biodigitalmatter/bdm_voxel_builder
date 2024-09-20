@@ -1,25 +1,23 @@
 import random as r
 from dataclasses import dataclass
 
+import compas.geometry as cg
 import numpy as np
 from compas import json_dumps
-from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import (
     get_mask_zone_xxyyzz,
-    get_nth_newest_file_in_folder,
     get_savepath,
     get_surrounding_offset_region,
-    get_values_using_index_map,
     index_map_cylinder,
     index_map_sphere,
     set_value_using_index_map,
 )
+from bdm_voxel_builder.helpers.array import get_array_density_using_index_map
 
 # ultimate_parameters - test_1 - absolut random build
 overhang_density = 0.35
@@ -58,7 +56,7 @@ class Algo20_Build_c(AgentAlgorithm):
     """
 
     agent_count: int
-    grid_size: int | tuple[int, int, int]
+    clipping_box: cg.Box
     name: str = "algo_20"
     relevant_data_grids: str = "ground"
     grid_to_dump: str = "ground"
@@ -91,12 +89,12 @@ class Algo20_Build_c(AgentAlgorithm):
         Run in __post_init__ since @dataclass creates __init__ method"""
         super().__init__(
             agent_count=self.agent_count,
-            grid_size=self.grid_size,
+            clipping_box=self.clipping_box,
             grid_to_dump=self.grid_to_dump,
             name=self.name,
         )
 
-    def initialization(self, **kwargs):
+    def initialization(self, state: Environment):
         """
         creates the simulation environment setup
         with preset values in the definition
@@ -104,108 +102,13 @@ class Algo20_Build_c(AgentAlgorithm):
         returns: grids
 
         """
-        iterations = kwargs.get("iterations")
-        ground = DiffusiveGrid(
-            name="ground",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(97, 92, 97),
-        )
-        scan = DiffusiveGrid(
-            name="scan",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(210, 220, 230),
-        )
-        if self.import_scan:
-            file_path = get_nth_newest_file_in_folder(self.dir_solid_npy)
-            loaded_grid = Grid.from_npy(file_path).array
-            loaded_grid = np.array(
-                loaded_grid, dtype=np.float64
-            )  # TODO set dtype in algo_11_a_self.import_scan.py  # noqa: E501
-
-            # the imported array is already cropped to the BBOX of interest
-
-            self.grid_size = np.shape(loaded_grid)
-            scan.array = loaded_grid
-        else:
-            arr = make_ground_mockup(self.grid_size)
-            if add_initial_box:
-                arr += make_init_box_mockup(self.grid_size)
-            arr = np.clip(arr, 0, 1)
-            scan.array = arr
-
-        # IMPORT SCAN
-        ground.array = scan.array.copy()
-        print(f"ground grid_size = {ground.grid_size}")
-
-        agent_space = DiffusiveGrid(
-            name="agent_space",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(34, 116, 240),
-        )
-        track = DiffusiveGrid(
-            name="track",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(34, 116, 240),
-            decay_ratio=1 / 10000,
-        )
-        centroids = DiffusiveGrid(
-            name="centroids",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(252, 25, 0),
-            flip_colors=True,
-            decay_ratio=1 / 10000,
-            decay_linear_value=1 / (iterations * 10),
-        )
-        self.print_dot_counter = 0
-        built_volume = DiffusiveGrid(
-            name="built_volume",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(219, 26, 206),
-            flip_colors=True,
-            decay_ratio=1 / 10e12,
-        )
-        if add_initial_box:
-            built_volume.array = make_init_box_mockup(self.grid_size)
-
-        follow_grid = DiffusiveGrid(
-            name="follow_grid",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(232, 226, 211),
-            flip_colors=True,
-            decay_ratio=1 / 10e12,
-            gradient_resolution=10e22,
-        )
-        sense_maps_grid = DiffusiveGrid(
-            name="sense_maps_grid",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(200, 195, 0),
-            flip_colors=True,
-        )
-        move_map_grid = DiffusiveGrid(
-            name="move_map_grid",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(180, 180, 195),
-            flip_colors=True,
-        )
+        ground = state.grids["ground"]
+        scan = state.grids["scan"]
 
         # update walk region
-        self.update_offset_regions(ground.array.copy(), scan.array.copy())
+        self.update_offset_regions(ground.to_numpy(), scan.to_numpy())
 
         print("initialized")
-
-        # WRAP ENVIRONMENT
-        grids = {
-            "agent": agent_space,
-            "ground": ground,
-            "track": track,
-            "centroids": centroids,
-            "built_volume": built_volume,
-            "follow_grid": follow_grid,
-            "scan": scan,
-            "sense_maps_grid": sense_maps_grid,
-            "move_map_grid": move_map_grid,
-        }
-        return grids
 
     def update_environment(self, state: Environment, **kwargs):
         grids = state.grids
@@ -219,10 +122,10 @@ class Algo20_Build_c(AgentAlgorithm):
                 grade=False,
             )
 
-    def setup_agents(self, grids: dict[str, DiffusiveGrid]):
-        agent_space = grids["agent"]
-        track = grids["track"]
-        ground_grid = grids["ground"]
+    def setup_agents(self, state: Environment):
+        agent_space = state.grids["agent"]
+        track = state.grids["track"]
+        ground_grid = state.grids["ground"]
         agents = []
 
         # generate agents based on agent_type_dicts
@@ -350,7 +253,7 @@ class Algo20_Build_c(AgentAlgorithm):
         )
 
         # follow pheromones
-        follow_map = get_values_by_index_map(
+        follow_map = get_values_using_index_map(
             state.grids["follow_grid"].array, agent.move_map, agent.pose
         )
 
@@ -450,19 +353,20 @@ class Algo20_Build_c(AgentAlgorithm):
 
     def get_agent_build_probability(self, agent, state):
         # BUILD CONSTRAINTS:
-        ground = state.grids["ground"]
+        ground_array = state.grids["ground"].to_numpy()
 
         nozzle_map = agent.orient_sense_nozzle_map(world_z=False)
-        nozzle_access_density = agent.get_array_density_by_oriented_index_map(
-            ground.array, nozzle_map, nonzero=True
+        nozzle_access_density = get_array_density_using_index_map(
+            ground_array, nozzle_map, nonzero=True
         )
+
         # print(
         #     f"nozzle_acces_density: {nozzle_access_density}, degree: {agent.normal_angle}"
         # )
         nozzle_access_collision = nozzle_access_density >= 0.01
         overhang_map = agent.orient_sense_overhang_map()
-        density = agent.get_array_density_by_oriented_index_map(
-            ground.array, overhang_map, nonzero=True
+        density = get_array_density_using_index_map(
+            ground_array, overhang_map, nonzero=True
         )
         too_low_overhang = density < agent.overhang_density
         if nozzle_access_collision or too_low_overhang:
@@ -478,9 +382,10 @@ class Algo20_Build_c(AgentAlgorithm):
             if agent.build_next_to_bool:
                 built_volume = state.grids["built_volume"]
                 build_map = agent.orient_move_map()
-                built_density = agent.get_array_density_by_oriented_index_map(
-                    built_volume.array, build_map, nonzero=True
+                built_density = get_array_density_using_index_map(
+                    built_volume.to_numpy(), build_map, nonzero=True
                 )
+
                 if built_density < 0.001:  # noqa: SIM108
                     bp_build_next_to = 0
                 else:
@@ -489,10 +394,9 @@ class Algo20_Build_c(AgentAlgorithm):
 
             # BUILD BY WALL RADAR
             if agent.sense_wall_radar_bool:
-                ground = state.grids["ground"]
                 wall_radar_map = agent.orient_sense_wall_radar_map()
-                radar_density = agent.get_array_density_by_oriented_index_map(
-                    ground.array, wall_radar_map, nonzero=True
+                radar_density = get_array_density_using_index_map(
+                    ground_array, wall_radar_map, nonzero=True
                 )
                 if radar_density < agent.max_radar_density:  # walking on wall
                     bp_wall_radar = agent.build_probability_wall_radar[0]

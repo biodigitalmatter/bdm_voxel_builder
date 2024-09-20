@@ -31,8 +31,8 @@ clipping_box = cg.Box.from_diagonal(([0, 0, 0], grid_size))
 # skip = ("agent_space", 'ground', 'follow_grid', 'move_map_grid')
 config = Config(
     iterations=iterations,
-    grid_size=grid_size,
-    algo=Algo20_Build_d2(
+    clipping_box=clipping_box,
+    algo=Algo20_Build_c(
         agent_count=agent_count,
         name=name,
         clipping_box=clipping_box,
@@ -40,4 +40,6 @@ config = Config(
     save_interval=save_interval,
     visualizer=CompasViewerVisualizer(save_file=True, skip_grids=skip),
     visualize_interval=visualize_interval,
+    mockup_scan=True,
+    add_initial_box=True,
 )

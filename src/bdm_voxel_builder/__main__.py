@@ -68,6 +68,8 @@ def main(config_file):
 
     sim_state = Environment(config)
 
+    algo.initialization(sim_state)
+
     note = f"{algo.name}_a{algo.agent_count}_i{config.iterations}"
 
     if visualizer:
