@@ -8,6 +8,13 @@ import requests
 REPO_DIR = Path(__file__).parent.parent.parent
 DATA_DIR = REPO_DIR / "data"
 TEMP_DIR = REPO_DIR / "temp"
+TEMP_DIR_CLOUD = (
+    Path.home()
+    / r"Lund University\MAEF, bioDigital Matter & ABM makerspace - General\data\2024_bdm_voxel_builder__TEMP"
+)
+
+if not TEMP_DIR_CLOUD.exists():
+    print(f"Temporary dir on OneDrive not accesible, looking for {TEMP_DIR_CLOUD}")
 
 
 def get(file_name: str, force_redownload=False):
