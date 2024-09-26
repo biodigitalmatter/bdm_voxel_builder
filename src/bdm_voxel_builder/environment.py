@@ -35,7 +35,6 @@ class Environment:
     def setup_grids(
         self, iterations, mockup_scan: bool = False, add_initial_box: bool = False
     ):
-
         shared_grid_kwargs = {
             "clipping_box": self.clipping_box,
             "xform": self.xform,

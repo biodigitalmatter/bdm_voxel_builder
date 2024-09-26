@@ -241,12 +241,13 @@ def index_map_box(box_size, box_min_size=None):
 
     return filtered_index_map
 
+
 def index_map_box_xxyyzz(xxyyzz: tuple[int, int, int, int, int, int]):
     x_min, x_max, y_min, y_max, z_min, z_max = xxyyzz
 
     x = np.arange(x_min, x_max - 1)
-    y = np.arange(y_min, y_max -1)
-    z = np.arange(z_min, z_max -1)
+    y = np.arange(y_min, y_max - 1)
+    z = np.arange(z_min, z_max - 1)
 
     x, y, z = np.meshgrid(x, y, z, indexing="ij")
 
@@ -387,22 +388,19 @@ def index_map_sphere_scale_NU(
 
 
 def clip_index_map_to_box(
-    array: np.ndarray[np.int_], bbox: cg.Box | tuple[tuple[float]]
+    index_map: np.ndarray[np.int_], bbox: cg.Box | tuple[tuple[float]]
 ) -> np.ndarray:
     if not isinstance(bbox, cg.Box):
         a_min, a_max = bbox
     else:
         a_min, a_max = bbox.diagonal
-        # cast to lists
-        a_min = list(a_min)
-        a_max = list(a_max)
 
-    a_max = np.array(a_max) - 1
+    a_min = np.floor(a_min).astype(np.int_)
+    a_max = np.floor(a_max).astype(np.int_) - 1
 
-    new_index_map = array.clip(a_min, a_max)
-    np.floor(new_index_map, out=new_index_map)
+    new_index_map = index_map.clip(a_min, a_max)
 
-    return np.unique(new_index_map.astype(np.int_, copy=False), axis=0)
+    return np.unique(new_index_map, axis=0)
 
 
 def get_localized_index_map(
@@ -424,6 +422,8 @@ def get_values_using_index_map(
 ):
     if origin is None:
         origin = (0, 0, 0)
+
+    clipping_box = clipping_box or cg.Box.from_diagonal(((0, 0, 0), (array.shape)))
     index_map = get_localized_index_map(index_map, origin, clipping_box=clipping_box)
 
     return array[tuple(index_map.transpose())]

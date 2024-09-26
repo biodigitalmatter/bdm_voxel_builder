@@ -1,7 +1,4 @@
-import compas.geometry as cg
 import numpy as np
-
-from bdm_voxel_builder.helpers import get_mask_zone_xxyyzz
 
 
 def get_any_index_of_mask(index_map_array, nonzero=True):

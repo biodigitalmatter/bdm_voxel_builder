@@ -6,6 +6,7 @@ from .array import (
     create_random_array,
     crop_array,
     get_array_density_from_zone_xxyyzz,
+    get_array_density_using_index_map,
     get_localized_index_map,
     get_mask_zone_xxyyzz,
     get_sub_array,

@@ -12,6 +12,7 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
+    get_array_density_using_index_map,
     get_localized_index_map,
     get_values_using_index_map,
     index_map_cylinder,
@@ -109,7 +110,7 @@ class Agent:
         return copy(self)
 
     def get_fab_plane(self):
-        return cg.Plane(self.pose, self.normal_vector)
+        return cg.Plane(self.pose, self.get_normal_vector())
 
     def get_localized_move_mask(self, array: npt.NDArray[np.float_]):
         filter_ = get_values_using_index_map(
@@ -364,7 +365,7 @@ class Agent:
         """
         move_values = self.calculate_move_values_random__z_based()
 
-        follow_map = follow_grid.get_values(self.get_localized_move_map())
+        follow_map = np.array(follow_grid.get_values(self.get_localized_move_map()))
         follow_map *= self.move_mod_follow
 
         move_values += follow_map
@@ -455,7 +456,9 @@ class Agent:
         return self.orient_index_map(self.sense_depth_map)
 
     def orient_sense_wall_radar_map(self):
-        return self.orient_index_map(self.sense_wall_radar_map, normal=cg.Vector.Zaxis())
+        return self.orient_index_map(
+            self.sense_wall_radar_map, normal=cg.Vector.Zaxis()
+        )
 
     def orient_sense_overhang_map(self):
         map = self.orient_index_map(self.sense_overhang_map, normal=cg.Vector(0, 0, 1))

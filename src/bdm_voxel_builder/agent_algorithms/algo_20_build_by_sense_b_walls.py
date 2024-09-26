@@ -15,8 +15,6 @@ from bdm_voxel_builder.helpers.array import (
     get_mask_zone_xxyyzz,
     get_nth_newest_file_in_folder,
     get_savepath,
-    get_surrounding_offset_region,
-    get_values_by_index_map,
     index_map_cylinder,
     index_map_sphere,
     set_value_by_index_map,
@@ -329,81 +327,6 @@ class Algo20_Build_b(AgentAlgorithm):
 
         return agents
 
-    def calculate_move_values_random_and_Z(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-        move_map_in_place = agent.move_map_in_place
-
-        # random map
-        map_size = len(move_map_in_place)
-        random_map_values = np.random.random(map_size) + 0.5
-
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
-
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
-        move_values = move_z_coordinate + random_map_values  # + follow_map
-        return move_values
-
-    def calculate_move_values_random_and_Z_f(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-        move_map_in_place = agent.move_map_in_place
-
-        # random map
-        random_map_values = np.random.random(len(move_map_in_place)) + 0.5
-
-        # global direction preference
-        move_z_coordinate = (
-            np.array(move_map_in_place, dtype=np.float64)[:, 2] - agent.pose[2]
-        )
-
-        # follow pheromones
-        follow_map = get_values_by_index_map(
-            state.grids["follow_grid"].array, agent.move_map, agent.pose
-        )
-
-        built_density = agent.get_array_density_by_oriented_index_map(
-            state.grids["built_volume"].array, move_map_in_place, nonzero=True
-        )
-        # MOVE PREFERENCE SETTINGS
-        move_z_coordinate *= agent.move_mod_z
-        random_map_values *= agent.move_mod_random
-        follow_map *= agent.move_mod_follow
-        if built_density < 0.1:
-            follow_map *= 10000000
-
-        move_values = move_z_coordinate + random_map_values + follow_map
-
-        return move_values
-
-    def get_legal_move_mask(self, agent: Agent, state: Environment):
-        """moves agents in a calculated direction
-        calculate weigthed sum of slices of grids makes the direction_cube
-        check and excludes illegal moves by replace values to -1
-        move agent
-        return True if moved, False if not or in ground
-        """
-
-        # legal move mask
-        filter = get_values_by_index_map(
-            self.region_legal_move, agent.move_map, agent.pose, dtype=np.float64
-        )
-        legal_move_mask = filter == 1
-        return legal_move_mask
-
     def build(self, agent: Agent, state: Environment):
         """fill built volume in built_shape if agent.build_probability >= build_limit"""
 
@@ -542,84 +465,3 @@ class Algo20_Build_b(AgentAlgorithm):
             build_probability = bp_random + bp_shell_topology
         # print(f"build_probability:{build_probability}")
         return build_probability
-
-    def update_offset_regions(self, ground_array, scan_array):
-        self.region_legal_move = get_surrounding_offset_region(
-            arrays=[ground_array],
-            offset_thickness=self.walk_region_thickness,
-        )
-        if not self.deploy_anywhere:
-            self.region_deploy_agent = self.region_legal_move
-        else:
-            self.region_deploy_agent = get_surrounding_offset_region(
-                arrays=[scan_array],
-                offset_thickness=self.walk_region_thickness,
-                exclude_arrays=[ground_array],
-            )
-
-    # ACTION FUNCTION
-    def agent_action(self, agent, state: Environment):
-        """
-        GET_PROPABILITY
-        BUILD
-        MOVE
-        *RESET
-        """
-        # BUILD
-        build_probability = self.get_agent_build_probability(agent, state)
-        print(
-            f"""agent_{agent.id}, {agent.pose} """  # noqa: E501
-        )
-        if build_probability > r.random():
-            print(
-                f"""\n## agent_{agent.id} - {agent.pose} ##\n{agent.agent_type_summary}\n {agent.normal_vector}"""  # noqa: E501
-            )
-            print(f"build_probability = {build_probability}")
-
-            print(f"angle {agent.normal_angle}")
-
-            # build
-            self.build(agent, state)
-
-            # update offset regions
-            self.update_offset_regions(
-                ground_array=state.grids["ground"].array.copy(),
-                scan_array=state.grids["scan"].array.copy(),
-            )
-
-            # reset if
-            agent.step_counter = 0
-            if agent.reset_after_build:
-                if isinstance(agent.reset_after_build, float):
-                    if r.random() < agent.reset_after_build:
-                        agent.deploy_in_region(self.region_deploy_agent)
-                elif agent.reset_after_build is True:
-                    agent.deploy_in_region(self.region_deploy_agent)
-                else:
-                    pass
-        # MOVE
-        # check collision
-        collision = agent.check_solid_collision([state.grids["built_volume"].array])
-        # move
-        if not collision:
-            move_values = self.calculate_move_values_random_and_Z_f(agent, state)
-            move_map_in_place = agent.move_map_in_place
-
-            legal_move_mask = self.get_legal_move_mask(agent, state)
-
-            agent.move_by_index_map(
-                index_map_in_place=move_map_in_place[legal_move_mask],
-                move_values=move_values[legal_move_mask],
-                random_batch_size=4,
-            )
-            agent.step_counter += 1
-
-        # RESET
-        else:
-            # reset if stuck
-            agent.deploy_in_region(self.region_deploy_agent)
-
-        # reset if inactive
-        if agent.inactive_step_count_limit:  # noqa: SIM102
-            if agent.step_counter >= agent.inactive_step_count_limit:
-                agent.deploy_in_region(self.region_deploy_agent)

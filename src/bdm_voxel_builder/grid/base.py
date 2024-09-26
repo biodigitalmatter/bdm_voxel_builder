@@ -191,7 +191,12 @@ class Grid:
         return cg.Pointcloud(self.get_active_voxels())
 
     def get_world_pts(self) -> list[list[float]]:
-        return cg.transform_points_numpy(self.get_active_voxels(), self.xform)
+        voxels = self.get_active_voxels()
+
+        if len(voxels) == 0:
+            return []
+
+        return cg.transform_points_numpy(voxels, self.xform)
 
     def get_world_pointcloud(self) -> cg.Pointcloud:
         return cg.Pointcloud(self.get_world_pts())
