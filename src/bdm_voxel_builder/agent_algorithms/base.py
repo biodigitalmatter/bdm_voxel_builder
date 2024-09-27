@@ -2,12 +2,17 @@ import abc
 import random
 
 import compas.geometry as cg
+import numpy as np
+import numpy.typing as npt
+from compas import json_dumps
 
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.helpers import get_values_using_index_map
-from bdm_voxel_builder.helpers.array import get_surrounding_offset_region
+from bdm_voxel_builder.helpers import (
+    get_surrounding_offset_region,
+    get_values_using_index_map,
+)
 
 
 class AgentAlgorithm(abc.ABC):
@@ -29,14 +34,31 @@ class AgentAlgorithm(abc.ABC):
     def setup_agents(self, state: Environment):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def initialization(self, state: Environment, **kwargs):
-        pass
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def update_environment(self, state: Environment):
+        raise NotImplementedError
+
+    def decay_environment(self, state: Environment):
         for grid_name in self.grids_to_decay or []:
             grid = state.grids[grid_name]
             assert isinstance(grid, DiffusiveGrid)
             grid.decay()
+
+    def diffuse_follow_grid(
+        self, state: Environment, emission_array: npt.NDArray[np.float_]
+    ):
+        follow_grid: DiffusiveGrid = state.grids["follow"]
+        blocking_grids = [state.grids["ground"]]
+
+        # update goal_density
+        follow_grid.diffuse_diffusive_grid(
+            emission_array=emission_array,
+            blocking_grids=blocking_grids,
+        )
 
     def get_legal_move_mask(self, agent: Agent, state: Environment):
         """moves agents in a calculated direction
@@ -67,10 +89,64 @@ class AgentAlgorithm(abc.ABC):
                 exclude_arrays=[ground_array],
             )
 
+    def get_move_values(self, agent: Agent, state: Environment):
+        follow_grid = state.grids["follow"]
+        return agent.calculate_move_values_random__z_based__follow(
+            follow_grid,
+        )
+
+    def build(self, agent: Agent, state: Environment):
+        # update print dot array
+        centroids = state.grids["centroids"]
+        self.print_dot_counter += 1
+        centroids.set_value(agent.pose, self.print_dot_counter)
+
+        built = state.grids["built"]
+
+        # orient shape map
+        build_map = agent.orient_build_map()
+
+        # update built_volume_volume_array
+        built.set_value_using_index_map(build_map, values=1)
+
+        print(f"built at: {agent.pose}")
+
+        # TODO: Why change ground here?
+        ground = state.grids["ground"]
+        ground.set_value_using_index_map(build_map, value=1)
+
+        # update grids for index_map visualisation
+        move_map_grid = state.grids.get("move_map")
+        if move_map_grid:
+            move_map_grid.set_value_using_index_map(agent.orient_sense_map(), values=1)
+
+        sense_maps_grid = state.grids.get("sense_maps")
+
+        if sense_maps_grid:
+            sense_maps_grid.set_value_using_index_map(
+                agent.orient_sense_inplane_map(), values=1
+            )
+
+            sense_maps_grid.set_value_using_index_map(
+                agent.orient_sense_depth_map(), values=1
+            )
+
+        self.update_fab_planes_file(agent.get_plane())
+
+    def update_fab_planes_file(self, plane):
+        self.fab_planes.append(plane)
+
+        if not self.fab_planes_file_path.exists():
+            self.fab_planes_file_path.parent.mkdir(parents=True, exist_ok=True)
+            self.fab_planes_file_path.touch()
+
+        with self.fab_planes_file_path.open(mode="a") as f:
+            f.write(json_dumps(plane) + "\n")
+
     # ACTION FUNCTION
     def agent_action(self, agent: Agent, state: Environment):
         """
-        GET_PROPABILITY
+        GET_PROBABILITY
         BUILD
         MOVE
         *RESET
@@ -104,14 +180,11 @@ class AgentAlgorithm(abc.ABC):
                     agent.deploy_in_region(self.region_deploy_agent)
                 else:
                     pass
-        # MOVE
+
         # check collision
-        collision = agent.check_solid_collision([state.grids["built_volume"]])
-        # move
-        if not collision:
-            move_values = agent.calculate_move_values_random__z_based__follow(
-                state.grids["follow_grid"]
-            )
+        if not agent.check_solid_collision([state.grids["built"]]):
+            # move
+            move_values = self.get_move_values(agent, state)
 
             legal_move_mask = self.get_legal_move_mask(agent, state)
 

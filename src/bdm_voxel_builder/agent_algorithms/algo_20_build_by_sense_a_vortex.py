@@ -2,22 +2,17 @@ import random as r
 from dataclasses import dataclass
 
 import numpy as np
-from compas import json_dumps
-from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import diffuse_diffusive_grid
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid, Grid
+from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import (
     get_mask_zone_xxyyzz,
-    get_nth_newest_file_in_folder,
     get_savepath,
     index_map_cylinder,
     index_map_sphere,
-    set_value_by_index_map,
 )
 
 
@@ -136,7 +131,7 @@ class Algo20_Build_a(AgentAlgorithm):
     grid_to_dump: str = "ground"
 
     # TODO
-    vdb_to_dump: str = "built_volume"  # not implemented
+    vdb_to_dump: str = "built"  # not implemented
     point_cloud_to_dump: str = "centroids"  # not implemented
 
     seed_iterations: int = 1
@@ -149,6 +144,8 @@ class Algo20_Build_a(AgentAlgorithm):
     # import scan
     import_scan = False
     dir_solid_npy = REPO_DIR / "data/live/build_grid/02_solid/npy"
+
+    to_decay = ["built"]
 
     # save fab_planes
     fab_planes = []
@@ -168,7 +165,7 @@ class Algo20_Build_a(AgentAlgorithm):
             name=self.name,
         )
 
-    def initialization(self, **kwargs):
+    def initialization(self, state: Environment):
         """
         creates the simulation environment setup
         with preset values in the definition
@@ -176,113 +173,14 @@ class Algo20_Build_a(AgentAlgorithm):
         returns: grids
 
         """
-        iterations = kwargs.get("iterations")
-        ground = DiffusiveGrid(
-            name="ground",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(97, 92, 97),
-        )
-        scan = DiffusiveGrid(
-            name="scan",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(210, 220, 230),
-        )
-        if self.import_scan:
-            file_path = get_nth_newest_file_in_folder(self.dir_solid_npy)
-            loaded_grid = Grid.from_npy(file_path).array
-            loaded_grid = np.array(
-                loaded_grid, dtype=np.float64
-            )  # TODO set dtype in algo_11_a_self.import_scan.py  # noqa: E501
-
-            # the imported array is already cropped to the BBOX of interest
-
-            self.grid_size = np.shape(loaded_grid)
-            scan.array = loaded_grid
-        else:
-            scan.array = make_ground_mockup(self.grid_size)
-            scan.array = make_init_box_mockup(self.grid_size)
-
-        # IMPORT SCAN
-        ground.array = scan.array.copy()
-        print(f"ground grid_size = {ground.grid_size}")
-
-        agent_space = DiffusiveGrid(
-            name="agent_space",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(34, 116, 240),
-        )
-        track = DiffusiveGrid(
-            name="track",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(34, 116, 240),
-            decay_ratio=1 / 10000,
-        )
-        centroids = DiffusiveGrid(
-            name="centroids",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(252, 25, 0),
-            flip_colors=True,
-            decay_ratio=1 / 10000,
-            decay_linear_value=1 / (iterations * 10),
-        )
-        self.print_dot_counter = 0
-        built_volume = DiffusiveGrid(
-            name="built_volume",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(219, 26, 206),
-            flip_colors=True,
-            decay_ratio=1 / 1000,
-        )
-        built_volume.array = make_init_box_mockup(self.grid_size)
-
-        follow_grid = DiffusiveGrid(
-            name="follow_grid",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(232, 226, 211),
-            flip_colors=True,
-            decay_ratio=1 / 1000000,
-            gradient_resolution=1000000000000,
-        )
-        sense_maps_grid = DiffusiveGrid(
-            name="sense_maps_grid",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(200, 195, 0),
-            flip_colors=True,
-        )
-        move_map_grid = DiffusiveGrid(
-            name="move_map_grid",
-            grid_size=self.grid_size,
-            color=Color.from_rgb255(180, 180, 195),
-            flip_colors=True,
-        )
-
         # update walk region
-        self.update_offset_regions(ground.array.copy(), scan.array.copy())
-
-        # WRAP ENVIRONMENT
-        grids = {
-            "agent": agent_space,
-            "ground": ground,
-            "track": track,
-            "centroids": centroids,
-            "built_volume": built_volume,
-            "follow_grid": follow_grid,
-            "scan": scan,
-            "sense_maps_grid": sense_maps_grid,
-            "move_map_grid": move_map_grid,
-        }
-        return grids
+        self.update_offset_regions(
+            state.grids["ground"].to_numpy(), state.grids["scan"].to_numpy()
+        )
 
     def update_environment(self, state: Environment):
-        grids = state.grids
-        pass
-        # grids["centroids"].decay()
-        grids["built_volume"].decay()
-        diffuse_diffusive_grid(
-            grids["follow_grid"],
-            emmission_array=grids["built_volume"].array,
-            blocking_grids=[grids["ground"]],
-        )
+        self.decay_environment(state)
+        self.diffuse_follow_grid(state, state.grids["built"].to_numpy())
 
     def setup_agents(self, grids: dict[str, DiffusiveGrid]):
         agent_space = grids["agent"]
@@ -324,58 +222,6 @@ class Algo20_Build_a(AgentAlgorithm):
         print("pref_build_angle_gain", agents[0].pref_build_angle_gain)
 
         return agents
-
-    def build(self, agent: Agent, state: Environment):
-        """fill built volume in built_shape if agent.build_probability >= build_limit"""
-
-        self.print_dot_counter += 1
-
-        built_volume = state.grids["built_volume"]
-        centroids = state.grids["centroids"]
-        ground = state.grids["ground"]
-        sense_maps_grid = state.grids["sense_maps_grid"]
-        move_map_grid = state.grids["move_map_grid"]
-
-        x, y, z = agent.pose
-
-        # update print dot array
-        centroids.array[x, y, z] = self.print_dot_counter
-
-        # orient shape map
-        build_map = agent.orient_build_map()
-        # update built_volume_volume_array
-        built_volume.array = set_value_by_index_map(
-            built_volume.array,
-            build_map,
-            value=1,
-        )
-        ground.array = set_value_by_index_map(
-            ground.array,
-            build_map,
-            value=1,
-        )
-
-        # update grids for index_map visualisation
-        move_map_grid.array = set_value_by_index_map(
-            move_map_grid.array, agent.orient_sense_map()
-        )
-        sense_maps_grid.array = set_value_by_index_map(
-            sense_maps_grid.array, agent.orient_sense_inplane_map()
-        )
-        sense_maps_grid.array = set_value_by_index_map(
-            sense_maps_grid.array, agent.orient_sense_depth_map()
-        )
-
-        print(f"built at: {agent.pose}")
-
-        # update fab_planes
-        plane = agent.fab_plane
-        self.fab_planes.append(plane)
-
-        # write fabplane to file
-        data = json_dumps(agent.fab_plane)
-        with open(self.fab_planes_file_path, "a") as f:
-            f.write(data + "\n")
 
     def get_agent_build_probability(self, agent, state):
         # BUILD CONSTRAINTS:

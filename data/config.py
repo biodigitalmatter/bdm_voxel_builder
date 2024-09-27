@@ -23,7 +23,7 @@ grid_size = [50, 50, 50]
 iterations = 10000
 agent_count = 1
 name = f"algo_20_e_solo2_i{iterations}a{agent_count}"
-skip = ("agent_space", "ground", "follow_grid")
+skip = ("agent_space", "ground", "follow")
 save_interval = 50
 visualize_interval = 500
 

@@ -109,7 +109,7 @@ class Agent:
     def copy(self):
         return copy(self)
 
-    def get_fab_plane(self):
+    def get_plane(self):
         return cg.Plane(self.pose, self.get_normal_vector())
 
     def get_localized_move_mask(self, array: npt.NDArray[np.float_]):
@@ -357,7 +357,28 @@ class Agent:
         move_values = z_component + random_map_values  # + follow_map
         return move_values
 
+    def get_follow_modifiers(self, follow_grid: Grid):
+        """Set follow modifiers based on the follow grid"""
+        follow_mods = np.array(follow_grid.get_values(self.get_localized_move_map()))
+        return follow_mods * self.move_mod_follow
+
     def calculate_move_values_random__z_based__follow(self, follow_grid: Grid):
+        """Generate probability values for the movement index map to control
+        movement.
+
+        Weight add for Z component and follow component.
+        """
+        return self.calculate_move_values_random__z_based() + self.get_follow_modifiers(
+            follow_grid
+        )
+
+    def calculate_move_values_random__z_based__follow_with_low_density_weight(
+        self,
+        follow_grid: Grid,
+        built_grid: Grid,
+        low_density_threshold=0.1,
+        low_density_weight=1e7,
+    ):
         """Generate probability values for the movement index map to control
         movement.
 
@@ -365,12 +386,19 @@ class Agent:
         """
         move_values = self.calculate_move_values_random__z_based()
 
-        follow_map = np.array(follow_grid.get_values(self.get_localized_move_map()))
-        follow_map *= self.move_mod_follow
+        follow_mods = self.get_follow_modifiers(follow_grid)
 
-        move_values += follow_map
+        built_density = get_array_density_using_index_map(
+            built_grid.to_numpy(),
+            self.get_localized_move_map(),
+            self.pose,
+            nonzero=True,
+        )
 
-        return move_values
+        if built_density < self.min_build_density:
+            follow_mods += low_density_weight
+
+        return move_values + follow_mods
 
     def get_build_limit_by_density_range(self, array, radius, nonzero):
         """return build"""

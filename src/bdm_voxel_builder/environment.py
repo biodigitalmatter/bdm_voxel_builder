@@ -1,6 +1,5 @@
-from math import floor
-
 import compas.geometry as cg
+import numpy as np
 from compas.colors import Color
 
 from bdm_voxel_builder.agent import Agent
@@ -33,7 +32,10 @@ class Environment:
         self.agents: list[Agent] = config.algo.setup_agents(self)
 
     def setup_grids(
-        self, iterations, mockup_scan: bool = False, add_initial_box: bool = False
+        self,
+        iterations,
+        mockup_scan: bool = False,
+        add_initial_box: bool = False,
     ):
         shared_grid_kwargs = {
             "clipping_box": self.clipping_box,
@@ -50,7 +52,7 @@ class Environment:
         )
 
         if mockup_scan:
-            scan.set_values(self.make_ground_mockup(), values=1.0)
+            scan.set_values(self.make_ground_mockup_index_grid(), values=1.0)
         else:
             scan_arr = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
             scan.set_values_using_array(scan_arr)
@@ -78,7 +80,7 @@ class Environment:
             diffusion_ratio=default_decay,
             **shared_grid_kwargs,
         )
-        built_volume = DiffusiveGrid(
+        built = DiffusiveGrid(
             name="density",
             color=Color.from_rgb255(219, 26, 206),
             flip_colors=True,
@@ -87,10 +89,10 @@ class Environment:
         )
 
         if add_initial_box:
-            built_volume.set_values(self.make_init_box_mockup(), values=1.0)
+            built.set_values(self.make_init_box_mockup_index_grid(), values=1.0)
 
-        follow_grid = DiffusiveGrid(
-            name="follow_grid",
+        follow = DiffusiveGrid(
+            name="follow",
             color=Color.from_rgb255(232, 226, 211),
             flip_colors=True,
             decay_ratio=slow_decay,
@@ -98,16 +100,24 @@ class Environment:
             **shared_grid_kwargs,
         )
 
-        sense_maps_grid = Grid(
-            name="sense_maps_grid",
+        sense_maps = Grid(
+            name="sense_maps",
             color=Color.from_rgb255(200, 195, 0),
             flip_colors=True,
             **shared_grid_kwargs,
         )
-        move_map_grid = Grid(
-            name="move_map_grid",
+        move_maps = Grid(
+            name="move_maps",
             color=Color.from_rgb255(180, 180, 195),
             flip_colors=True,
+            **shared_grid_kwargs,
+        )
+        goal_density = DiffusiveGrid(
+            name="goal_density",
+            color=Color.from_rgb255(232, 226, 211),
+            flip_colors=True,
+            decay_ratio=slow_decay,
+            gradient_resolution=1e23,
             **shared_grid_kwargs,
         )
 
@@ -116,39 +126,56 @@ class Environment:
             "ground": ground,
             "track": track,
             "centroids": centroids,
-            "built_volume": built_volume,
-            "follow_grid": follow_grid,
+            "built": built,
+            "follow": follow,
             "scan": scan,
-            "sense_maps_grid": sense_maps_grid,
-            "move_map_grid": move_map_grid,
+            "sense_maps": sense_maps,
+            "move_map": move_maps,
+            "goal_density": goal_density,
         }
 
-    def make_ground_mockup(self):
-        a, b, c = (floor(v) - 1 for v in self.clipping_box.dimensions)
+    def make_mockup_index_map_from_xxyyzz_factors(
+        self, xxyyzz_factors: list[float, float, float, float, float, float]
+    ):
+        b_min, b_max = self.clipping_box.diagonal
 
-        base_layer = [0, a, 0, b, 0, 10]
+        xxyyzz = []
 
-        ground_zones = [base_layer]
+        for i in range(3):
+            min_ = xxyyzz_factors[i * 2]
+            max_ = xxyyzz_factors[i * 2 + 1]
 
-        mask_set = set()
+            xxyyzz.extend(np.interp([min_, max_], [0, 1], [b_min[i], b_max[i]]))
 
-        for zone in ground_zones:
-            indices = index_map_box_xxyyzz(zone)
-            mask_set.update([tuple(ijk) for ijk in indices])
+        return index_map_box_xxyyzz(xxyyzz)
 
-        return list(mask_set)
+    def make_ground_mockup_index_grid(self):
+        zsize = self.clipping_box.dimensions[2]
+        return self.make_mockup_index_map_from_xxyyzz_factors(
+            [0, 1, 0, 1, 0, 10 / zsize]
+        )
 
-    def make_init_box_mockup(self):
-        a, b, c = (floor(v) - 1 for v in self.clipping_box.dimensions)
+    def make_init_box_mockup_index_grid(self):
+        xsize, ysize, zsize = self.clipping_box.dimensions
+        return self.make_mockup_index_map_from_xxyyzz_factors(
+            [0.5, 0.5 + 3 / xsize, 0.5, 0.5 + 3 / ysize, 10 / zsize, 13 / zsize]
+        )
 
-        box_1 = [floor(v) for v in (a / 2, a / 2 + 3, b / 2, b / 2 + 3, 10, 13)]
+    def make_goal_density_box_mockup_A(self):
+        return self.make_mockup_index_map_from_xxyyzz_factors(
+            [0.2, 0.5, 0.2, 0.8, 0, 1]
+        )
 
-        ground_zones = [box_1]
+    def make_goal_density_box_mockup_B(self):
+        xsize, ysize, _ = self.clipping_box.dimensions
+        return self.make_mockup_index_map_from_xxyyzz_factors(
+            [0.5, 0.8, 0.2, 0.8, 0, 0.7]
+        )
 
-        mask_set = set()
+    def make_goal_density_box_mockup_C(self):
+        return self.make_mockup_index_map_from_xxyyzz_factors([0, 0.2, 0, 0.8, 0, 1])
 
-        for zone in ground_zones:
-            indices = index_map_box_xxyyzz(zone)
-            mask_set.update([tuple(ijk) for ijk in indices])
-
-        return list(mask_set)
+    def make_goal_density_box_mockup_D(self):
+        return self.make_mockup_index_map_from_xxyyzz_factors(
+            [0.4, 0.6, 0.4, 0.6, 0, 1]
+        )

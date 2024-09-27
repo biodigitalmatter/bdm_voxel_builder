@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 import compas.geometry as cg
 import numpy as np
-from compas import json_dumps
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
@@ -59,7 +58,7 @@ class Algo20_Build_c(AgentAlgorithm):
     grid_to_dump: str = "ground"
 
     # TODO
-    vdb_to_dump: str = "built_volume"  # not implemented
+    vdb_to_dump: str = "built"  # not implemented
 
     # global settings
 
@@ -68,6 +67,8 @@ class Algo20_Build_c(AgentAlgorithm):
 
     walk_region_thickness = 1
     deploy_anywhere = deploy_anywhere  # only on the initial scan volume
+
+    to_decay = ["built"]
 
     # import scan
     import_scan = False
@@ -106,19 +107,10 @@ class Algo20_Build_c(AgentAlgorithm):
         # update walk region
         self.update_offset_regions(ground.to_numpy(), scan.to_numpy())
 
-        print("initialized")
-
-    def update_environment(self, state: Environment, **kwargs):
-        grids = state.grids
-        pass
-        # grids["centroids"].decay()
-        grids["built_volume"].decay()
+    def update_environment(self, state: Environment):
+        self.decay_environment(state)
         if follow_newly_built > 0:
-            grids["follow_grid"].diffuse_diffusive_grid(
-                emission_array=grids["built_volume"].to_numpy(),
-                blocking_grids=[grids["ground"]],
-                grade=False,
-            )
+            self.diffuse_follow_grid(state, state.grids["built"].to_numpy())
 
     def setup_agents(self, state: Environment):
         agent_space = state.grids["agent"]
@@ -209,55 +201,6 @@ class Algo20_Build_c(AgentAlgorithm):
 
         return agents
 
-    def build(self, agent: Agent, state: Environment):
-        """fill built volume in built_shape if agent.build_probability >= build_limit"""
-
-        self.print_dot_counter += 1
-
-        built_volume = state.grids["built_volume"]
-        centroids = state.grids["centroids"]
-        ground = state.grids["ground"]
-
-        # update print dot array
-        centroids.set_value(agent.pose, self.print_dot_counter)
-
-        # orient shape map
-        build_map = agent.orient_build_map()
-        # update built_volume_volume_array
-        built_volume.set_value_using_index_map(build_map, values=1)
-        ground.set_value_using_index_map(build_map, values=1)
-
-        # update grids for index_map visualisation
-        # move_map_grid.array = set_value_by_index_map(
-        #     move_map_grid.array, agent.orient_sense_map()
-        # )
-        # sense_maps_grid.array = set_value_by_index_map(
-        #     sense_maps_grid.array, agent.orient_sense_inplane_map()
-        # )
-        # sense_maps_grid.array = set_value_by_index_map(
-        #     sense_maps_grid.array, agent.orient_sense_depth_map()
-        # )
-        # move_map_grid.array = set_value_by_index_map(
-        #     move_map_grid.array, agent.orient_sense_overhang_map()
-        # )
-        # move_map_grid.array = set_value_by_index_map(
-        #     move_map_grid.array, agent.orient_sense_nozzle_map()
-        # )
-
-        print(f"built at: {agent.pose}")
-
-        # update fab_planes
-        plane = agent.get_fab_plane()
-
-        self.fab_planes.append(plane)
-
-        if not self.fab_planes_file_path.exists():
-            self.fab_planes_file_path.parent.mkdir(parents=True, exist_ok=True)
-            self.fab_planes_file_path.touch()
-
-        with self.fab_planes_file_path.open(mode="a") as f:
-            f.write(json_dumps(plane) + "\n")
-
     def get_agent_build_probability(self, agent, state):
         # BUILD CONSTRAINTS:
         ground_array = state.grids["ground"].to_numpy()
@@ -267,9 +210,6 @@ class Algo20_Build_c(AgentAlgorithm):
             ground_array, nozzle_map, nonzero=True
         )
 
-        # print(
-        #     f"nozzle_acces_density: {nozzle_access_density}, degree: {agent.normal_angle}"
-        # )
         nozzle_access_collision = nozzle_access_density >= 0.01
         overhang_map = agent.orient_sense_overhang_map()
         density = get_array_density_using_index_map(
@@ -287,7 +227,7 @@ class Algo20_Build_c(AgentAlgorithm):
 
             # BUILD NEXT TO built
             if agent.build_next_to_bool:
-                built_volume = state.grids["built_volume"]
+                built_volume = state.grids["built"]
                 build_map = agent.orient_move_map()
                 built_density = get_array_density_using_index_map(
                     built_volume.to_numpy(), build_map, nonzero=True

@@ -1,16 +1,12 @@
 from dataclasses import dataclass
 
 import compas.geometry as cg
-from compas.colors import Color
 
 from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
-from bdm_voxel_builder.agent_algorithms.common import make_ground_mockup
 from bdm_voxel_builder.environment import Environment
-from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import (
-    get_nth_newest_file_in_folder,
     get_surrounding_offset_region,
     index_map_cylinder,
     index_map_sphere,
@@ -29,8 +25,8 @@ class Algo15_Build(AgentAlgorithm):
     agent_count: int
     clipping_box: cg.Box
     name: str = "algo_15"
-    relevant_data_grids: str = "built_volume"
-    grid_to_dump: str = "built_volume"
+    relevant_data_grids: str = "built"
+    grid_to_dump: str = "built"
 
     seed_iterations: int = 1
 
@@ -86,7 +82,7 @@ class Algo15_Build(AgentAlgorithm):
             grids_to_decay=[],
         )
 
-    def initialization(self, **kwargs):
+    def initialization(self, state: Environment):
         """
         creates the simulation environment setup
         with preset values in the definition
@@ -94,81 +90,11 @@ class Algo15_Build(AgentAlgorithm):
         returns: grids
 
         """
-        iterations = int(kwargs["iterations"])
-        xform = kwargs.get("xform")
-
-        assert isinstance(xform, cg.Transformation | None)
-
-        if self.import_scan:
-            scan_arr = get_nth_newest_file_in_folder(self.dir_save_solid_npy)
-        else:
-            scan_arr = make_ground_mockup(self.clipping_box)
-
-        scan = Grid.from_numpy(
-            scan_arr,
-            clipping_box=self.clipping_box,
-            name="scan",
-            color=Color.from_rgb255(210, 220, 230),
-        )
-
-        ground = scan.copy()
-        ground.name = "ground"
-        ground.color = Color.from_rgb255(97, 92, 97)
-
-        agent_space = Grid(
-            name="agent_space",
-            clipping_box=self.clipping_box,
-            xform=xform,
-            color=Color.from_rgb255(34, 116, 240),
-        )
-        track = DiffusiveGrid(
-            name="track",
-            clipping_box=self.clipping_box,
-            xform=xform,
-            color=Color.from_rgb255(34, 116, 240),
-            decay_ratio=1 / 10000,
-        )
-        built_centroids = DiffusiveGrid(
-            name="built_centroids",
-            clipping_box=self.clipping_box,
-            xform=xform,
-            color=Color.from_rgb255(252, 25, 0),
-            flip_colors=True,
-            decay_ratio=1 / 10000,
-            decay_linear_value=1 / (iterations * 10),
-        )
-        built_volume = DiffusiveGrid(
-            name="density",
-            clipping_box=self.clipping_box,
-            xform=xform,
-            color=Color.from_rgb255(219, 26, 206),
-            flip_colors=True,
-            decay_ratio=1 / 10000,
-        )
-        follow_grid = DiffusiveGrid(
-            name="follow_grid",
-            clipping_box=self.clipping_box,
-            xform=xform,
-            color=Color.from_rgb255(232, 226, 211),
-            flip_colors=True,
-            decay_ratio=1 / 10000,
-        )
 
         # init legal_move_mask
         self.region_legal_move = get_surrounding_offset_region(
-            [ground.to_numpy()], self.walk_region_thickness
+            [state.grids["ground"].to_numpy()], self.walk_region_thickness
         )
-
-        # WRAP ENVIRONMENT
-        grids = {
-            "agent": agent_space,
-            "ground": ground,
-            "track": track,
-            "built_centroids": built_centroids,
-            "built_volume": built_volume,
-            "follow_grid": follow_grid,
-        }
-        return grids
 
     def setup_agents(self, state: Environment):
         agent_space = state.grids["agent"]
@@ -219,22 +145,3 @@ class Algo15_Build(AgentAlgorithm):
 
             agents.append(agent)
         return agents
-
-    def build(self, agent: Agent, state: Environment, build_limit=0.5):
-        """fill built volume in built_shape if agent.build_probability >= build_limit"""
-
-        self.print_dot_counter += 1
-
-        density = state.grids["built_volume"]
-        built_centroids = state.grids["built_centroids"]
-
-        # update print dot array
-        self.print_dot_counter += 1
-        built_centroids.set_value(agent.pose, self.print_dot_counter)
-
-        # orient shape map
-        build_map = agent.orient_build_map()
-        # update density_volume_array
-        density.set_values(build_map, self.print_dot_counter)
-
-        print(f"built at: {agent.pose}")
