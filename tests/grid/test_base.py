@@ -135,15 +135,11 @@ class TestSetValuesUsingArray:
         grid = Grid(name="test_set_values_by_array")
         grid.set_values_using_array(array)
 
-        assert grid.get_number_of_active_voxels() == 12
-        assert grid.get_value((0, 0, 0)) == 1
-        assert grid.get_value((1, 0, 0)) == 1
-        assert grid.get_value((0, 1, 0)) == 1
+        assert grid.get_number_of_active_voxels() == 4
+        assert grid.get_value((2, 1, 0)) == 1
+        assert grid.get_value((0, 2, 1)) == 1
+        assert grid.get_value((1, 0, 2)) == 1
         assert grid.get_value((1, 1, 0)) == 1
-        assert grid.get_value((0, 0, 1)) == 1
-        assert grid.get_value((1, 0, 1)) == 1
-        assert grid.get_value((0, 1, 1)) == 1
-        assert grid.get_value((1, 1, 1)) == 1
 
     def test_set_values_by_array_origin(self, array, large_grid):
         assert large_grid.get_number_of_active_voxels() == 20
@@ -151,7 +147,7 @@ class TestSetValuesUsingArray:
 
         large_grid.set_values_using_array(array, origin=origin)
 
-        assert large_grid.get_number_of_active_voxels() == 32
+        assert large_grid.get_number_of_active_voxels() == 24
         assert large_grid.get_value((-9, -19, -30)) == 1
         assert large_grid.get_value((-9, -19, -29)) == 1
         assert large_grid.get_value((-9, -19, -28)) == 1
