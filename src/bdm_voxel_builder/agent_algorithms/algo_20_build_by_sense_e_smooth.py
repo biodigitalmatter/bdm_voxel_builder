@@ -92,18 +92,6 @@ class Algo20_Build_c(AgentAlgorithm):
             name=self.name,
         )
 
-    def initialization(self, state: Environment):
-        """
-        creates the simulation environment setup
-        with preset values in the definition
-
-        returns: grids
-
-        """
-        ground = state.grids["ground"]
-        scan = state.grids["scan"]
-        self.update_offset_regions(ground.to_numpy(), scan.to_numpy())
-
     def update_environment(self, state: Environment):
         self.decay_environment(state)
 

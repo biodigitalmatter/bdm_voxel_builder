@@ -34,9 +34,11 @@ class AgentAlgorithm(abc.ABC):
     def setup_agents(self, state: Environment):
         raise NotImplementedError
 
-    @abc.abstractmethod
     def initialization(self, state: Environment, **kwargs):
-        raise NotImplementedError
+        """Setup that needs to be after environment is created"""
+        ground = state.grids["ground"].to_numpy()
+        scan = state.grids["scan"].to_numpy()
+        self.update_offset_regions(ground, scan)
 
     @abc.abstractmethod
     def update_environment(self, state: Environment):

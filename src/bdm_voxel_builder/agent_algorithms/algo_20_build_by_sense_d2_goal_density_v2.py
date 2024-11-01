@@ -92,22 +92,12 @@ class Algo20_Build_d2(AgentAlgorithm):
         )
 
     def initialization(self, state: Environment):
-        """
-        creates the simulation environment setup
-        with preset values in the definition
-
-        returns: grids
-
-        """
+        """Setup that needs to be after environment is created"""
+        self.super().initialization(state)
         goal_density = state.grids["goal_density"]
 
         goal_density.set_values_using_index_map(
             self.make_goal_density_box_mockup_D(), goal_density__modifier_D
-        )
-
-        # update walk region
-        self.update_offset_regions(
-            state.grids["ground"].to_numpy(), state.grids["scan"].to_numpy()
         )
 
     def update_environment(self, state: Environment):

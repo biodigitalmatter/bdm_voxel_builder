@@ -93,20 +93,6 @@ class Algo20_Build_c(AgentAlgorithm):
         )
         self.print_dot_counter = 0
 
-    def initialization(self, state: Environment):
-        """
-        creates the simulation environment setup
-        with preset values in the definition
-
-        returns: grids
-
-        """
-        ground = state.grids["ground"]
-        scan = state.grids["scan"]
-
-        # update walk region
-        self.update_offset_regions(ground.to_numpy(), scan.to_numpy())
-
     def update_environment(self, state: Environment):
         self.decay_environment(state)
         if follow_newly_built > 0:
