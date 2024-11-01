@@ -36,3 +36,9 @@ select = [
 [tool.setuptools]
 # packages = ["bdm_voxel_builder", "compas_voxel_builder"]
 package-dir = {"" = "src"}
+
+[tool.vulture]
+make_whitelist = false
+paths = ["tests", "src"]
+sort_by_size = true
+verbose = false
