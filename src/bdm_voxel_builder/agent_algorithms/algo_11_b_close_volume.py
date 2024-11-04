@@ -26,7 +26,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
     clipping_box: cg.Box
     name: str = "algo_8_d"
     relevant_data_grids: str = "scan"
-    grid_to_dump = "scan"
+    grids_to_dump: list[str] = ("scan",)
     seed_iterations = 0
 
     # directory import
@@ -45,7 +45,7 @@ class Algo11b_CloseVolume(AgentAlgorithm):
         super().__init__(
             agent_count=self.agent_count,
             clipping_box=self.clipping_box,
-            grid_to_dump=self.grid_to_dump,
+            grids_to_dump=self.grids_to_dump,
             name=self.name,
         )
 

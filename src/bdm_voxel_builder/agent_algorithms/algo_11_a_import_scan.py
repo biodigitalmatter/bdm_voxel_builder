@@ -26,7 +26,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
     clipping_box: cg.Box
     name: str = "algo_11_a_import_scan"
     relevant_data_grids: str = "scan"
-    grid_to_dump = "scan"
+    grids_to_dump: list[str] = ("scan",)
     seed_iterations = 0
 
     scan_ply_folder_path = REPO_DIR / "data/live/scan_ply"
@@ -43,7 +43,7 @@ class Algo11a_ImportScan(AgentAlgorithm):
         super().__init__(
             clipping_box=self.clipping_box,
             agent_count=self.agent_count,
-            grid_to_dump=self.grid_to_dump,
+            grids_to_dump=self.grids_to_dump,
             name=self.name,
         )
 

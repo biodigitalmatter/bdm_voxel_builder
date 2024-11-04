@@ -19,13 +19,13 @@ class AgentAlgorithm(abc.ABC):
     def __init__(
         self,
         agent_count: int,
-        grid_to_dump: str,
+        grids_to_dump: list[str],
         clipping_box: cg.Box,
         name: str | None = None,
         grids_to_decay: list[str] | None = None,
     ) -> None:
         self.agent_count = agent_count
-        self.grid_to_dump = grid_to_dump
+        self.grids_to_dump = grids_to_dump
         self.clipping_box = clipping_box
         self.name = name
         self.grids_to_decay = grids_to_decay

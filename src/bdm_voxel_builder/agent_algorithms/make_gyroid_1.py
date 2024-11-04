@@ -18,7 +18,7 @@ class Make_Gyroid(AgentAlgorithm):
     grid_size: int | tuple[int, int, int]
     name: str = "gyroid"
     relevant_data_grids: str = "density"
-    grid_to_dump: str = "density"
+    grids_to_dump: list[str] = ("density",)
 
     seed_iterations: int = 1
 
@@ -36,7 +36,7 @@ class Make_Gyroid(AgentAlgorithm):
         super().__init__(
             agent_count=self.agent_count,
             grid_size=self.grid_size,
-            grid_to_dump=self.grid_to_dump,
+            grids_to_dump=self.grids_to_dump,
             name=self.name,
         )
 

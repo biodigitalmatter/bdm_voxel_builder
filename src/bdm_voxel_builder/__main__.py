@@ -33,7 +33,7 @@ def simulate(config: Config, sim_state: Environment):
         sim_state.iteration_count % config.save_interval == 0
         or sim_state.iteration_count == config.iterations - 1
     ):
-        # a1 = sim_state.grids[algo.grid_to_dump].array.copy()
+        # a1 = sim_state.grids[algo.grids_to_dump].array.copy()
         # # a1[:, :, : algo.ground_level_Z] = 0
 
         # save_ndarray(a1, note=note)

@@ -52,7 +52,7 @@ class Algo20_Build_b(AgentAlgorithm):
     grid_size: int | tuple[int, int, int]
     name: str = "algo_20"
     relevant_data_grids: str = "ground"
-    grid_to_dump: str = "ground"
+    grids_to_dump: list[str] = ("ground",)
 
     # TODO
     vdb_to_dump: str = "built"  # not implemented
@@ -85,7 +85,7 @@ class Algo20_Build_b(AgentAlgorithm):
         super().__init__(
             agent_count=self.agent_count,
             grid_size=self.grid_size,
-            grid_to_dump=self.grid_to_dump,
+            grids_to_dump=self.grids_to_dump,
             name=self.name,
         )
 

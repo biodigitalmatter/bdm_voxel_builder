@@ -26,7 +26,7 @@ class Algo15_Build(AgentAlgorithm):
     clipping_box: cg.Box
     name: str = "algo_15"
     relevant_data_grids: str = "built"
-    grid_to_dump: str = "built"
+    grids_to_dump: list[str] = ("built",)
 
     seed_iterations: int = 1
 
@@ -77,7 +77,7 @@ class Algo15_Build(AgentAlgorithm):
         super().__init__(
             agent_count=self.agent_count,
             clipping_box=self.clipping_box,
-            grid_to_dump=self.grid_to_dump,
+            grids_to_dump=self.grids_to_dump,
             name=self.name,
             grids_to_decay=[],
         )

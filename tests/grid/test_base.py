@@ -148,9 +148,9 @@ class TestSetValuesUsingArray:
         large_grid.set_values_using_array(array, origin=origin)
 
         assert large_grid.get_number_of_active_voxels() == 24
-        assert large_grid.get_value((-9, -19, -30)) == 1 # + [1, 1, 0]
-        assert large_grid.get_value((-9, -19, -29)) == 0 # + [1, 1, 1]
-        assert large_grid.get_value((-9, -20, -28)) == 1 # + [1, 0, 2]
+        assert large_grid.get_value((-9, -19, -30)) == 1  # + [1, 1, 0]
+        assert large_grid.get_value((-9, -19, -29)) == 0  # + [1, 1, 1]
+        assert large_grid.get_value((-9, -20, -28)) == 1  # + [1, 0, 2]
         assert large_grid.get_value((84, 78, 226)) == 1
         assert large_grid.get_value((88, 57, 149)) == 1
         assert large_grid.get_value((96, 38, 282)) == 1
