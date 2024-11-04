@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from compas import json_dumps
 
+from bdm_voxel_builder.agents import Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import (
