@@ -54,14 +54,7 @@ def _load_config(config_file: pathlib.Path) -> Config:
 
     return config_module.config
 
-
-@click.command()
-@click.argument(
-    "config-file", type=click.Path(exists=True), default=DATA_DIR / "config.py"
-)
-def main(config_file):
-    config: Config = _load_config(config_file)
-
+def run_algo(config: Config):
     algo = config.algo
     visualizer = config.visualizer
     iterations = config.iterations
@@ -91,6 +84,14 @@ def main(config_file):
         if visualizer.should_show:
             visualizer.show()
 
+
+@click.command()
+@click.argument(
+    "config-file", type=click.Path(exists=True), default=DATA_DIR / "config.py"
+)
+def main(config_file):
+    config: Config = _load_config(config_file)
+    run_algo(config)
 
 if __name__ == "__main__":
     main()
