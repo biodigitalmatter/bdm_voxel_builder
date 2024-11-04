@@ -4,15 +4,13 @@ from dataclasses import dataclass
 import numpy as np
 
 from bdm_voxel_builder import REPO_DIR
-from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agents import OrientableAgent as Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import (
     get_mask_zone_xxyyzz,
     get_savepath,
-    index_map_cylinder,
-    index_map_sphere,
 )
 
 
@@ -69,20 +67,6 @@ basic_agent.pref_build_angle_gain = 0
 basic_agent.max_shell_thickness = 15
 basic_agent.max_build_angle = 91
 
-# create shape maps
-basic_agent.move_map = index_map_sphere(
-    basic_agent.walk_radius, basic_agent.min_walk_radius
-)
-basic_agent.build_map = index_map_cylinder(
-    basic_agent.build_radius, basic_agent.build_h, 0, -1
-)
-basic_agent.sense_map = index_map_sphere(basic_agent.sense_radius)
-basic_agent.sense_inplane_map = index_map_cylinder(
-    radius=3, height=2, min_radius=0, z_lift=1
-)
-basic_agent.sense_depth_map = index_map_cylinder(
-    1, basic_agent.max_shell_thickness * 2, 0, 1
-)
 # __dict__
 agent_dict_A = basic_agent.__dict__.copy()
 

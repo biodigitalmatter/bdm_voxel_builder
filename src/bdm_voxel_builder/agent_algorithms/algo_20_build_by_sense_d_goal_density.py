@@ -4,8 +4,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from bdm_voxel_builder import REPO_DIR
-from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agents import OrientableAgent as Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import (
@@ -25,7 +25,7 @@ build_next_to_bool = True
 sense_wall_radar_bool = True
 sense_goal_density = True
 
-build_probability_absolut_random = 0.001
+build_probability_absolute_random = 0.001
 build_probability_next_to = [0, 0.3]  # (no, yes)
 build_probability_too_dense = [0, -10]  # (no, yes)
 
@@ -154,7 +154,7 @@ class Algo20_Build_d(AgentAlgorithm):
                 basic_agent.inactive_step_count_limit = None
                 # sensor settings
                 basic_agent.sense_radius = 3
-                basic_agent.build_random_chance = build_probability_absolut_random
+                basic_agent.build_random_chance = build_probability_absolute_random
                 basic_agent.build_random_gain = 1
                 basic_agent.max_build_angle = 30
                 basic_agent.overhang_density = overhang_density

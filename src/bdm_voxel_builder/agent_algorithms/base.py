@@ -6,7 +6,6 @@ import numpy as np
 import numpy.typing as npt
 from compas import json_dumps
 
-from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import (
@@ -115,7 +114,7 @@ class AgentAlgorithm(abc.ABC):
 
         # TODO: Why change ground here?
         ground = state.grids["ground"]
-        ground.set_value_using_index_map(build_map, value=1)
+        ground.set_value_using_index_map(build_map, values=1)
 
         # update grids for index_map visualisation
         move_map_grid = state.grids.get("move_map")

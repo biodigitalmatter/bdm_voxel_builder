@@ -4,11 +4,11 @@ from dataclasses import dataclass
 import numpy as np
 
 from bdm_voxel_builder import REPO_DIR
-from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agents import OrientableAgent as Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
-from bdm_voxel_builder.helpers.array import (
+from bdm_voxel_builder.helpers import (
     get_savepath,
     index_map_cylinder,
     index_map_sphere,

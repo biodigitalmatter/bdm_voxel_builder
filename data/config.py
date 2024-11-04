@@ -36,6 +36,7 @@ config = Config(
         agent_count=agent_count,
         name=name,
         clipping_box=clipping_box,
+        grids_to_dump=[("track")],
     ),
     save_interval=save_interval,
     visualizer=CompasViewerVisualizer(save_file=True, skip_grids=skip),

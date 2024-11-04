@@ -2,7 +2,7 @@ import compas.geometry as cg
 import numpy as np
 from compas.colors import Color
 
-from bdm_voxel_builder.agent import Agent
+from bdm_voxel_builder.agents import Agent
 from bdm_voxel_builder.grid import DiffusiveGrid, Grid
 from bdm_voxel_builder.helpers import (
     get_nth_newest_file_in_folder,

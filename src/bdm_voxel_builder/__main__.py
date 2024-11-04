@@ -41,8 +41,8 @@ def simulate(config: Config, sim_state: Environment):
         # pointcloud, values = pointcloud_from_grid_array(a1, return_values=True)
         # save_pointcloud(pointcloud, values=values, note=note)
         # save vdb only
-        sim_state.grids[algo.grid_to_dump].save_vdb()
-
+        for grid_name in algo.grids_to_dump:
+            sim_state.grids[grid_name].save_vdb()
     print(sim_state.iteration_count)
     sim_state.iteration_count += 1
 

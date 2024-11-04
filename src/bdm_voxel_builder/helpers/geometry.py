@@ -146,11 +146,12 @@ def transform_index_map_to_plane(
     """
 
     if isinstance(index_map, np.ndarray):
-        index_map.tolist()
+        index_map = index_map.tolist()
     elif isinstance(index_map, list):
         pass
     else:
-        raise TypeError
+        raise TypeError("index_map must be a numpy array or a list.")
+    
     index_map_pointcloud = cg.Pointcloud(index_map)
 
     p = cg.Plane(new_origin, normal_vector)

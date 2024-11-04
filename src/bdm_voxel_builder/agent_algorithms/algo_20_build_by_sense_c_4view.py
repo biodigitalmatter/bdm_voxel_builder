@@ -5,15 +5,15 @@ import compas.geometry as cg
 import numpy as np
 
 from bdm_voxel_builder import REPO_DIR
-from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agents import OrientableAgent as Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.helpers import (
+    get_array_density_using_index_map,
     get_savepath,
     index_map_cylinder,
     index_map_sphere,
 )
-from bdm_voxel_builder.helpers.array import get_array_density_using_index_map
 
 # ultimate_parameters - test_1 - absolut random build
 overhang_density = 0.35

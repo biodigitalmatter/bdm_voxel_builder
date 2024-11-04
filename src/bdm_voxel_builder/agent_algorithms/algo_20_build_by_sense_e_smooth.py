@@ -4,8 +4,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from bdm_voxel_builder import REPO_DIR
-from bdm_voxel_builder.agent import Agent
 from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
+from bdm_voxel_builder.agents.agent import OrientableAgent as Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import (

@@ -1,7 +1,6 @@
 import random as r
 from copy import copy
 from dataclasses import dataclass
-from math import cos, radians, sin
 
 import compas.geometry as cg
 import numpy as np
@@ -19,7 +18,6 @@ from bdm_voxel_builder.helpers import (
     index_map_sphere,
     mask_index_map_by_nonzero,
     random_choice_index_from_best_n,
-    transform_index_map_to_plane,
 )
 
 
@@ -51,12 +49,7 @@ class Agent:
     min_walk_radius = 0
     build_radius = 3
     sense_radius = 5
-    move_map = None
-    build_map = None
-    sense_map = None
-    sense_inplane_map = None
     sense_wall_radar_map = None
-    sense_depth_map = None
     sense_overhang_map = None
     sense_nozzle_map = None
     sense_topology_bool = True
@@ -81,10 +74,25 @@ class Agent:
     last_move_vector = []
     move_turn_degree = None
 
+    pref_build_angle = 25.0  # degrees
+    pref_build_angle_gain = 0.0
+
     _normal_vector = cg.Vector(0, 0, 1)
+
+    # backs properties
+    _normal_vector = None
+    _build_map = None
+    _move_map = None
+    _sense_map = None
+    _sense_inplane_map = None
+    _sense_depth_map = None
 
     def __post_init__(self):
         self._pose = self.initial_pose or np.array([0, 0, 0], dtype=np.int_)
+
+        self.space_grid = self.space_grid or Grid()
+        self.track_grid = self.track_grid or Grid()
+        self.ground_grid = self.ground_grid or Grid()
 
     @property
     def pose(self):
@@ -106,11 +114,56 @@ class Agent:
         self.space_grid.set_value(new_pose, 1)
         self._pose = new_pose
 
+    @property
+    def build_map(self):
+        return self._build_map or index_map_cylinder(
+            self.build_radius, self.build_h, min_radius=0, z_lift=-1
+        )
+
+    @build_map.setter
+    def build_map(self, index_map):
+        self._build_map = index_map
+
+    @property
+    def move_map(self):
+        return self._move_map or index_map_sphere(
+            self.walk_radius, min_radius=self.min_walk_radius
+        )
+
+    @move_map.setter
+    def move_map(self, index_map):
+        self._move_map = index_map
+
+    @property
+    def sense_map(self):
+        return self._sense_map or index_map_sphere(self.sense_radius)
+
+    @sense_map.setter
+    def sense_map(self, index_map):
+        self._sense_map = index_map
+
+    @property
+    def sense_inplane_map(self):
+        return self._sense_inplane_map or index_map_cylinder(
+            radius=3, height=2, min_radius=0, z_lift=1
+        )
+
+    @sense_inplane_map.setter
+    def sense_inplane_map(self, index_map):
+        self._sense_inplane_map = index_map
+
+    @property
+    def sense_depth_map(self):
+        return self._sense_depth_map or index_map_cylinder(
+            1, self.max_shell_thickness * 2, 0, 1
+        )
+
+    @sense_depth_map.setter
+    def sense_depth_map(self, index_map):
+        self._sense_depth_map = index_map
+
     def copy(self):
         return copy(self)
-
-    def get_plane(self):
-        return cg.Plane(self.pose, self.get_normal_vector())
 
     def get_localized_move_mask(self, array: npt.NDArray[np.float_]):
         filter_ = get_values_using_index_map(
@@ -123,33 +176,6 @@ class Agent:
         legal_move_mask = np.logical_not(filter_ == 0)
 
         return legal_move_mask
-
-    def get_normal_vector(self, ground_array=None, radius=None):
-        """return self.normal_vector, self.normal_vector
-        compas.geometry.Vector"""
-        vectors = self.get_nonzero_map_in_sense_range(ground_array, radius)
-        vectors = self.pose - vectors
-        self.all_vectors = vectors
-        if len(vectors) != 0:
-            average_vector = np.sum(vectors, axis=0) / len(vectors)
-            average_vector = cg.Vector(*average_vector)
-            if average_vector.length != 0:
-                average_vector.unitize()
-                average_vector.invert()
-                self._normal_vector = average_vector
-                return average_vector
-            else:
-                print("normal vector calculation problem, average_vector.length = 0")
-                self._normal_vector = cg.Vector.Zaxis().inverted()
-                return self._normal_vector
-
-        else:  # bug. originated from somewhere else. I think its fixed
-            print(
-                "normal vector calculation problem."
-                + f"empty value list in array selection in pose: {self.pose}"
-            )
-            self._normal_vector = self._normal_vector = cg.Vector.Zaxis().inverted()
-            return self._normal_vector
 
     def move_by_index_map(
         self,
@@ -257,7 +283,7 @@ class Agent:
 
     def calculate_last_move_vector(self):
         last_pose = self.move_history[-1]
-        pose = self._pose
+        pose = self.pose
         self.last_move_vector = pose - last_pose
         return self.last_move_vector
 
@@ -440,80 +466,3 @@ class Agent:
         for x, y, z in filtered_nonzero_map:
             vectors.append(cg.Vector(x, y, z))
         return vectors
-
-    def orient_index_map(self, index_map, normal: cg.Vector | None = None):
-        """transforms shape map
-        input:
-        index_maps: list
-        new_origins: None or Point
-        normals: None or Vector"""
-        return transform_index_map_to_plane(
-            index_map,
-            self.pose,
-            normal or self.get_normal_vector(),
-            clipping_box=self.space_grid.clipping_box,
-        )
-
-    def orient_index_maps(self, index_maps, new_origins=None, normals=None):
-        """transforms shape maps
-        input:
-        index_maps: list
-        new_origins: None or list
-        normals: None or list"""
-        maps = []
-        for i in range(len(index_maps)):
-            new_origin = self.pose if not new_origins else new_origins[i]
-            normal = self.normal_vector if not normals else normals[i]
-
-            index_map = index_maps[i]
-
-            transformed_map = self.orient_index_map(index_map, new_origin, normal)
-            maps.append(transformed_map)
-        return maps
-
-    def orient_move_map(self):
-        return self.orient_index_map(self.move_map)
-
-    def orient_build_map(self):
-        return self.orient_index_map(self.build_map)
-
-    def orient_sense_map(self):
-        return self.orient_index_map(self.sense_map)
-
-    def orient_sense_depth_map(self):
-        return self.orient_index_map(self.sense_depth_map)
-
-    def orient_sense_wall_radar_map(self):
-        return self.orient_index_map(
-            self.sense_wall_radar_map, normal=cg.Vector.Zaxis()
-        )
-
-    def orient_sense_overhang_map(self):
-        map = self.orient_index_map(self.sense_overhang_map, normal=cg.Vector(0, 0, 1))
-        return map
-
-    def orient_sense_nozzle_map(self, world_z=False):
-        if not world_z and 180 > self.get_normal_angle() > self.max_build_angle:
-            x, y, z = self.get_normal_vector()
-            v2 = cg.Vector(x, y, 0)
-            v2.unitize()
-            x, y, _ = v2
-            z = sin(radians(self.max_build_angle)) * -1
-            x = cos(radians(self.max_build_angle)) * x
-            y = cos(radians(self.max_build_angle)) * y
-            v = cg.Vector(x, y, z)
-            # print(f"adjusted_nozzle_angle {v.angle(Vector(0,0,-1), True)}")
-        elif not world_z:
-            v = self.get_normal_vector().inverted()
-        else:
-            v = cg.Vector.Zaxis()
-        map = self.orient_index_map(self.sense_nozzle_map, normal=v)
-        return map
-
-    def orient_sense_inplane_map(self):
-        return self.orient_index_map(self.sense_inplane_map)
-
-    def get_normal_angle(self):
-        v = self.get_normal_vector()
-        angle = v.angle([0, 0, -1], degrees=True)
-        return angle
