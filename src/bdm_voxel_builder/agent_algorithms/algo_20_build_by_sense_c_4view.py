@@ -9,7 +9,7 @@ from bdm_voxel_builder.agent_algorithms.base import AgentAlgorithm
 from bdm_voxel_builder.agents import OrientableAgent as Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.helpers import (
-    get_array_density_using_index_map,
+    get_array_average_using_index_map,
     get_savepath,
     index_map_cylinder,
     index_map_sphere,
@@ -192,13 +192,13 @@ class Algo20_Build_c(AgentAlgorithm):
         ground_array = state.grids["ground"].to_numpy()
 
         nozzle_map = agent.orient_sense_nozzle_map(world_z=False)
-        nozzle_access_density = get_array_density_using_index_map(
+        nozzle_access_density = get_array_average_using_index_map(
             ground_array, nozzle_map, nonzero=True
         )
 
         nozzle_access_collision = nozzle_access_density >= 0.01
         overhang_map = agent.orient_sense_overhang_map()
-        density = get_array_density_using_index_map(
+        density = get_array_average_using_index_map(
             ground_array, overhang_map, nonzero=True
         )
         too_low_overhang = density < agent.overhang_density
@@ -215,7 +215,7 @@ class Algo20_Build_c(AgentAlgorithm):
             if agent.build_next_to_bool:
                 built_volume = state.grids["built"]
                 build_map = agent.orient_move_map()
-                built_density = get_array_density_using_index_map(
+                built_density = get_array_average_using_index_map(
                     built_volume.to_numpy(), build_map, nonzero=True
                 )
 
@@ -228,7 +228,7 @@ class Algo20_Build_c(AgentAlgorithm):
             # BUILD BY WALL RADAR
             if agent.sense_wall_radar_bool:
                 wall_radar_map = agent.orient_sense_wall_radar_map()
-                radar_density = get_array_density_using_index_map(
+                radar_density = get_array_average_using_index_map(
                     ground_array, wall_radar_map, nonzero=True
                 )
                 if radar_density < agent.max_radar_density:  # walking on wall

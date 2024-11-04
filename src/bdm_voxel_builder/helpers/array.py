@@ -125,7 +125,7 @@ def get_mask_zone_xxyyzz(
     return mask
 
 
-def get_array_density_using_index_map(
+def get_array_average_using_index_map(
     array: npt.NDArray,
     map_,
     origin=(0, 0, 0),
@@ -136,52 +136,9 @@ def get_array_density_using_index_map(
     values = get_values_using_index_map(array, map_, origin, clipping_box)
 
     if nonzero:
-        density = np.count_nonzero(values) / len(values)
+        return np.count_nonzero(values) / len(values)
     else:
-        density = sum(values) / len(values)
-
-    return density
-
-
-def get_array_density_from_zone_xxyyzz(
-    array,
-    pose,
-    relative_zone_xxyyzz: tuple[int, int, int, int, int, int],
-    nonzero=False,
-):
-    """gets 3D boolean array within zone (including both end)
-    return bool or int
-    input:
-        grid_size: tuple[i, j, k]
-        zone_xxyyzz : [x_start, x_end, y_start, y_end, z_start, z_end]
-        _bool_type: bool
-    """
-    # make sure params are in bounds
-    shape = array.shape
-    # grid_vol = array.size
-    # print(f'shape {shape}, grid vol: {grid_vol}')
-    x, y, z = pose
-    x_min, x_max, y_min, y_max, z_min, z_max = relative_zone_xxyyzz
-    zone_xxyyzz = [x_min + x, x_max + x, y_min + y, y_max + y, z_min + z, z_max + z]
-    zone_xxyyzz = clip_indices_to_grid_size(zone_xxyyzz, shape)
-    # print(zone_xxyyzz)
-    x_min, x_max, y_min, y_max, z_min, z_max = zone_xxyyzz
-    vol = (abs(x_min - x_max) + 1) * (abs(y_min - y_max) + 1) * (abs(z_min - z_max) + 1)
-    # print("vol", vol)
-    mask = np.zeros(shape, dtype=np.int32)
-    mask[x_min : x_max + 1, y_min : y_max + 1, z_min : z_max + 1] = 1
-    v = np.where(mask == 1, array, 0)
-    print(f"v_sum {np.sum(v)}")
-    # print('v', v)
-    if not nonzero:
-        d = np.sum(v) / vol
-    else:
-        n = np.count_nonzero(v)
-        # print(f"n = {n}")
-        # m = grid_vol - n
-        d = n / vol
-    # print(f"density:{d}")
-    return d
+        return np.sum(values) / len(values)
 
 
 def crop_array(arr, start=0, end=1):
@@ -420,6 +377,9 @@ def get_values_using_index_map(
     origin: tuple[int, int, int] | None = None,
     clipping_box: cg.Box | None = None,
 ):
+    if len(index_map) == 0:
+        raise ValueError("Index map is empty")
+
     if origin is None:
         origin = (0, 0, 0)
 

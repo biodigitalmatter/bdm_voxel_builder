@@ -11,7 +11,7 @@ from bdm_voxel_builder.agent_algorithms.common import (
 )
 from bdm_voxel_builder.grid import Grid
 from bdm_voxel_builder.helpers import (
-    get_array_density_using_index_map,
+    get_array_average_using_index_map,
     get_localized_index_map,
     get_values_using_index_map,
     index_map_cylinder,
@@ -245,7 +245,7 @@ class Agent:
         self, volume_array, max_density_limit, radius, height, rate=0.5
     ):
         map = index_map_cylinder(radius, height)
-        density_above = get_array_density_using_index_map(
+        density_above = get_array_average_using_index_map(
             volume_array,
             map,
             self._pose + [0, 0, +1],
@@ -349,7 +349,7 @@ class Agent:
         nonzero=True,
     ):
         surrounding_map = index_map_sphere(radius)
-        d = get_array_density_using_index_map(
+        d = get_array_average_using_index_map(
             array, surrounding_map, self.pose, nonzero=nonzero
         )
         a, b, _ = [min_density, max_density, self.build_probability]
@@ -414,7 +414,7 @@ class Agent:
 
         follow_mods = self.get_follow_modifiers(follow_grid)
 
-        built_density = get_array_density_using_index_map(
+        built_density = get_array_average_using_index_map(
             built_grid.to_numpy(),
             self.get_localized_move_map(),
             self.pose,
@@ -432,7 +432,7 @@ class Agent:
 
         surr_map = index_map_sphere(radius)
 
-        d = get_array_density_using_index_map(
+        d = get_array_average_using_index_map(
             array,
             surr_map,
             self.pose,

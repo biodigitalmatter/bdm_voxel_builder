@@ -54,6 +54,7 @@ def _load_config(config_file: pathlib.Path) -> Config:
 
     return config_module.config
 
+
 def run_algo(config: Config):
     algo = config.algo
     visualizer = config.visualizer
@@ -92,6 +93,7 @@ def run_algo(config: Config):
 def main(config_file):
     config: Config = _load_config(config_file)
     run_algo(config)
+
 
 if __name__ == "__main__":
     main()
