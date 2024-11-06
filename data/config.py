@@ -1,25 +1,38 @@
 # ruff: noqa: F401
 import compas.geometry as cg
 
-from bdm_voxel_builder.agent_algorithms.algo_21_print_path import Algo21PrintPath
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_c_4view import (
+    Algo20_Build_c,
+)
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_d2_goal_density_v2 import (
+    Algo20_Build_d2,
+)
+from bdm_voxel_builder.agent_algorithms.algo_20_build_by_sense_d_goal_density import (
+    Algo20_Build_d,
+)
 from bdm_voxel_builder.config_setup import Config
 from bdm_voxel_builder.visualizer.compas_viewer import CompasViewerVisualizer
 
+# setup 2 test
+# grid_size = [300, 250, 150]
+
+# grid_size = [200, 200, 100]
+# grid_size = [100, 100, 50]
 grid_size = [50, 50, 50]
 
-iterations = 1
+iterations = 10000
 agent_count = 1
-name = f"algo_21_i{iterations}a{agent_count}"
+name = f"algo_20_e_solo2_i{iterations}a{agent_count}"
 skip = ("agent_space", "ground", "follow")
 save_interval = 50
-visualize_interval = 100
+visualize_interval = 500
 
 clipping_box = cg.Box.from_diagonal(([0, 0, 0], grid_size))
 # skip = ("agent_space", 'ground', 'follow_grid', 'move_map_grid')
 config = Config(
     iterations=iterations,
     clipping_box=clipping_box,
-    algo=Algo21PrintPath(
+    algo=Algo20_Build_c(
         agent_count=agent_count,
         name=name,
         clipping_box=clipping_box,
