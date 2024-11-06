@@ -1,4 +1,5 @@
 import abc
+import os
 import random
 
 import compas.geometry as cg
@@ -6,10 +7,12 @@ import numpy as np
 import numpy.typing as npt
 from compas import json_dumps
 
+from bdm_voxel_builder import REPO_DIR
 from bdm_voxel_builder.agents import Agent
 from bdm_voxel_builder.environment import Environment
 from bdm_voxel_builder.grid import DiffusiveGrid
 from bdm_voxel_builder.helpers import (
+    get_savepath,
     get_surrounding_offset_region,
     get_values_using_index_map,
 )
@@ -19,16 +22,31 @@ class AgentAlgorithm(abc.ABC):
     def __init__(
         self,
         agent_count: int,
-        grids_to_dump: list[str],
         clipping_box: cg.Box,
         name: str | None = None,
         grids_to_decay: list[str] | None = None,
+        grids_to_dump: list[str] | None = None,
+        seed_iterations: int = 1,
+        walk_region_thickness: int = 1,
+        deploy_anywhere: bool = False,
+        fab_planes: list[cg.Plane] | None = None,
+        fab_planes_file_path: os.PathLike | None = None,
     ) -> None:
         self.agent_count = agent_count
         self.grids_to_dump = grids_to_dump
         self.clipping_box = clipping_box
         self.name = name
-        self.grids_to_decay = grids_to_decay
+        self.grids_to_decay = grids_to_decay or []
+        self.grids_to_dump = grids_to_dump or []
+        self.seed_iterations = seed_iterations
+        self.walk_region_thickness = walk_region_thickness
+        self.deploy_anywhere = deploy_anywhere
+        self.fab_planes = fab_planes or []
+        self.fab_planes_file_path = fab_planes_file_path or get_savepath(
+            dir=REPO_DIR / "temp/fabplanes/", note=name, suffix="_fabplanes.txt"
+        )
+
+        self.print_dot_counter = 0
 
     @abc.abstractmethod
     def setup_agents(self, state: Environment):
