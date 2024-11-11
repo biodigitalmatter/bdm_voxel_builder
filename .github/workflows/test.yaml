@@ -29,7 +29,7 @@ jobs:
         uses: actions/cache@v4
         env:
           # Increase this value to reset cache if environment.yml has not changed
-          CACHE_NUMBER: 1
+          CACHE_NUMBER: 0
         with:
           path: ~/conda_pkgs_dir
           key:
@@ -40,7 +40,7 @@ jobs:
           miniforge-version: latest
           python-version: ${{ matrix.python-version }}
           environment-file: ./environment.yml
-          use-only-tar-bz2: true
+          use-only-tar-bz2: false
 
       - name: install local package
         run: invoke install
