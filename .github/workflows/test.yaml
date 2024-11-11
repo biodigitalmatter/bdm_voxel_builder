@@ -40,6 +40,7 @@ jobs:
           miniforge-version: latest
           python-version: ${{ matrix.python-version }}
           environment-file: ./environment.yml
+          use-only-tar-bz2: true
 
       - name: install local package
         run: invoke install
